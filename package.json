@@ -1,0 +1,28 @@
+{
+  "name": "ba-hub-unified",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "BA Hub - Broken Arrow Stats Platform",
+  "workspaces": [
+    "frontend",
+    "backend",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w backend\" \"npm run dev -w frontend\"",
+    "build": "npm run build -w shared && npm run build -w backend && npm run build -w frontend",
+    "build:backend": "npm run build -w backend",
+    "build:frontend": "npm run build -w frontend",
+    "build:shared": "npm run build -w shared",
+    "type-check": "npm run type-check -w backend && npm run type-check -w frontend && npm run type-check -w shared",
+    "clean": "rimraf **/node_modules **/dist **/.qwik",
+    "docker:build": "cd docker && docker-compose build",
+    "docker:up": "cd docker && docker-compose up",
+    "docker:down": "cd docker && docker-compose down"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "rimraf": "^5.0.5"
+  }
+}

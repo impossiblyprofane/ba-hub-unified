@@ -1,0 +1,425 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* BA-HUB palette — neutral grays, bright text, teal-blue accent */
+  --bg:        #1a1a1a;   /* main dark background */
+  --bg-raised: #242424;   /* cards, nav, elevated surfaces */
+  --bg-hover:  #2c2c2c;   /* hover state */
+  --border:    #333;       /* subtle border */
+  --border-hi: #444;       /* highlighted border */
+  --text:      #ededed;   /* primary text — bright, readable */
+  --text-dim:  #999;       /* secondary / muted */
+  --accent:    #4697c3;   /* teal-blue accent (exact ba-hub) */
+  --accent-hi: #3d8fbc;   /* accent hover / pressed */
+  --tag:       #1e2e38;   /* label / tag background */
+  --tag-text:  #4697c3;   /* label / tag text */
+  --green:     #22c55e;   /* success / live */
+  --amber:     #f59e0b;   /* warning / caution */
+  --red:       #e74c3c;   /* error */
+  --mono:      'IBM Plex Mono', 'Consolas', 'Monaco', monospace;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Hard corners — military precision */
+* {
+  border-radius: 0 !important;
+}
+
+/* Thin scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); }
+::-webkit-scrollbar-thumb:hover { background: var(--border-hi); }
+
+/* ═══════════════════════════════════════════
+   TACTICAL BACKGROUND & CONSOLE EFFECTS
+   ═══════════════════════════════════════════ */
+
+/* Grid + targeting cell animation */
+.bg-grid {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 2px, transparent 2px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 2px, transparent 2px);
+  background-size: 20px 20px;
+}
+
+/* Targeting reticle — a single cell highlight that drifts across the grid */
+.bg-grid::before {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(70, 151, 195, 0.06);
+  background: rgba(70, 151, 195, 0.015);
+  animation: target-drift 25s linear infinite;
+  opacity: 0;
+}
+
+@keyframes target-drift {
+  0%   { top: 15%; left: 10%; opacity: 0; }
+  5%   { opacity: 1; }
+  20%  { top: 15%; left: 10%; opacity: 1; }
+  25%  { top: 15%; left: 10%; opacity: 0; }
+  30%  { top: 45%; left: 60%; opacity: 0; }
+  35%  { opacity: 1; }
+  50%  { top: 45%; left: 60%; opacity: 1; }
+  55%  { top: 45%; left: 60%; opacity: 0; }
+  60%  { top: 75%; left: 30%; opacity: 0; }
+  65%  { opacity: 1; }
+  80%  { top: 75%; left: 30%; opacity: 1; }
+  85%  { top: 75%; left: 30%; opacity: 0; }
+  90%  { top: 25%; left: 80%; opacity: 0; }
+  95%  { opacity: 0.8; }
+  100% { top: 25%; left: 80%; opacity: 0; }
+}
+
+/* Scrolling mission log watermark — subtle text crawl */
+.bg-grid::after {
+  content: 'STANDBY ... CONNECTED ... AWAITING INPUT ... SYS:OK ... NET:ACTIVE ... DB:SYNC ... CMD:READY ... OPS:NOMINAL ... GRID:LOCKED ...';
+  position: absolute;
+  bottom: 12px;
+  left: 0;
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  color: rgba(255, 255, 255, 0.03);
+  animation: log-scroll 60s linear infinite;
+}
+
+@keyframes log-scroll {
+  0%   { transform: translateX(100vw); }
+  100% { transform: translateX(-200%); }
+}
+
+/* Ambient vignette behind hero — homepage only */
+.hero-glow {
+  position: absolute;
+  top: -80px;
+  left: 50%;
+  translate: -50% 0;
+  width: 500px;
+  height: 250px;
+  background: radial-gradient(ellipse, rgba(70, 151, 195, 0.04) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Live indicator dot — slow steady pulse */
+.pulse-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  background: var(--green);
+  animation: dot-pulse 3s ease-in-out infinite;
+}
+
+@keyframes dot-pulse {
+  0%, 100% { opacity: 0.9; }
+  50%      { opacity: 0.4; }
+}
+
+/* Nav hover — simple color shift */
+.nav-glow:hover {
+  color: var(--text);
+}
+
+/* ═══════════════════════════════════════════
+   SIDEBAR NAV — icon rail, expand on hover
+   ═══════════════════════════════════════════ */
+
+.sidebar-nav {
+  width: 52px;                        /* icon-only rail */
+  transition: width 0.2s ease;
+}
+.sidebar-nav:hover,
+.sidebar-nav.locale-open {
+  width: 180px;                       /* expanded with labels */
+}
+
+/* Each row: icon + label inline */
+.nav-item-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.nav-icon {
+  flex-shrink: 0;
+  width: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-label {
+  opacity: 0;
+  max-width: 0;
+  overflow: hidden;
+  transition: opacity 0.15s ease, max-width 0.2s ease, margin 0.2s ease;
+  margin-left: 0;
+}
+
+.sidebar-nav:hover .nav-label,
+.sidebar-nav.locale-open .nav-label {
+  opacity: 1;
+  max-width: 140px;
+  margin-left: 10px;
+}
+
+/* Card hover — simple highlight, no glow */
+.card-glow:hover {
+  box-shadow: none;
+}
+
+/* Corner accents — tactical brackets */
+.corner-brackets {
+  position: relative;
+}
+.corner-brackets::before,
+.corner-brackets::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--accent);
+  opacity: 0.2;
+}
+.corner-brackets::before {
+  top: -1px;
+  left: -1px;
+  border-right: none;
+  border-bottom: none;
+}
+.corner-brackets::after {
+  bottom: -1px;
+  right: -1px;
+  border-left: none;
+  border-top: none;
+}
+
+/* Status bar dim — steady, occasional dim */
+.status-blink {
+  animation: status-blink 5s ease-in-out infinite;
+}
+@keyframes status-blink {
+  0%, 92%, 100% { opacity: 1; }
+  96% { opacity: 0.5; }
+}
+
+/* ── Card ── */
+.card {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  padding: 1.25rem;
+  transition: border-color 0.15s, background 0.15s;
+}
+.card:hover {
+  border-color: var(--border-hi);
+  background: var(--bg-hover);
+}
+
+/* ── Feature card — hero-icon tile ── */
+.feature-card {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  padding: 1.5rem 1rem;
+  transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.75rem;
+  min-height: 140px;
+}
+.feature-card::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  translate: -50% 0;
+  width: 0;
+  height: 2px;
+  background: var(--accent);
+  transition: width 0.25s ease;
+}
+.feature-card:hover {
+  border-color: var(--border-hi);
+  background: var(--bg-hover);
+}
+.feature-card:hover::before {
+  width: 50%;
+}
+/* Slight lift on card hover */
+.feature-card:hover .game-icon {
+  transform: scale(1.05);
+}
+
+.feature-card .fc-label {
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  transition: color 0.2s;
+}
+.feature-card:hover .fc-label {
+  color: var(--accent);
+}
+
+.feature-card .fc-tag {
+  display: inline-block;
+  background: var(--tag);
+  color: var(--tag-text);
+  font-size: 0.6rem;
+  font-weight: 500;
+  padding: 0.1rem 0.45rem;
+  letter-spacing: 0.05em;
+  font-family: var(--mono);
+}
+
+/* ═══════════════════════════════════════════
+   LOCALE SELECTOR DROPDOWN
+   ═══════════════════════════════════════════ */
+.locale-dropdown {
+  position: fixed;
+  /* top/left set dynamically via inline style from button rect */
+  transform: translateY(-100%);
+  width: 180px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  padding: 4px 0;
+  z-index: 9999;
+  max-height: 320px;
+  overflow-y: auto;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+.locale-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-dim);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+  font-family: var(--mono);
+}
+.locale-option:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+.locale-option.active {
+  color: var(--accent);
+}
+.locale-flag {
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.locale-label {
+  flex: 1;
+  text-align: left;
+}
+.locale-code {
+  font-size: 10px;
+  opacity: 0.5;
+  letter-spacing: 0.05em;
+}
+
+/* ═══════════════════════════════════════════
+   PAGE TRANSITIONS (View Transitions API)
+   ═══════════════════════════════════════════ */
+
+/* Old page sweeps out to the right */
+::view-transition-old(page-content) {
+  animation: vt-exit 0.18s ease-in both;
+}
+
+/* New page sweeps in from the left */
+::view-transition-new(page-content) {
+  animation: vt-enter 0.3s cubic-bezier(0.25, 1, 0.5, 1) 0.06s both;
+}
+
+@keyframes vt-exit {
+  from {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+  to {
+    opacity: 0;
+    clip-path: inset(0 0 0 100%);
+  }
+}
+
+@keyframes vt-enter {
+  from {
+    opacity: 0;
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* ── Utility ── */
+.text-accent { color: var(--accent); }
+.text-dim    { color: var(--text-dim); }
+.bg-raised   { background: var(--bg-raised); }
+.border-line { border-color: var(--border); }
+
+/* ── Game Icons ── */
+.game-icon {
+  object-fit: contain;
+  image-rendering: auto;
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+  transition: filter 0.2s ease, transform 0.2s ease;
+}
+
+/* Force white — works on any colored / semi-transparent PNG */
+.icon-white {
+  filter: brightness(0) invert(1);
+}
+
+/* Tint to accent teal-blue */
+.icon-accent {
+  filter: brightness(0) invert(1)
+          sepia(1) saturate(5) hue-rotate(175deg);
+}
+
+/* Subtle shadow halo — not neon, just definition */
+.icon-glow {
+  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.12));
+}
+.icon-white.icon-glow {
+  filter: brightness(0) invert(1)
+          drop-shadow(0 0 3px rgba(255, 255, 255, 0.15));
+}
+.icon-accent.icon-glow {
+  filter: brightness(0) invert(1)
+          sepia(1) saturate(5) hue-rotate(175deg)
+          drop-shadow(0 0 3px rgba(70, 151, 195, 0.2));
+}

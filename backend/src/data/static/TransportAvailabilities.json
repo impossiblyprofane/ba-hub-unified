@@ -1,0 +1,2492 @@
+[
+    {
+        "Id": 15,
+        "SpecializationAvailabilityId": 104,
+        "UnitId": 48
+    },
+    {
+        "Id": 17,
+        "SpecializationAvailabilityId": 104,
+        "UnitId": 29
+    },
+    {
+        "Id": 25,
+        "SpecializationAvailabilityId": 105,
+        "UnitId": 48
+    },
+    {
+        "Id": 27,
+        "SpecializationAvailabilityId": 105,
+        "UnitId": 29
+    },
+    {
+        "Id": 38,
+        "SpecializationAvailabilityId": 106,
+        "UnitId": 48
+    },
+    {
+        "Id": 145,
+        "SpecializationAvailabilityId": 107,
+        "UnitId": 47
+    },
+    {
+        "Id": 149,
+        "SpecializationAvailabilityId": 107,
+        "UnitId": 22
+    },
+    {
+        "Id": 150,
+        "SpecializationAvailabilityId": 107,
+        "UnitId": 17
+    },
+    {
+        "Id": 155,
+        "SpecializationAvailabilityId": 108,
+        "UnitId": 47
+    },
+    {
+        "Id": 156,
+        "SpecializationAvailabilityId": 108,
+        "UnitId": 22
+    },
+    {
+        "Id": 157,
+        "SpecializationAvailabilityId": 108,
+        "UnitId": 17
+    },
+    {
+        "Id": 180,
+        "SpecializationAvailabilityId": 108,
+        "UnitId": 52
+    },
+    {
+        "Id": 192,
+        "SpecializationAvailabilityId": 109,
+        "UnitId": 22
+    },
+    {
+        "Id": 206,
+        "SpecializationAvailabilityId": 110,
+        "UnitId": 22
+    },
+    {
+        "Id": 223,
+        "SpecializationAvailabilityId": 111,
+        "UnitId": 22
+    },
+    {
+        "Id": 243,
+        "SpecializationAvailabilityId": 112,
+        "UnitId": 22
+    },
+    {
+        "Id": 267,
+        "SpecializationAvailabilityId": 113,
+        "UnitId": 21
+    },
+    {
+        "Id": 293,
+        "SpecializationAvailabilityId": 114,
+        "UnitId": 21
+    },
+    {
+        "Id": 480,
+        "SpecializationAvailabilityId": 118,
+        "UnitId": 48
+    },
+    {
+        "Id": 481,
+        "SpecializationAvailabilityId": 118,
+        "UnitId": 52
+    },
+    {
+        "Id": 482,
+        "SpecializationAvailabilityId": 118,
+        "UnitId": 21
+    },
+    {
+        "Id": 530,
+        "SpecializationAvailabilityId": 109,
+        "UnitId": 81
+    },
+    {
+        "Id": 531,
+        "SpecializationAvailabilityId": 110,
+        "UnitId": 81
+    },
+    {
+        "Id": 532,
+        "SpecializationAvailabilityId": 111,
+        "UnitId": 81
+    },
+    {
+        "Id": 533,
+        "SpecializationAvailabilityId": 112,
+        "UnitId": 81
+    },
+    {
+        "Id": 552,
+        "SpecializationAvailabilityId": 164,
+        "UnitId": 90
+    },
+    {
+        "Id": 553,
+        "SpecializationAvailabilityId": 164,
+        "UnitId": 89
+    },
+    {
+        "Id": 555,
+        "SpecializationAvailabilityId": 164,
+        "UnitId": 23
+    },
+    {
+        "Id": 556,
+        "SpecializationAvailabilityId": 176,
+        "UnitId": 142
+    },
+    {
+        "Id": 558,
+        "SpecializationAvailabilityId": 165,
+        "UnitId": 90
+    },
+    {
+        "Id": 559,
+        "SpecializationAvailabilityId": 165,
+        "UnitId": 89
+    },
+    {
+        "Id": 561,
+        "SpecializationAvailabilityId": 165,
+        "UnitId": 23
+    },
+    {
+        "Id": 562,
+        "SpecializationAvailabilityId": 166,
+        "UnitId": 90
+    },
+    {
+        "Id": 563,
+        "SpecializationAvailabilityId": 166,
+        "UnitId": 89
+    },
+    {
+        "Id": 565,
+        "SpecializationAvailabilityId": 166,
+        "UnitId": 23
+    },
+    {
+        "Id": 568,
+        "SpecializationAvailabilityId": 175,
+        "UnitId": 141
+    },
+    {
+        "Id": 570,
+        "SpecializationAvailabilityId": 173,
+        "UnitId": 141
+    },
+    {
+        "Id": 571,
+        "SpecializationAvailabilityId": 173,
+        "UnitId": 142
+    },
+    {
+        "Id": 579,
+        "SpecializationAvailabilityId": 173,
+        "UnitId": 172
+    },
+    {
+        "Id": 586,
+        "SpecializationAvailabilityId": 249,
+        "UnitId": 41
+    },
+    {
+        "Id": 587,
+        "SpecializationAvailabilityId": 249,
+        "UnitId": 15
+    },
+    {
+        "Id": 588,
+        "SpecializationAvailabilityId": 249,
+        "UnitId": 16
+    },
+    {
+        "Id": 593,
+        "SpecializationAvailabilityId": 253,
+        "UnitId": 1
+    },
+    {
+        "Id": 595,
+        "SpecializationAvailabilityId": 254,
+        "UnitId": 1
+    },
+    {
+        "Id": 596,
+        "SpecializationAvailabilityId": 255,
+        "UnitId": 1
+    },
+    {
+        "Id": 599,
+        "SpecializationAvailabilityId": 257,
+        "UnitId": 1
+    },
+    {
+        "Id": 601,
+        "SpecializationAvailabilityId": 258,
+        "UnitId": 1
+    },
+    {
+        "Id": 603,
+        "SpecializationAvailabilityId": 259,
+        "UnitId": 1
+    },
+    {
+        "Id": 607,
+        "SpecializationAvailabilityId": 262,
+        "UnitId": 1
+    },
+    {
+        "Id": 615,
+        "SpecializationAvailabilityId": 224,
+        "UnitId": 1
+    },
+    {
+        "Id": 619,
+        "SpecializationAvailabilityId": 226,
+        "UnitId": 1
+    },
+    {
+        "Id": 623,
+        "SpecializationAvailabilityId": 274,
+        "UnitId": 48
+    },
+    {
+        "Id": 624,
+        "SpecializationAvailabilityId": 274,
+        "UnitId": 49
+    },
+    {
+        "Id": 625,
+        "SpecializationAvailabilityId": 274,
+        "UnitId": 29
+    },
+    {
+        "Id": 626,
+        "SpecializationAvailabilityId": 274,
+        "UnitId": 159
+    },
+    {
+        "Id": 627,
+        "SpecializationAvailabilityId": 107,
+        "UnitId": 82
+    },
+    {
+        "Id": 628,
+        "SpecializationAvailabilityId": 275,
+        "UnitId": 41
+    },
+    {
+        "Id": 629,
+        "SpecializationAvailabilityId": 275,
+        "UnitId": 26
+    },
+    {
+        "Id": 630,
+        "SpecializationAvailabilityId": 276,
+        "UnitId": 48
+    },
+    {
+        "Id": 631,
+        "SpecializationAvailabilityId": 276,
+        "UnitId": 49
+    },
+    {
+        "Id": 632,
+        "SpecializationAvailabilityId": 276,
+        "UnitId": 29
+    },
+    {
+        "Id": 633,
+        "SpecializationAvailabilityId": 276,
+        "UnitId": 159
+    },
+    {
+        "Id": 634,
+        "SpecializationAvailabilityId": 277,
+        "UnitId": 48
+    },
+    {
+        "Id": 635,
+        "SpecializationAvailabilityId": 277,
+        "UnitId": 49
+    },
+    {
+        "Id": 636,
+        "SpecializationAvailabilityId": 277,
+        "UnitId": 159
+    },
+    {
+        "Id": 638,
+        "SpecializationAvailabilityId": 278,
+        "UnitId": 48
+    },
+    {
+        "Id": 639,
+        "SpecializationAvailabilityId": 278,
+        "UnitId": 49
+    },
+    {
+        "Id": 640,
+        "SpecializationAvailabilityId": 278,
+        "UnitId": 79
+    },
+    {
+        "Id": 641,
+        "SpecializationAvailabilityId": 278,
+        "UnitId": 21
+    },
+    {
+        "Id": 642,
+        "SpecializationAvailabilityId": 279,
+        "UnitId": 48
+    },
+    {
+        "Id": 643,
+        "SpecializationAvailabilityId": 279,
+        "UnitId": 49
+    },
+    {
+        "Id": 644,
+        "SpecializationAvailabilityId": 279,
+        "UnitId": 21
+    },
+    {
+        "Id": 645,
+        "SpecializationAvailabilityId": 279,
+        "UnitId": 79
+    },
+    {
+        "Id": 646,
+        "SpecializationAvailabilityId": 287,
+        "UnitId": 84
+    },
+    {
+        "Id": 647,
+        "SpecializationAvailabilityId": 287,
+        "UnitId": 78
+    },
+    {
+        "Id": 648,
+        "SpecializationAvailabilityId": 287,
+        "UnitId": 80
+    },
+    {
+        "Id": 649,
+        "SpecializationAvailabilityId": 288,
+        "UnitId": 82
+    },
+    {
+        "Id": 650,
+        "SpecializationAvailabilityId": 288,
+        "UnitId": 22
+    },
+    {
+        "Id": 651,
+        "SpecializationAvailabilityId": 288,
+        "UnitId": 81
+    },
+    {
+        "Id": 652,
+        "SpecializationAvailabilityId": 289,
+        "UnitId": 84
+    },
+    {
+        "Id": 653,
+        "SpecializationAvailabilityId": 289,
+        "UnitId": 78
+    },
+    {
+        "Id": 654,
+        "SpecializationAvailabilityId": 289,
+        "UnitId": 80
+    },
+    {
+        "Id": 655,
+        "SpecializationAvailabilityId": 290,
+        "UnitId": 33
+    },
+    {
+        "Id": 656,
+        "SpecializationAvailabilityId": 291,
+        "UnitId": 82
+    },
+    {
+        "Id": 657,
+        "SpecializationAvailabilityId": 291,
+        "UnitId": 22
+    },
+    {
+        "Id": 658,
+        "SpecializationAvailabilityId": 291,
+        "UnitId": 81
+    },
+    {
+        "Id": 667,
+        "SpecializationAvailabilityId": 294,
+        "UnitId": 84
+    },
+    {
+        "Id": 668,
+        "SpecializationAvailabilityId": 294,
+        "UnitId": 78
+    },
+    {
+        "Id": 669,
+        "SpecializationAvailabilityId": 294,
+        "UnitId": 80
+    },
+    {
+        "Id": 670,
+        "SpecializationAvailabilityId": 295,
+        "UnitId": 82
+    },
+    {
+        "Id": 671,
+        "SpecializationAvailabilityId": 295,
+        "UnitId": 22
+    },
+    {
+        "Id": 672,
+        "SpecializationAvailabilityId": 295,
+        "UnitId": 81
+    },
+    {
+        "Id": 673,
+        "SpecializationAvailabilityId": 296,
+        "UnitId": 82
+    },
+    {
+        "Id": 674,
+        "SpecializationAvailabilityId": 296,
+        "UnitId": 22
+    },
+    {
+        "Id": 675,
+        "SpecializationAvailabilityId": 296,
+        "UnitId": 81
+    },
+    {
+        "Id": 676,
+        "SpecializationAvailabilityId": 297,
+        "UnitId": 82
+    },
+    {
+        "Id": 677,
+        "SpecializationAvailabilityId": 297,
+        "UnitId": 22
+    },
+    {
+        "Id": 678,
+        "SpecializationAvailabilityId": 297,
+        "UnitId": 81
+    },
+    {
+        "Id": 679,
+        "SpecializationAvailabilityId": 298,
+        "UnitId": 82
+    },
+    {
+        "Id": 680,
+        "SpecializationAvailabilityId": 298,
+        "UnitId": 22
+    },
+    {
+        "Id": 681,
+        "SpecializationAvailabilityId": 298,
+        "UnitId": 81
+    },
+    {
+        "Id": 682,
+        "SpecializationAvailabilityId": 299,
+        "UnitId": 52
+    },
+    {
+        "Id": 685,
+        "SpecializationAvailabilityId": 302,
+        "UnitId": 52
+    },
+    {
+        "Id": 688,
+        "SpecializationAvailabilityId": 305,
+        "UnitId": 23
+    },
+    {
+        "Id": 689,
+        "SpecializationAvailabilityId": 305,
+        "UnitId": 90
+    },
+    {
+        "Id": 690,
+        "SpecializationAvailabilityId": 305,
+        "UnitId": 89
+    },
+    {
+        "Id": 691,
+        "SpecializationAvailabilityId": 306,
+        "UnitId": 23
+    },
+    {
+        "Id": 692,
+        "SpecializationAvailabilityId": 306,
+        "UnitId": 90
+    },
+    {
+        "Id": 693,
+        "SpecializationAvailabilityId": 306,
+        "UnitId": 89
+    },
+    {
+        "Id": 694,
+        "SpecializationAvailabilityId": 307,
+        "UnitId": 23
+    },
+    {
+        "Id": 695,
+        "SpecializationAvailabilityId": 307,
+        "UnitId": 90
+    },
+    {
+        "Id": 696,
+        "SpecializationAvailabilityId": 307,
+        "UnitId": 89
+    },
+    {
+        "Id": 698,
+        "SpecializationAvailabilityId": 308,
+        "UnitId": 1
+    },
+    {
+        "Id": 699,
+        "SpecializationAvailabilityId": 308,
+        "UnitId": 3
+    },
+    {
+        "Id": 700,
+        "SpecializationAvailabilityId": 309,
+        "UnitId": 1
+    },
+    {
+        "Id": 701,
+        "SpecializationAvailabilityId": 309,
+        "UnitId": 3
+    },
+    {
+        "Id": 702,
+        "SpecializationAvailabilityId": 310,
+        "UnitId": 1
+    },
+    {
+        "Id": 703,
+        "SpecializationAvailabilityId": 311,
+        "UnitId": 1
+    },
+    {
+        "Id": 704,
+        "SpecializationAvailabilityId": 342,
+        "UnitId": 1
+    },
+    {
+        "Id": 705,
+        "SpecializationAvailabilityId": 342,
+        "UnitId": 3
+    },
+    {
+        "Id": 706,
+        "SpecializationAvailabilityId": 343,
+        "UnitId": 90
+    },
+    {
+        "Id": 707,
+        "SpecializationAvailabilityId": 343,
+        "UnitId": 89
+    },
+    {
+        "Id": 708,
+        "SpecializationAvailabilityId": 343,
+        "UnitId": 141
+    },
+    {
+        "Id": 709,
+        "SpecializationAvailabilityId": 343,
+        "UnitId": 7
+    },
+    {
+        "Id": 710,
+        "SpecializationAvailabilityId": 344,
+        "UnitId": 141
+    },
+    {
+        "Id": 711,
+        "SpecializationAvailabilityId": 344,
+        "UnitId": 90
+    },
+    {
+        "Id": 712,
+        "SpecializationAvailabilityId": 344,
+        "UnitId": 89
+    },
+    {
+        "Id": 713,
+        "SpecializationAvailabilityId": 344,
+        "UnitId": 7
+    },
+    {
+        "Id": 714,
+        "SpecializationAvailabilityId": 345,
+        "UnitId": 141
+    },
+    {
+        "Id": 715,
+        "SpecializationAvailabilityId": 345,
+        "UnitId": 142
+    },
+    {
+        "Id": 716,
+        "SpecializationAvailabilityId": 345,
+        "UnitId": 172
+    },
+    {
+        "Id": 717,
+        "SpecializationAvailabilityId": 345,
+        "UnitId": 7
+    },
+    {
+        "Id": 718,
+        "SpecializationAvailabilityId": 346,
+        "UnitId": 141
+    },
+    {
+        "Id": 719,
+        "SpecializationAvailabilityId": 346,
+        "UnitId": 142
+    },
+    {
+        "Id": 720,
+        "SpecializationAvailabilityId": 346,
+        "UnitId": 172
+    },
+    {
+        "Id": 721,
+        "SpecializationAvailabilityId": 346,
+        "UnitId": 7
+    },
+    {
+        "Id": 722,
+        "SpecializationAvailabilityId": 347,
+        "UnitId": 141
+    },
+    {
+        "Id": 723,
+        "SpecializationAvailabilityId": 347,
+        "UnitId": 142
+    },
+    {
+        "Id": 724,
+        "SpecializationAvailabilityId": 347,
+        "UnitId": 7
+    },
+    {
+        "Id": 725,
+        "SpecializationAvailabilityId": 348,
+        "UnitId": 142
+    },
+    {
+        "Id": 726,
+        "SpecializationAvailabilityId": 348,
+        "UnitId": 7
+    },
+    {
+        "Id": 727,
+        "SpecializationAvailabilityId": 349,
+        "UnitId": 1
+    },
+    {
+        "Id": 728,
+        "SpecializationAvailabilityId": 349,
+        "UnitId": 3
+    },
+    {
+        "Id": 729,
+        "SpecializationAvailabilityId": 350,
+        "UnitId": 1
+    },
+    {
+        "Id": 730,
+        "SpecializationAvailabilityId": 350,
+        "UnitId": 3
+    },
+    {
+        "Id": 731,
+        "SpecializationAvailabilityId": 351,
+        "UnitId": 1
+    },
+    {
+        "Id": 732,
+        "SpecializationAvailabilityId": 351,
+        "UnitId": 3
+    },
+    {
+        "Id": 733,
+        "SpecializationAvailabilityId": 352,
+        "UnitId": 1
+    },
+    {
+        "Id": 734,
+        "SpecializationAvailabilityId": 352,
+        "UnitId": 3
+    },
+    {
+        "Id": 735,
+        "SpecializationAvailabilityId": 353,
+        "UnitId": 1
+    },
+    {
+        "Id": 736,
+        "SpecializationAvailabilityId": 355,
+        "UnitId": 1
+    },
+    {
+        "Id": 737,
+        "SpecializationAvailabilityId": 355,
+        "UnitId": 3
+    },
+    {
+        "Id": 739,
+        "SpecializationAvailabilityId": 356,
+        "UnitId": 1
+    },
+    {
+        "Id": 740,
+        "SpecializationAvailabilityId": 356,
+        "UnitId": 3
+    },
+    {
+        "Id": 741,
+        "SpecializationAvailabilityId": 357,
+        "UnitId": 1
+    },
+    {
+        "Id": 753,
+        "SpecializationAvailabilityId": 106,
+        "UnitId": 29
+    },
+    {
+        "Id": 754,
+        "SpecializationAvailabilityId": 247,
+        "UnitId": 185
+    },
+    {
+        "Id": 755,
+        "SpecializationAvailabilityId": 248,
+        "UnitId": 185
+    },
+    {
+        "Id": 756,
+        "SpecializationAvailabilityId": 249,
+        "UnitId": 185
+    },
+    {
+        "Id": 757,
+        "SpecializationAvailabilityId": 250,
+        "UnitId": 185
+    },
+    {
+        "Id": 759,
+        "SpecializationAvailabilityId": 114,
+        "UnitId": 184
+    },
+    {
+        "Id": 761,
+        "SpecializationAvailabilityId": 113,
+        "UnitId": 184
+    },
+    {
+        "Id": 762,
+        "SpecializationAvailabilityId": 109,
+        "UnitId": 82
+    },
+    {
+        "Id": 763,
+        "SpecializationAvailabilityId": 110,
+        "UnitId": 82
+    },
+    {
+        "Id": 764,
+        "SpecializationAvailabilityId": 111,
+        "UnitId": 82
+    },
+    {
+        "Id": 765,
+        "SpecializationAvailabilityId": 112,
+        "UnitId": 82
+    },
+    {
+        "Id": 781,
+        "SpecializationAvailabilityId": 302,
+        "UnitId": 262
+    },
+    {
+        "Id": 783,
+        "SpecializationAvailabilityId": 302,
+        "UnitId": 260
+    },
+    {
+        "Id": 784,
+        "SpecializationAvailabilityId": 164,
+        "UnitId": 141
+    },
+    {
+        "Id": 786,
+        "SpecializationAvailabilityId": 165,
+        "UnitId": 141
+    },
+    {
+        "Id": 788,
+        "SpecializationAvailabilityId": 166,
+        "UnitId": 141
+    },
+    {
+        "Id": 797,
+        "SpecializationAvailabilityId": 354,
+        "UnitId": 216
+    },
+    {
+        "Id": 798,
+        "SpecializationAvailabilityId": 354,
+        "UnitId": 235
+    },
+    {
+        "Id": 799,
+        "SpecializationAvailabilityId": 361,
+        "UnitId": 253
+    },
+    {
+        "Id": 800,
+        "SpecializationAvailabilityId": 361,
+        "UnitId": 254
+    },
+    {
+        "Id": 801,
+        "SpecializationAvailabilityId": 361,
+        "UnitId": 235
+    },
+    {
+        "Id": 806,
+        "SpecializationAvailabilityId": 363,
+        "UnitId": 254
+    },
+    {
+        "Id": 807,
+        "SpecializationAvailabilityId": 363,
+        "UnitId": 255
+    },
+    {
+        "Id": 808,
+        "SpecializationAvailabilityId": 253,
+        "UnitId": 199
+    },
+    {
+        "Id": 811,
+        "SpecializationAvailabilityId": 254,
+        "UnitId": 199
+    },
+    {
+        "Id": 813,
+        "SpecializationAvailabilityId": 255,
+        "UnitId": 199
+    },
+    {
+        "Id": 814,
+        "SpecializationAvailabilityId": 255,
+        "UnitId": 214
+    },
+    {
+        "Id": 815,
+        "SpecializationAvailabilityId": 255,
+        "UnitId": 3
+    },
+    {
+        "Id": 817,
+        "SpecializationAvailabilityId": 257,
+        "UnitId": 199
+    },
+    {
+        "Id": 818,
+        "SpecializationAvailabilityId": 257,
+        "UnitId": 200
+    },
+    {
+        "Id": 819,
+        "SpecializationAvailabilityId": 257,
+        "UnitId": 214
+    },
+    {
+        "Id": 820,
+        "SpecializationAvailabilityId": 257,
+        "UnitId": 3
+    },
+    {
+        "Id": 821,
+        "SpecializationAvailabilityId": 258,
+        "UnitId": 199
+    },
+    {
+        "Id": 822,
+        "SpecializationAvailabilityId": 258,
+        "UnitId": 200
+    },
+    {
+        "Id": 823,
+        "SpecializationAvailabilityId": 258,
+        "UnitId": 214
+    },
+    {
+        "Id": 824,
+        "SpecializationAvailabilityId": 258,
+        "UnitId": 3
+    },
+    {
+        "Id": 825,
+        "SpecializationAvailabilityId": 259,
+        "UnitId": 199
+    },
+    {
+        "Id": 826,
+        "SpecializationAvailabilityId": 259,
+        "UnitId": 200
+    },
+    {
+        "Id": 827,
+        "SpecializationAvailabilityId": 259,
+        "UnitId": 214
+    },
+    {
+        "Id": 828,
+        "SpecializationAvailabilityId": 259,
+        "UnitId": 3
+    },
+    {
+        "Id": 831,
+        "SpecializationAvailabilityId": 261,
+        "UnitId": 216
+    },
+    {
+        "Id": 833,
+        "SpecializationAvailabilityId": 262,
+        "UnitId": 199
+    },
+    {
+        "Id": 834,
+        "SpecializationAvailabilityId": 262,
+        "UnitId": 200
+    },
+    {
+        "Id": 835,
+        "SpecializationAvailabilityId": 262,
+        "UnitId": 214
+    },
+    {
+        "Id": 836,
+        "SpecializationAvailabilityId": 262,
+        "UnitId": 3
+    },
+    {
+        "Id": 841,
+        "SpecializationAvailabilityId": 221,
+        "UnitId": 212
+    },
+    {
+        "Id": 842,
+        "SpecializationAvailabilityId": 221,
+        "UnitId": 208
+    },
+    {
+        "Id": 854,
+        "SpecializationAvailabilityId": 224,
+        "UnitId": 212
+    },
+    {
+        "Id": 855,
+        "SpecializationAvailabilityId": 224,
+        "UnitId": 208
+    },
+    {
+        "Id": 857,
+        "SpecializationAvailabilityId": 225,
+        "UnitId": 212
+    },
+    {
+        "Id": 858,
+        "SpecializationAvailabilityId": 225,
+        "UnitId": 208
+    },
+    {
+        "Id": 860,
+        "SpecializationAvailabilityId": 226,
+        "UnitId": 212
+    },
+    {
+        "Id": 874,
+        "SpecializationAvailabilityId": 457,
+        "UnitId": 48
+    },
+    {
+        "Id": 877,
+        "SpecializationAvailabilityId": 467,
+        "UnitId": 185
+    },
+    {
+        "Id": 878,
+        "SpecializationAvailabilityId": 467,
+        "UnitId": 41
+    },
+    {
+        "Id": 879,
+        "SpecializationAvailabilityId": 467,
+        "UnitId": 37
+    },
+    {
+        "Id": 880,
+        "SpecializationAvailabilityId": 468,
+        "UnitId": 185
+    },
+    {
+        "Id": 881,
+        "SpecializationAvailabilityId": 468,
+        "UnitId": 41
+    },
+    {
+        "Id": 882,
+        "SpecializationAvailabilityId": 468,
+        "UnitId": 16
+    },
+    {
+        "Id": 883,
+        "SpecializationAvailabilityId": 468,
+        "UnitId": 15
+    },
+    {
+        "Id": 884,
+        "SpecializationAvailabilityId": 471,
+        "UnitId": 79
+    },
+    {
+        "Id": 885,
+        "SpecializationAvailabilityId": 471,
+        "UnitId": 262
+    },
+    {
+        "Id": 886,
+        "SpecializationAvailabilityId": 471,
+        "UnitId": 260
+    },
+    {
+        "Id": 887,
+        "SpecializationAvailabilityId": 471,
+        "UnitId": 259
+    },
+    {
+        "Id": 888,
+        "SpecializationAvailabilityId": 472,
+        "UnitId": 49
+    },
+    {
+        "Id": 889,
+        "SpecializationAvailabilityId": 472,
+        "UnitId": 79
+    },
+    {
+        "Id": 890,
+        "SpecializationAvailabilityId": 472,
+        "UnitId": 262
+    },
+    {
+        "Id": 891,
+        "SpecializationAvailabilityId": 472,
+        "UnitId": 260
+    },
+    {
+        "Id": 897,
+        "SpecializationAvailabilityId": 261,
+        "UnitId": 204
+    },
+    {
+        "Id": 898,
+        "SpecializationAvailabilityId": 113,
+        "UnitId": 81
+    },
+    {
+        "Id": 899,
+        "SpecializationAvailabilityId": 114,
+        "UnitId": 81
+    },
+    {
+        "Id": 901,
+        "SpecializationAvailabilityId": 471,
+        "UnitId": 49
+    },
+    {
+        "Id": 902,
+        "SpecializationAvailabilityId": 172,
+        "UnitId": 206
+    },
+    {
+        "Id": 906,
+        "SpecializationAvailabilityId": 176,
+        "UnitId": 145
+    },
+    {
+        "Id": 907,
+        "SpecializationAvailabilityId": 500,
+        "UnitId": 1
+    },
+    {
+        "Id": 908,
+        "SpecializationAvailabilityId": 500,
+        "UnitId": 253
+    },
+    {
+        "Id": 909,
+        "SpecializationAvailabilityId": 501,
+        "UnitId": 1
+    },
+    {
+        "Id": 910,
+        "SpecializationAvailabilityId": 501,
+        "UnitId": 253
+    },
+    {
+        "Id": 911,
+        "SpecializationAvailabilityId": 354,
+        "UnitId": 204
+    },
+    {
+        "Id": 913,
+        "SpecializationAvailabilityId": 502,
+        "UnitId": 254
+    },
+    {
+        "Id": 914,
+        "SpecializationAvailabilityId": 502,
+        "UnitId": 255
+    },
+    {
+        "Id": 917,
+        "SpecializationAvailabilityId": 503,
+        "UnitId": 254
+    },
+    {
+        "Id": 918,
+        "SpecializationAvailabilityId": 503,
+        "UnitId": 255
+    },
+    {
+        "Id": 921,
+        "SpecializationAvailabilityId": 362,
+        "UnitId": 254
+    },
+    {
+        "Id": 922,
+        "SpecializationAvailabilityId": 362,
+        "UnitId": 255
+    },
+    {
+        "Id": 932,
+        "SpecializationAvailabilityId": 536,
+        "UnitId": 1
+    },
+    {
+        "Id": 933,
+        "SpecializationAvailabilityId": 536,
+        "UnitId": 199
+    },
+    {
+        "Id": 934,
+        "SpecializationAvailabilityId": 536,
+        "UnitId": 212
+    },
+    {
+        "Id": 935,
+        "SpecializationAvailabilityId": 536,
+        "UnitId": 208
+    },
+    {
+        "Id": 937,
+        "SpecializationAvailabilityId": 224,
+        "UnitId": 199
+    },
+    {
+        "Id": 939,
+        "SpecializationAvailabilityId": 226,
+        "UnitId": 199
+    },
+    {
+        "Id": 948,
+        "SpecializationAvailabilityId": 555,
+        "UnitId": 199
+    },
+    {
+        "Id": 963,
+        "SpecializationAvailabilityId": 560,
+        "UnitId": 1
+    },
+    {
+        "Id": 964,
+        "SpecializationAvailabilityId": 560,
+        "UnitId": 199
+    },
+    {
+        "Id": 969,
+        "SpecializationAvailabilityId": 225,
+        "UnitId": 273
+    },
+    {
+        "Id": 995,
+        "SpecializationAvailabilityId": 502,
+        "UnitId": 235
+    },
+    {
+        "Id": 998,
+        "SpecializationAvailabilityId": 248,
+        "UnitId": 41
+    },
+    {
+        "Id": 999,
+        "SpecializationAvailabilityId": 248,
+        "UnitId": 26
+    },
+    {
+        "Id": 1000,
+        "SpecializationAvailabilityId": 250,
+        "UnitId": 41
+    },
+    {
+        "Id": 1001,
+        "SpecializationAvailabilityId": 250,
+        "UnitId": 15
+    },
+    {
+        "Id": 1002,
+        "SpecializationAvailabilityId": 250,
+        "UnitId": 16
+    },
+    {
+        "Id": 1009,
+        "SpecializationAvailabilityId": 608,
+        "UnitId": 185
+    },
+    {
+        "Id": 1010,
+        "SpecializationAvailabilityId": 608,
+        "UnitId": 41
+    },
+    {
+        "Id": 1011,
+        "SpecializationAvailabilityId": 608,
+        "UnitId": 15
+    },
+    {
+        "Id": 1012,
+        "SpecializationAvailabilityId": 608,
+        "UnitId": 16
+    },
+    {
+        "Id": 1013,
+        "SpecializationAvailabilityId": 609,
+        "UnitId": 185
+    },
+    {
+        "Id": 1014,
+        "SpecializationAvailabilityId": 609,
+        "UnitId": 41
+    },
+    {
+        "Id": 1020,
+        "SpecializationAvailabilityId": 613,
+        "UnitId": 184
+    },
+    {
+        "Id": 1021,
+        "SpecializationAvailabilityId": 613,
+        "UnitId": 79
+    },
+    {
+        "Id": 1024,
+        "SpecializationAvailabilityId": 614,
+        "UnitId": 184
+    },
+    {
+        "Id": 1025,
+        "SpecializationAvailabilityId": 614,
+        "UnitId": 79
+    },
+    {
+        "Id": 1027,
+        "SpecializationAvailabilityId": 614,
+        "UnitId": 260
+    },
+    {
+        "Id": 1029,
+        "SpecializationAvailabilityId": 613,
+        "UnitId": 260
+    },
+    {
+        "Id": 1030,
+        "SpecializationAvailabilityId": 615,
+        "UnitId": 49
+    },
+    {
+        "Id": 1031,
+        "SpecializationAvailabilityId": 615,
+        "UnitId": 79
+    },
+    {
+        "Id": 1033,
+        "SpecializationAvailabilityId": 615,
+        "UnitId": 260
+    },
+    {
+        "Id": 1034,
+        "SpecializationAvailabilityId": 616,
+        "UnitId": 49
+    },
+    {
+        "Id": 1035,
+        "SpecializationAvailabilityId": 616,
+        "UnitId": 259
+    },
+    {
+        "Id": 1046,
+        "SpecializationAvailabilityId": 621,
+        "UnitId": 262
+    },
+    {
+        "Id": 1051,
+        "SpecializationAvailabilityId": 636,
+        "UnitId": 49
+    },
+    {
+        "Id": 1053,
+        "SpecializationAvailabilityId": 172,
+        "UnitId": 142
+    },
+    {
+        "Id": 1054,
+        "SpecializationAvailabilityId": 172,
+        "UnitId": 90
+    },
+    {
+        "Id": 1055,
+        "SpecializationAvailabilityId": 172,
+        "UnitId": 89
+    },
+    {
+        "Id": 1057,
+        "SpecializationAvailabilityId": 174,
+        "UnitId": 141
+    },
+    {
+        "Id": 1058,
+        "SpecializationAvailabilityId": 174,
+        "UnitId": 142
+    },
+    {
+        "Id": 1059,
+        "SpecializationAvailabilityId": 174,
+        "UnitId": 90
+    },
+    {
+        "Id": 1060,
+        "SpecializationAvailabilityId": 174,
+        "UnitId": 89
+    },
+    {
+        "Id": 1061,
+        "SpecializationAvailabilityId": 174,
+        "UnitId": 145
+    },
+    {
+        "Id": 1062,
+        "SpecializationAvailabilityId": 175,
+        "UnitId": 142
+    },
+    {
+        "Id": 1063,
+        "SpecializationAvailabilityId": 175,
+        "UnitId": 90
+    },
+    {
+        "Id": 1064,
+        "SpecializationAvailabilityId": 175,
+        "UnitId": 89
+    },
+    {
+        "Id": 1066,
+        "SpecializationAvailabilityId": 177,
+        "UnitId": 141
+    },
+    {
+        "Id": 1067,
+        "SpecializationAvailabilityId": 177,
+        "UnitId": 142
+    },
+    {
+        "Id": 1068,
+        "SpecializationAvailabilityId": 177,
+        "UnitId": 90
+    },
+    {
+        "Id": 1069,
+        "SpecializationAvailabilityId": 177,
+        "UnitId": 89
+    },
+    {
+        "Id": 1071,
+        "SpecializationAvailabilityId": 555,
+        "UnitId": 365
+    },
+    {
+        "Id": 1072,
+        "SpecializationAvailabilityId": 555,
+        "UnitId": 214
+    },
+    {
+        "Id": 1073,
+        "SpecializationAvailabilityId": 555,
+        "UnitId": 3
+    },
+    {
+        "Id": 1090,
+        "SpecializationAvailabilityId": 648,
+        "UnitId": 3
+    },
+    {
+        "Id": 1091,
+        "SpecializationAvailabilityId": 649,
+        "UnitId": 199
+    },
+    {
+        "Id": 1092,
+        "SpecializationAvailabilityId": 649,
+        "UnitId": 365
+    },
+    {
+        "Id": 1093,
+        "SpecializationAvailabilityId": 649,
+        "UnitId": 214
+    },
+    {
+        "Id": 1094,
+        "SpecializationAvailabilityId": 649,
+        "UnitId": 3
+    },
+    {
+        "Id": 1095,
+        "SpecializationAvailabilityId": 650,
+        "UnitId": 199
+    },
+    {
+        "Id": 1096,
+        "SpecializationAvailabilityId": 650,
+        "UnitId": 365
+    },
+    {
+        "Id": 1097,
+        "SpecializationAvailabilityId": 650,
+        "UnitId": 214
+    },
+    {
+        "Id": 1098,
+        "SpecializationAvailabilityId": 650,
+        "UnitId": 3
+    },
+    {
+        "Id": 1101,
+        "SpecializationAvailabilityId": 653,
+        "UnitId": 212
+    },
+    {
+        "Id": 1102,
+        "SpecializationAvailabilityId": 653,
+        "UnitId": 208
+    },
+    {
+        "Id": 1115,
+        "SpecializationAvailabilityId": 656,
+        "UnitId": 1
+    },
+    {
+        "Id": 1116,
+        "SpecializationAvailabilityId": 656,
+        "UnitId": 212
+    },
+    {
+        "Id": 1117,
+        "SpecializationAvailabilityId": 656,
+        "UnitId": 208
+    },
+    {
+        "Id": 1120,
+        "SpecializationAvailabilityId": 657,
+        "UnitId": 212
+    },
+    {
+        "Id": 1121,
+        "SpecializationAvailabilityId": 657,
+        "UnitId": 208
+    },
+    {
+        "Id": 1126,
+        "SpecializationAvailabilityId": 659,
+        "UnitId": 141
+    },
+    {
+        "Id": 1127,
+        "SpecializationAvailabilityId": 659,
+        "UnitId": 142
+    },
+    {
+        "Id": 1128,
+        "SpecializationAvailabilityId": 659,
+        "UnitId": 90
+    },
+    {
+        "Id": 1129,
+        "SpecializationAvailabilityId": 659,
+        "UnitId": 89
+    },
+    {
+        "Id": 1131,
+        "SpecializationAvailabilityId": 661,
+        "UnitId": 185
+    },
+    {
+        "Id": 1132,
+        "SpecializationAvailabilityId": 661,
+        "UnitId": 41
+    },
+    {
+        "Id": 1133,
+        "SpecializationAvailabilityId": 661,
+        "UnitId": 15
+    },
+    {
+        "Id": 1134,
+        "SpecializationAvailabilityId": 661,
+        "UnitId": 16
+    },
+    {
+        "Id": 1135,
+        "SpecializationAvailabilityId": 662,
+        "UnitId": 185
+    },
+    {
+        "Id": 1136,
+        "SpecializationAvailabilityId": 662,
+        "UnitId": 41
+    },
+    {
+        "Id": 1137,
+        "SpecializationAvailabilityId": 662,
+        "UnitId": 15
+    },
+    {
+        "Id": 1138,
+        "SpecializationAvailabilityId": 662,
+        "UnitId": 16
+    },
+    {
+        "Id": 1140,
+        "SpecializationAvailabilityId": 668,
+        "UnitId": 212
+    },
+    {
+        "Id": 1141,
+        "SpecializationAvailabilityId": 668,
+        "UnitId": 208
+    },
+    {
+        "Id": 1143,
+        "SpecializationAvailabilityId": 668,
+        "UnitId": 383
+    },
+    {
+        "Id": 1147,
+        "SpecializationAvailabilityId": 653,
+        "UnitId": 383
+    },
+    {
+        "Id": 1148,
+        "SpecializationAvailabilityId": 221,
+        "UnitId": 383
+    },
+    {
+        "Id": 1151,
+        "SpecializationAvailabilityId": 609,
+        "UnitId": 386
+    },
+    {
+        "Id": 1152,
+        "SpecializationAvailabilityId": 609,
+        "UnitId": 26
+    },
+    {
+        "Id": 1154,
+        "SpecializationAvailabilityId": 621,
+        "UnitId": 184
+    },
+    {
+        "Id": 1157,
+        "SpecializationAvailabilityId": 621,
+        "UnitId": 79
+    },
+    {
+        "Id": 1159,
+        "SpecializationAvailabilityId": 687,
+        "UnitId": 259
+    },
+    {
+        "Id": 1163,
+        "SpecializationAvailabilityId": 621,
+        "UnitId": 392
+    },
+    {
+        "Id": 1165,
+        "SpecializationAvailabilityId": 693,
+        "UnitId": 365
+    },
+    {
+        "Id": 1166,
+        "SpecializationAvailabilityId": 693,
+        "UnitId": 214
+    },
+    {
+        "Id": 1167,
+        "SpecializationAvailabilityId": 693,
+        "UnitId": 3
+    },
+    {
+        "Id": 1168,
+        "SpecializationAvailabilityId": 695,
+        "UnitId": 365
+    },
+    {
+        "Id": 1169,
+        "SpecializationAvailabilityId": 695,
+        "UnitId": 214
+    },
+    {
+        "Id": 1170,
+        "SpecializationAvailabilityId": 695,
+        "UnitId": 3
+    },
+    {
+        "Id": 1171,
+        "SpecializationAvailabilityId": 696,
+        "UnitId": 365
+    },
+    {
+        "Id": 1172,
+        "SpecializationAvailabilityId": 696,
+        "UnitId": 214
+    },
+    {
+        "Id": 1173,
+        "SpecializationAvailabilityId": 696,
+        "UnitId": 3
+    },
+    {
+        "Id": 1174,
+        "SpecializationAvailabilityId": 697,
+        "UnitId": 365
+    },
+    {
+        "Id": 1175,
+        "SpecializationAvailabilityId": 697,
+        "UnitId": 214
+    },
+    {
+        "Id": 1176,
+        "SpecializationAvailabilityId": 697,
+        "UnitId": 3
+    },
+    {
+        "Id": 1180,
+        "SpecializationAvailabilityId": 696,
+        "UnitId": 200
+    },
+    {
+        "Id": 1182,
+        "SpecializationAvailabilityId": 698,
+        "UnitId": 204
+    },
+    {
+        "Id": 1183,
+        "SpecializationAvailabilityId": 698,
+        "UnitId": 216
+    },
+    {
+        "Id": 1184,
+        "SpecializationAvailabilityId": 362,
+        "UnitId": 235
+    },
+    {
+        "Id": 1185,
+        "SpecializationAvailabilityId": 363,
+        "UnitId": 235
+    },
+    {
+        "Id": 1186,
+        "SpecializationAvailabilityId": 503,
+        "UnitId": 235
+    },
+    {
+        "Id": 1187,
+        "SpecializationAvailabilityId": 558,
+        "UnitId": 1
+    },
+    {
+        "Id": 1188,
+        "SpecializationAvailabilityId": 558,
+        "UnitId": 253
+    },
+    {
+        "Id": 1189,
+        "SpecializationAvailabilityId": 711,
+        "UnitId": 365
+    },
+    {
+        "Id": 1190,
+        "SpecializationAvailabilityId": 711,
+        "UnitId": 214
+    },
+    {
+        "Id": 1191,
+        "SpecializationAvailabilityId": 711,
+        "UnitId": 3
+    },
+    {
+        "Id": 1194,
+        "SpecializationAvailabilityId": 556,
+        "UnitId": 1
+    },
+    {
+        "Id": 1195,
+        "SpecializationAvailabilityId": 556,
+        "UnitId": 253
+    },
+    {
+        "Id": 1196,
+        "SpecializationAvailabilityId": 557,
+        "UnitId": 1
+    },
+    {
+        "Id": 1197,
+        "SpecializationAvailabilityId": 557,
+        "UnitId": 253
+    },
+    {
+        "Id": 1198,
+        "SpecializationAvailabilityId": 713,
+        "UnitId": 1
+    },
+    {
+        "Id": 1199,
+        "SpecializationAvailabilityId": 713,
+        "UnitId": 253
+    },
+    {
+        "Id": 1200,
+        "SpecializationAvailabilityId": 736,
+        "UnitId": 1
+    },
+    {
+        "Id": 1201,
+        "SpecializationAvailabilityId": 736,
+        "UnitId": 253
+    },
+    {
+        "Id": 1202,
+        "SpecializationAvailabilityId": 716,
+        "UnitId": 1
+    },
+    {
+        "Id": 1203,
+        "SpecializationAvailabilityId": 716,
+        "UnitId": 253
+    },
+    {
+        "Id": 1204,
+        "SpecializationAvailabilityId": 737,
+        "UnitId": 365
+    },
+    {
+        "Id": 1205,
+        "SpecializationAvailabilityId": 737,
+        "UnitId": 214
+    },
+    {
+        "Id": 1206,
+        "SpecializationAvailabilityId": 737,
+        "UnitId": 3
+    },
+    {
+        "Id": 1207,
+        "SpecializationAvailabilityId": 739,
+        "UnitId": 1
+    },
+    {
+        "Id": 1208,
+        "SpecializationAvailabilityId": 739,
+        "UnitId": 253
+    },
+    {
+        "Id": 1209,
+        "SpecializationAvailabilityId": 740,
+        "UnitId": 1
+    },
+    {
+        "Id": 1210,
+        "SpecializationAvailabilityId": 740,
+        "UnitId": 253
+    },
+    {
+        "Id": 1211,
+        "SpecializationAvailabilityId": 741,
+        "UnitId": 1
+    },
+    {
+        "Id": 1212,
+        "SpecializationAvailabilityId": 741,
+        "UnitId": 253
+    },
+    {
+        "Id": 1213,
+        "SpecializationAvailabilityId": 742,
+        "UnitId": 1
+    },
+    {
+        "Id": 1214,
+        "SpecializationAvailabilityId": 742,
+        "UnitId": 253
+    },
+    {
+        "Id": 1215,
+        "SpecializationAvailabilityId": 743,
+        "UnitId": 1
+    },
+    {
+        "Id": 1216,
+        "SpecializationAvailabilityId": 743,
+        "UnitId": 253
+    },
+    {
+        "Id": 1217,
+        "SpecializationAvailabilityId": 101,
+        "UnitId": 180
+    },
+    {
+        "Id": 1218,
+        "SpecializationAvailabilityId": 101,
+        "UnitId": 78
+    },
+    {
+        "Id": 1220,
+        "SpecializationAvailabilityId": 102,
+        "UnitId": 78
+    },
+    {
+        "Id": 1221,
+        "SpecializationAvailabilityId": 103,
+        "UnitId": 180
+    },
+    {
+        "Id": 1222,
+        "SpecializationAvailabilityId": 103,
+        "UnitId": 78
+    },
+    {
+        "Id": 1223,
+        "SpecializationAvailabilityId": 448,
+        "UnitId": 180
+    },
+    {
+        "Id": 1224,
+        "SpecializationAvailabilityId": 448,
+        "UnitId": 78
+    },
+    {
+        "Id": 1225,
+        "SpecializationAvailabilityId": 606,
+        "UnitId": 180
+    },
+    {
+        "Id": 1226,
+        "SpecializationAvailabilityId": 606,
+        "UnitId": 78
+    },
+    {
+        "Id": 1227,
+        "SpecializationAvailabilityId": 115,
+        "UnitId": 82
+    },
+    {
+        "Id": 1229,
+        "SpecializationAvailabilityId": 116,
+        "UnitId": 82
+    },
+    {
+        "Id": 1230,
+        "SpecializationAvailabilityId": 116,
+        "UnitId": 22
+    },
+    {
+        "Id": 1231,
+        "SpecializationAvailabilityId": 117,
+        "UnitId": 82
+    },
+    {
+        "Id": 1232,
+        "SpecializationAvailabilityId": 117,
+        "UnitId": 22
+    },
+    {
+        "Id": 1233,
+        "SpecializationAvailabilityId": 745,
+        "UnitId": 82
+    },
+    {
+        "Id": 1234,
+        "SpecializationAvailabilityId": 745,
+        "UnitId": 22
+    },
+    {
+        "Id": 1237,
+        "SpecializationAvailabilityId": 292,
+        "UnitId": 47
+    },
+    {
+        "Id": 1238,
+        "SpecializationAvailabilityId": 292,
+        "UnitId": 52
+    },
+    {
+        "Id": 1239,
+        "SpecializationAvailabilityId": 293,
+        "UnitId": 47
+    },
+    {
+        "Id": 1240,
+        "SpecializationAvailabilityId": 293,
+        "UnitId": 52
+    },
+    {
+        "Id": 1241,
+        "SpecializationAvailabilityId": 300,
+        "UnitId": 47
+    },
+    {
+        "Id": 1242,
+        "SpecializationAvailabilityId": 300,
+        "UnitId": 52
+    },
+    {
+        "Id": 1243,
+        "SpecializationAvailabilityId": 301,
+        "UnitId": 47
+    },
+    {
+        "Id": 1244,
+        "SpecializationAvailabilityId": 301,
+        "UnitId": 52
+    },
+    {
+        "Id": 1245,
+        "SpecializationAvailabilityId": 473,
+        "UnitId": 47
+    },
+    {
+        "Id": 1246,
+        "SpecializationAvailabilityId": 473,
+        "UnitId": 52
+    },
+    {
+        "Id": 1247,
+        "SpecializationAvailabilityId": 748,
+        "UnitId": 47
+    },
+    {
+        "Id": 1248,
+        "SpecializationAvailabilityId": 748,
+        "UnitId": 52
+    },
+    {
+        "Id": 1251,
+        "SpecializationAvailabilityId": 247,
+        "UnitId": 41
+    },
+    {
+        "Id": 1252,
+        "SpecializationAvailabilityId": 247,
+        "UnitId": 387
+    },
+    {
+        "Id": 1253,
+        "SpecializationAvailabilityId": 247,
+        "UnitId": 37
+    },
+    {
+        "Id": 1254,
+        "SpecializationAvailabilityId": 618,
+        "UnitId": 392
+    },
+    {
+        "Id": 1256,
+        "SpecializationAvailabilityId": 618,
+        "UnitId": 260
+    },
+    {
+        "Id": 1257,
+        "SpecializationAvailabilityId": 619,
+        "UnitId": 392
+    },
+    {
+        "Id": 1259,
+        "SpecializationAvailabilityId": 620,
+        "UnitId": 184
+    },
+    {
+        "Id": 1260,
+        "SpecializationAvailabilityId": 620,
+        "UnitId": 392
+    },
+    {
+        "Id": 1263,
+        "SpecializationAvailabilityId": 622,
+        "UnitId": 184
+    },
+    {
+        "Id": 1264,
+        "SpecializationAvailabilityId": 622,
+        "UnitId": 392
+    },
+    {
+        "Id": 1265,
+        "SpecializationAvailabilityId": 622,
+        "UnitId": 79
+    },
+    {
+        "Id": 1267,
+        "SpecializationAvailabilityId": 620,
+        "UnitId": 79
+    },
+    {
+        "Id": 1269,
+        "SpecializationAvailabilityId": 752,
+        "UnitId": 184
+    },
+    {
+        "Id": 1270,
+        "SpecializationAvailabilityId": 752,
+        "UnitId": 392
+    },
+    {
+        "Id": 1271,
+        "SpecializationAvailabilityId": 752,
+        "UnitId": 79
+    },
+    {
+        "Id": 1273,
+        "SpecializationAvailabilityId": 754,
+        "UnitId": 1
+    },
+    {
+        "Id": 1274,
+        "SpecializationAvailabilityId": 754,
+        "UnitId": 253
+    },
+    {
+        "Id": 1275,
+        "SpecializationAvailabilityId": 738,
+        "UnitId": 365
+    },
+    {
+        "Id": 1276,
+        "SpecializationAvailabilityId": 738,
+        "UnitId": 214
+    },
+    {
+        "Id": 1277,
+        "SpecializationAvailabilityId": 738,
+        "UnitId": 3
+    },
+    {
+        "Id": 1281,
+        "SpecializationAvailabilityId": 223,
+        "UnitId": 425
+    },
+    {
+        "Id": 1282,
+        "SpecializationAvailabilityId": 539,
+        "UnitId": 425
+    },
+    {
+        "Id": 1283,
+        "SpecializationAvailabilityId": 755,
+        "UnitId": 425
+    },
+    {
+        "Id": 1284,
+        "SpecializationAvailabilityId": 223,
+        "UnitId": 212
+    },
+    {
+        "Id": 1285,
+        "SpecializationAvailabilityId": 223,
+        "UnitId": 208
+    },
+    {
+        "Id": 1286,
+        "SpecializationAvailabilityId": 539,
+        "UnitId": 212
+    },
+    {
+        "Id": 1287,
+        "SpecializationAvailabilityId": 539,
+        "UnitId": 208
+    },
+    {
+        "Id": 1288,
+        "SpecializationAvailabilityId": 755,
+        "UnitId": 212
+    },
+    {
+        "Id": 1289,
+        "SpecializationAvailabilityId": 755,
+        "UnitId": 208
+    },
+    {
+        "Id": 1290,
+        "SpecializationAvailabilityId": 764,
+        "UnitId": 365
+    },
+    {
+        "Id": 1291,
+        "SpecializationAvailabilityId": 764,
+        "UnitId": 214
+    },
+    {
+        "Id": 1292,
+        "SpecializationAvailabilityId": 764,
+        "UnitId": 3
+    },
+    {
+        "Id": 1293,
+        "SpecializationAvailabilityId": 773,
+        "UnitId": 21
+    },
+    {
+        "Id": 1294,
+        "SpecializationAvailabilityId": 774,
+        "UnitId": 22
+    },
+    {
+        "Id": 1295,
+        "SpecializationAvailabilityId": 776,
+        "UnitId": 22
+    },
+    {
+        "Id": 1296,
+        "SpecializationAvailabilityId": 775,
+        "UnitId": 22
+    },
+    {
+        "Id": 1297,
+        "SpecializationAvailabilityId": 777,
+        "UnitId": 33
+    },
+    {
+        "Id": 1298,
+        "SpecializationAvailabilityId": 457,
+        "UnitId": 82
+    },
+    {
+        "Id": 1300,
+        "SpecializationAvailabilityId": 788,
+        "UnitId": 47
+    },
+    {
+        "Id": 1301,
+        "SpecializationAvailabilityId": 788,
+        "UnitId": 82
+    },
+    {
+        "Id": 1302,
+        "SpecializationAvailabilityId": 789,
+        "UnitId": 47
+    },
+    {
+        "Id": 1303,
+        "SpecializationAvailabilityId": 789,
+        "UnitId": 82
+    },
+    {
+        "Id": 1304,
+        "SpecializationAvailabilityId": 790,
+        "UnitId": 47
+    },
+    {
+        "Id": 1305,
+        "SpecializationAvailabilityId": 790,
+        "UnitId": 82
+    },
+    {
+        "Id": 1306,
+        "SpecializationAvailabilityId": 791,
+        "UnitId": 47
+    },
+    {
+        "Id": 1307,
+        "SpecializationAvailabilityId": 791,
+        "UnitId": 82
+    },
+    {
+        "Id": 1308,
+        "SpecializationAvailabilityId": 797,
+        "UnitId": 82
+    },
+    {
+        "Id": 1311,
+        "SpecializationAvailabilityId": 610,
+        "UnitId": 47
+    },
+    {
+        "Id": 1312,
+        "SpecializationAvailabilityId": 610,
+        "UnitId": 82
+    },
+    {
+        "Id": 1313,
+        "SpecializationAvailabilityId": 798,
+        "UnitId": 47
+    },
+    {
+        "Id": 1314,
+        "SpecializationAvailabilityId": 798,
+        "UnitId": 82
+    },
+    {
+        "Id": 1315,
+        "SpecializationAvailabilityId": 801,
+        "UnitId": 49
+    },
+    {
+        "Id": 1316,
+        "SpecializationAvailabilityId": 801,
+        "UnitId": 79
+    },
+    {
+        "Id": 1318,
+        "SpecializationAvailabilityId": 801,
+        "UnitId": 260
+    },
+    {
+        "Id": 1319,
+        "SpecializationAvailabilityId": 807,
+        "UnitId": 47
+    },
+    {
+        "Id": 1320,
+        "SpecializationAvailabilityId": 807,
+        "UnitId": 82
+    },
+    {
+        "Id": 1321,
+        "SpecializationAvailabilityId": 808,
+        "UnitId": 82
+    },
+    {
+        "Id": 1322,
+        "SpecializationAvailabilityId": 751,
+        "UnitId": 180
+    },
+    {
+        "Id": 1323,
+        "SpecializationAvailabilityId": 751,
+        "UnitId": 78
+    },
+    {
+        "Id": 1324,
+        "SpecializationAvailabilityId": 619,
+        "UnitId": 260
+    },
+    {
+        "Id": 1325,
+        "SpecializationAvailabilityId": 815,
+        "UnitId": 365
+    },
+    {
+        "Id": 1326,
+        "SpecializationAvailabilityId": 815,
+        "UnitId": 214
+    },
+    {
+        "Id": 1327,
+        "SpecializationAvailabilityId": 815,
+        "UnitId": 3
+    },
+    {
+        "Id": 1328,
+        "SpecializationAvailabilityId": 816,
+        "UnitId": 365
+    },
+    {
+        "Id": 1329,
+        "SpecializationAvailabilityId": 816,
+        "UnitId": 214
+    },
+    {
+        "Id": 1330,
+        "SpecializationAvailabilityId": 816,
+        "UnitId": 3
+    },
+    {
+        "Id": 1331,
+        "SpecializationAvailabilityId": 817,
+        "UnitId": 365
+    },
+    {
+        "Id": 1332,
+        "SpecializationAvailabilityId": 817,
+        "UnitId": 214
+    },
+    {
+        "Id": 1333,
+        "SpecializationAvailabilityId": 817,
+        "UnitId": 3
+    },
+    {
+        "Id": 1334,
+        "SpecializationAvailabilityId": 818,
+        "UnitId": 1
+    },
+    {
+        "Id": 1335,
+        "SpecializationAvailabilityId": 818,
+        "UnitId": 253
+    },
+    {
+        "Id": 1336,
+        "SpecializationAvailabilityId": 819,
+        "UnitId": 1
+    },
+    {
+        "Id": 1337,
+        "SpecializationAvailabilityId": 819,
+        "UnitId": 253
+    },
+    {
+        "Id": 1338,
+        "SpecializationAvailabilityId": 820,
+        "UnitId": 1
+    },
+    {
+        "Id": 1339,
+        "SpecializationAvailabilityId": 820,
+        "UnitId": 253
+    },
+    {
+        "Id": 1340,
+        "SpecializationAvailabilityId": 821,
+        "UnitId": 1
+    },
+    {
+        "Id": 1341,
+        "SpecializationAvailabilityId": 821,
+        "UnitId": 253
+    },
+    {
+        "Id": 1342,
+        "SpecializationAvailabilityId": 822,
+        "UnitId": 425
+    },
+    {
+        "Id": 1343,
+        "SpecializationAvailabilityId": 822,
+        "UnitId": 212
+    },
+    {
+        "Id": 1344,
+        "SpecializationAvailabilityId": 822,
+        "UnitId": 208
+    },
+    {
+        "Id": 1345,
+        "SpecializationAvailabilityId": 823,
+        "UnitId": 184
+    },
+    {
+        "Id": 1346,
+        "SpecializationAvailabilityId": 823,
+        "UnitId": 392
+    },
+    {
+        "Id": 1347,
+        "SpecializationAvailabilityId": 823,
+        "UnitId": 79
+    },
+    {
+        "Id": 1348,
+        "SpecializationAvailabilityId": 816,
+        "UnitId": 200
+    },
+    {
+        "Id": 1349,
+        "SpecializationAvailabilityId": 838,
+        "UnitId": 365
+    },
+    {
+        "Id": 1350,
+        "SpecializationAvailabilityId": 838,
+        "UnitId": 214
+    },
+    {
+        "Id": 1351,
+        "SpecializationAvailabilityId": 838,
+        "UnitId": 3
+    },
+    {
+        "Id": 1352,
+        "SpecializationAvailabilityId": 842,
+        "UnitId": 425
+    },
+    {
+        "Id": 1354,
+        "SpecializationAvailabilityId": 842,
+        "UnitId": 212
+    },
+    {
+        "Id": 1355,
+        "SpecializationAvailabilityId": 842,
+        "UnitId": 208
+    },
+    {
+        "Id": 1356,
+        "SpecializationAvailabilityId": 843,
+        "UnitId": 141
+    },
+    {
+        "Id": 1357,
+        "SpecializationAvailabilityId": 843,
+        "UnitId": 142
+    }
+]

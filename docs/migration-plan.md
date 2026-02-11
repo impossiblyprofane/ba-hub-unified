@@ -2,90 +2,67 @@
 
 ## 📋 Overview
 
-Migrating BA Hub from React Express SSR to Qwik + FastAPI GraphQL while preserving the excellent metadata-only SSR approach.
+Lightweight migration of BA Hub to Qwik + Fastify GraphQL. This is a third-party stats viewer - keeping it simple.
 
 ## 🎯 Migration Strategy
 
 ### Phase 1: Project Setup ✅
 - [x] Create unified repo structure
-- [x] Document current architecture analysis
-- [x] Plan folder-based monorepo (vs branches)
+- [x] Simplify scope for lightweight viewer
 
-### Phase 2: Backend Migration (Next)
-- [ ] Set up FastAPI project structure
-- [ ] Design GraphQL schema based on existing REST endpoints  
-- [ ] Implement database models (PostgreSQL)
-- [ ] Create GraphQL resolvers
-- [ ] Add authentication/authorization
-- [ ] Set up testing framework
+### Phase 2: Backend (Fastify + GraphQL)
+- [ ] Set up Fastify + GraphQL server
+- [ ] Design GraphQL schema
+- [ ] Static JSON data source
+- [ ] WebSocket support for real-time
 
-### Phase 3: Frontend Migration
-- [ ] Initialize Qwik project
-- [ ] Set up Tailwind CSS and design system
-- [ ] Migrate shared types to `/shared`
-- [ ] Create base components (Button, Input, etc.)
-- [ ] Implement routing and layout
+### Phase 3: Frontend (Qwik SPA + SSR)
+- [ ] Initialize Qwik project  
+- [ ] Fastify SSR layer (metadata only)
+- [ ] Tailwind CSS setup
+- [ ] Base components
+- [ ] GraphQL client
 
-### Phase 4: Feature Migration
+### Phase 4: Features
 - [ ] Arsenal browser (unit database)
 - [ ] Deck builder (drag & drop)
-- [ ] Map viewer (canvas/Konva replacement)
+- [ ] Map viewer
 - [ ] Statistics dashboard
-- [ ] Tournament system
 
-### Phase 5: Advanced Features  
-- [ ] Real-time collaboration (WebSocket)
-- [ ] Metadata-only SSR for Qwik
-- [ ] Progressive enhancement
+### Phase 5: Polish
+- [ ] WebSocket integration
 - [ ] Performance optimization
+- [ ] Docker deployment
 
-## 🏗️ Architecture Decisions
+## 🏗️ Architecture (Simplified)
 
-### Why Qwik over React?
-- **Resumability**: No hydration waterfall
-- **Performance**: Better Core Web Vitals
-- **Bundle size**: Automatic code splitting
-- **SEO**: Can preserve metadata-only SSR approach
+### Stack
+- **Frontend**: Qwik SPA + Fastify (metadata SSR only)
+- **Backend**: Fastify + GraphQL (Mercurius)
+- **Language**: TypeScript everywhere
+- **Data**: Static JSON files
+- **Real-time**: WebSockets
+- **Styling**: Tailwind CSS
 
-### Why GraphQL over REST?
-- **Flexibility**: Clients fetch exactly what they need
-- **Type safety**: Generated TypeScript types
-- **Tooling**: Great dev experience with GraphiQL
-- **Real-time**: Built-in subscription support
+### Why This Stack?
+- **Qwik**: Resumability, performance, SEO-friendly
+- **GraphQL**: Flexible querying, type-safe
+- **Fastify**: Fast, TypeScript-friendly, simple
+- **Monorepo**: Shared types between frontend/backend
 
-### Why FastAPI over Express?
-- **Performance**: Async/await by default
-- **Types**: Built-in type validation with Pydantic
-- **Documentation**: Auto-generated OpenAPI docs
-- **GraphQL**: Excellent integration with Strawberry
+## 📊 Key Points
 
-## 📊 Current Analysis
+- **Static data source**: JSON files, served via GraphQL
+- **Configurable results**: Data output changes based on configurations
+- **Metadata SSR**: Only for link sharing (Discord, etc.)
+- **SPA after load**: Client-side navigation post-initial render
+- **Type safety**: Shared TypeScript types across stack
 
-### Strengths to Preserve
-- Metadata-only SSR approach (brilliant!)
-- Comprehensive TypeScript integration
-- Game data models and validation
-- Modular component architecture
+## 🎯 Goals
 
-### Areas for Improvement
-- Better client-side data management (GraphQL + caching)
-- Performance optimization (Qwik resumability)
-- Unified codebase (monorepo structure)
-- Enhanced developer experience
-
-## 🔄 Migration Workflow
-
-1. **Analyze current**: Document existing patterns and APIs
-2. **Design new**: Plan GraphQL schema and Qwik structure
-3. **Build backend**: FastAPI + GraphQL foundation
-4. **Build frontend**: Qwik + TanStack Query
-5. **Migrate features**: One-by-one with testing
-6. **Preserve SEO**: Maintain metadata-only SSR benefits
-
-## 🎯 Success Criteria
-
-- [ ] Feature parity with existing React app
-- [ ] Better Core Web Vitals scores
-- [ ] Preserved SEO benefits
-- [ ] Improved developer experience
-- [ ] Type-safe API layer
+- [ ] Lightweight, fast stats viewer
+- [ ] Metadata SSR for social media previews
+- [ ] GraphQL for flexible data querying
+- [ ] WebSocket for real-time updates
+- [ ] Easy local dev (`npm run dev`)
+- [ ] Docker-ready for deployment

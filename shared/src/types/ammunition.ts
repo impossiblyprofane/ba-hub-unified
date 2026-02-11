@@ -1,0 +1,79 @@
+/** An ammunition type fired by weapons. */
+export interface Ammunition {
+  Id: number;
+  Name: string;
+  HUDName: string;
+  HUDIcon: string;
+  AudioPreset: string;
+  UiOptions: number;
+  FxPreset: string;
+  VfxCountPerShot: number;
+  VfxCountPerShotMax: number;
+  ModelFileName: string;
+  HUDMultiplier: number;
+  CriticMultiplier: number;
+  SupplyCost: number;
+  ResupplyTime: number;
+  // Damage
+  Damage: number;
+  StressDamage: number;
+  IgnoreCover: number;
+  TargetType: number;
+  ArmorTargeted: number;
+  TrajectoryType: number;
+  // Range
+  MinimalRange: number;
+  GroundRange: number;
+  LowAltRange: number;
+  HighAltRange: number;
+  OverflyHeight: number;
+  // Penetration
+  PenetrationAtMinRange: number;
+  PenetrationAtGroundRange: number;
+  NoDamageFalloff: boolean;
+  TopArmorAttack: boolean;
+  // AOE
+  HealthAOERadius: number;
+  StressAOERadius: number;
+  RadioFuseDistance: number;
+  // Ballistics
+  LaunchMarginAngle: number;
+  MuzzleVelocity: number;
+  MaxSpeed: number;
+  Acceleration: number;
+  DispersionHorizontalRadius: number;
+  DispersionVerticalRadius: number;
+  // Smoke
+  GenerateSmoke: boolean;
+  SmokeRadius: number;
+  SmokeDuration: number;
+  SmokeFadeDuration: number;
+  DamageOverTimeDuration: number;
+  // Guidance
+  LaserGuided: boolean;
+  Seeker: number;
+  SeekerAngle: number;
+  MaxSeekerDistance: number;
+  CanBeIntercepted: boolean;
+  CanBeTargeted: boolean;
+  CanReaquire: boolean;
+  AimStartDelay: number;
+  MainEngineIgnitionDelay: number;
+  RotationSpeed: number;
+  BurnTime: number;
+  PreEgnitionRotationSpeed: number;
+  PreventReloadWhileTracked: boolean;
+  Airburst: boolean;
+  LoftAngle: number;
+  LoftHeight: number;
+}
+
+/** Junction table — links a Weapon to Ammunition for a specific Unit. */
+export interface WeaponAmmunition {
+  Id: number;
+  UnitId: number;
+  WeaponId: number;
+  AmmunitionId: number;
+  Order: number;
+  Quantity: number;
+}

@@ -10,63 +10,69 @@ This is a unified monorepo containing both frontend and backend for the BA Hub p
 
 ```
 ba-hub-unified/
-├── frontend/     # Qwik-based frontend application
-├── backend/      # FastAPI + GraphQL backend
-├── shared/       # Shared types, schemas, and utilities
-├── docs/         # Documentation and guides  
-├── docker/       # Docker configurations
-└── scripts/      # Build and deployment scripts
+├── frontend/     # Qwik SPA + Fastify SSR (metadata only)
+├── backend/      # Fastify + GraphQL (Mercurius)
+├── shared/       # Shared TypeScript types and utilities
+├── docs/         # Documentation
+├── docker/       # Docker configs (production)
+└── scripts/      # Build scripts
 ```
 
 ## 🚀 Tech Stack
 
-### Frontend (Planned)
-- **Framework**: Qwik (high performance, resumable)
+### Frontend
+- **Framework**: Qwik (SPA with metadata SSR)
+- **SSR Layer**: Fastify (link preview metadata)
 - **Styling**: Tailwind CSS
-- **State**: Qwik Signals + TanStack Query
-- **Build**: Vite
+- **State**: Qwik Signals + GraphQL client
 - **Language**: TypeScript
 
-### Backend (Planned)  
-- **API**: FastAPI (Python)
-- **Schema**: GraphQL with Strawberry
-- **Database**: PostgreSQL
-- **Cache**: Redis
-- **Language**: Python 3.11+
+### Backend
+- **Server**: Fastify
+- **API**: GraphQL (Mercurius)
+- **Data**: Static JSON files
+- **Real-time**: WebSockets
+- **Language**: TypeScript
 
 ### Shared
 - **Types**: TypeScript definitions
 - **Schemas**: GraphQL schemas
-- **Utils**: Common utilities
 
-## 🎯 Migration From Legacy
+## 🎯 About
 
-This project migrates from a React + Express SSR setup to a modern Qwik + FastAPI architecture while preserving the excellent metadata-only SSR approach for SEO.
+Lightweight third-party stats viewer for Broken Arrow. Migrating from React + Express to a simplified Qwik + Fastify architecture.
 
-### Legacy Strengths to Preserve
-- ✅ Metadata-only SSR (no complex hydration)
-- ✅ Comprehensive TypeScript integration  
-- ✅ Modular component architecture
-- ✅ Game data models and validation
+### Key Features
+- ✅ Metadata-only SSR (Discord/social media previews)
+- ✅ TypeScript everywhere
+- ✅ GraphQL for flexible querying
+- ✅ Static JSON data source
+- ✅ WebSocket support for real-time updates
+- ✅ Configurable data output
 
-### Improvements
-- 🚀 Better performance with Qwik resumability
-- 🔗 GraphQL for flexible data fetching
-- 📦 Unified monorepo structure
-- 🧪 Enhanced testing and development experience
+## 📊 Features
 
-## 📊 Game Features
-
-- **Arsenal Browser**: Unit database with advanced filtering
+- **Arsenal Browser**: Unit database with filtering
 - **Deck Builder**: Interactive deck construction
 - **Map Viewer**: Tactical map analysis
-- **Statistics**: Player rankings and match data
-- **Tournaments**: Bracket management
-- **Collaboration**: Real-time shared editing
+- **Statistics Dashboard**: Player rankings and match data
 
 ## 🛠️ Development
 
-*Setup instructions coming soon...*
+```bash
+# Install dependencies
+npm install
+
+# Run frontend and backend
+npm run dev
+```
+
+## 🐳 Deployment
+
+```bash
+# Build Docker images
+docker-compose up --build
+```
 
 ## 📝 Documentation
 
