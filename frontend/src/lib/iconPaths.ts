@@ -34,13 +34,28 @@ export function toWeaponIconPath(weaponId: string): string {
   return encodeIconPath(IconPaths.Weapon + weaponId + ".png");
 }
 
+/**
+ * Converts an OptionPicture value (e.g. "Weapons\\M2_BROWNING" or "Modifications\\ARMOR1")
+ * into a usable image path. The category prefix maps to the correct image directory.
+ */
+export function toOptionPicturePath(optionPicture: string): string {
+  const parts = optionPicture.replace(/\\/g, '/').split('/');
+  const category = parts.length > 1 ? parts[0] : '';
+  const fileName = parts[parts.length - 1];
+  if (category === 'Weapons') {
+    return encodeIconPath(IconPaths.Weapon + fileName + ".png");
+  }
+  // Modifications and others → outline directory
+  return encodeIconPath(IconPaths.Modification + "outline/" + fileName + ".png");
+}
+
 export function toAmmunitionIconPath(ammunitionId: string): string {
   return encodeIconPath(IconPaths.Ammunition + ammunitionId + ".png");
 }
 
 export function toPortraitIconPath(unitId: string): string {
   const split = unitId.split("\\");
-  const prefix = split.slice(0, -1).join("/");
+  const prefix = split.slice(0, -1).join("/").toLowerCase();
   const fileName = split[split.length - 1].toUpperCase();
   return encodeIconPath(IconPaths.Portrait + prefix + "/" + fileName + "_BASIC.png");
 }

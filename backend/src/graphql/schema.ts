@@ -21,6 +21,7 @@ export const schema = `
     specializations: [Specialization!]!
     specialization(id: Int!): Specialization
     arsenalFilters: ArsenalFilters!
+    unitDetail(id: Int!, optionIds: [Int!]): UnitDetailResult
   }
 
   type Mutation {
@@ -496,5 +497,34 @@ export const schema = `
     TimeBetweenBurstsMin: Float
     TimeBetweenBurstsMax: Float
     TimeBetweenShotsInBurst: Float
+  }
+
+  type UnitDetailResult {
+    unit: Unit!
+    baseUnit: Unit!
+    displayName: String!
+    totalCost: Int!
+    country: Country
+    armor: Armor
+    mobility: Mobility
+    flyPreset: FlyPreset
+    sensors: [Sensor!]!
+    abilities: [Ability!]!
+    weapons: [UnitWeapon!]!
+    modifications: [ModificationSlot!]!
+    squadMembers: [SquadMember!]!
+    availability: [UnitAvailability!]!
+  }
+
+  type ModificationSlot {
+    modification: Modification!
+    options: [Option!]!
+    selectedOptionId: Int!
+  }
+
+  type UnitAvailability {
+    specialization: Specialization!
+    maxAvailability: Int
+    transports: [Unit!]!
   }
 `;

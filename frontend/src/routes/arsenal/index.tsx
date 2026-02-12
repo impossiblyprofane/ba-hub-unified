@@ -157,7 +157,8 @@ export default component$(() => {
 
   const toggleSpecSelection = $((specId: number) => {
     const next = new Set(selectedSpecializations.value);
-    if (next.has(specId)) {
+    const wasSelected = next.has(specId);
+    if (wasSelected) {
       next.delete(specId);
     } else {
       next.add(specId);
@@ -167,9 +168,22 @@ export default component$(() => {
     const spec = dataSignal.value.specializations.find((item) => item.Id === specId);
     if (spec) {
       const countries = new Set(selectedCountries.value);
-      if (!countries.has(spec.CountryId)) {
-        countries.add(spec.CountryId);
-        selectedCountries.value = Array.from(countries);
+      if (!wasSelected) {
+        // Adding a spec — auto-select its country
+        if (!countries.has(spec.CountryId)) {
+          countries.add(spec.CountryId);
+          selectedCountries.value = Array.from(countries);
+        }
+      } else {
+        // Removing a spec — if no remaining specs belong to this country, deselect it
+        const countryStillHasSpec = Array.from(next).some((id) => {
+          const s = dataSignal.value.specializations.find((item) => item.Id === id);
+          return s?.CountryId === spec.CountryId;
+        });
+        if (!countryStillHasSpec && countries.has(spec.CountryId)) {
+          countries.delete(spec.CountryId);
+          selectedCountries.value = Array.from(countries);
+        }
       }
     }
   });
@@ -392,99 +406,128 @@ export default component$(() => {
           />
         </div>
 
-        <div class="flex flex-wrap items-center gap-3">
-          <button
-            class="px-3 py-2 text-xs font-mono uppercase border border-[var(--border)] text-[var(--text-dim)] hover:text-[var(--text)]"
-            onClick$={(event) => {
-              const btn = (event.target as HTMLElement).closest('button') as HTMLElement | null;
-              const rect = btn?.getBoundingClientRect();
-              if (rect) {
-                panelTop.value = rect.bottom + 6;
-                panelLeft.value = rect.left;
-              }
-              openPanel.value = openPanel.value === 'countries' ? null : 'countries';
-            }}
-            data-filter-trigger="countries"
-          >
-            {countrySummary.value}
-          </button>
-          <button
-            class="px-3 py-2 text-xs font-mono uppercase border border-[var(--border)] text-[var(--text-dim)] hover:text-[var(--text)]"
-            onClick$={(event) => {
-              const btn = (event.target as HTMLElement).closest('button') as HTMLElement | null;
-              const rect = btn?.getBoundingClientRect();
-              if (rect) {
-                panelTop.value = rect.bottom + 6;
-                panelLeft.value = rect.left;
-              }
-              openPanel.value = openPanel.value === 'categories' ? null : 'categories';
-            }}
-            data-filter-trigger="categories"
-          >
-            {categorySummary.value}
-          </button>
-          <button
-            class="px-3 py-2 text-xs font-mono uppercase border border-[var(--border)] text-[var(--text-dim)] hover:text-[var(--text)]"
-            onClick$={(event) => {
-              const btn = (event.target as HTMLElement).closest('button') as HTMLElement | null;
-              const rect = btn?.getBoundingClientRect();
-              if (rect) {
-                panelTop.value = rect.bottom + 6;
-                panelLeft.value = rect.left;
-              }
-              openPanel.value = openPanel.value === 'specializations' ? null : 'specializations';
-            }}
-            data-filter-trigger="specializations"
-          >
-            {specializationSummary.value}
-          </button>
-          <button
-            class="px-3 py-2 text-xs font-mono uppercase border border-[var(--border)] text-[var(--text-dim)] hover:text-[var(--text)]"
-            onClick$={() => {
-              sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc';
-            }}
-          >
-            {sortBy.value.toUpperCase()} · {sortDir.value === 'asc' ? 'ASC' : 'DESC'}
-          </button>
-          <div class="flex gap-2">
+        <div class="flex flex-wrap items-center gap-6">
+          {/* ── Filter dropdowns ── */}
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] font-mono text-[var(--text-dim)] tracking-[0.25em] uppercase select-none">Filter</span>
+            <div class="w-px h-5 bg-[var(--border)]" />
             <button
               class={[
-                'px-3 py-2 text-xs font-mono uppercase border',
-                sortBy.value === 'name'
-                  ? 'bg-[var(--accent)] text-black border-[var(--accent)]'
-                  : 'text-[var(--text-dim)] border-[var(--border)] hover:text-[var(--text)]'
+                'px-3 py-2 text-xs font-mono uppercase border min-w-[140px] text-left truncate transition-colors',
+                selectedCountries.value.length > 0
+                  ? 'border-[var(--accent)] text-[var(--accent)]'
+                  : 'border-[var(--border)] text-[var(--text-dim)] hover:text-[var(--text)] hover:border-[var(--text-dim)]',
               ].join(' ')}
-              onClick$={() => {
-                sortBy.value = 'name';
+              onClick$={(event) => {
+                const btn = (event.target as HTMLElement).closest('button') as HTMLElement | null;
+                const rect = btn?.getBoundingClientRect();
+                if (rect) {
+                  panelTop.value = rect.bottom + 6;
+                  panelLeft.value = rect.left;
+                }
+                openPanel.value = openPanel.value === 'countries' ? null : 'countries';
               }}
+              data-filter-trigger="countries"
             >
-              Name
+              {countrySummary.value}
             </button>
             <button
               class={[
-                'px-3 py-2 text-xs font-mono uppercase border',
-                sortBy.value === 'cost'
-                  ? 'bg-[var(--accent)] text-black border-[var(--accent)]'
-                  : 'text-[var(--text-dim)] border-[var(--border)] hover:text-[var(--text)]'
+                'px-3 py-2 text-xs font-mono uppercase border min-w-[160px] text-left truncate transition-colors',
+                selectedSpecializations.value.length > 0
+                  ? 'border-[var(--accent)] text-[var(--accent)]'
+                  : 'border-[var(--border)] text-[var(--text-dim)] hover:text-[var(--text)] hover:border-[var(--text-dim)]',
               ].join(' ')}
-              onClick$={() => {
-                sortBy.value = 'cost';
+              onClick$={(event) => {
+                const btn = (event.target as HTMLElement).closest('button') as HTMLElement | null;
+                const rect = btn?.getBoundingClientRect();
+                if (rect) {
+                  panelTop.value = rect.bottom + 6;
+                  panelLeft.value = rect.left;
+                }
+                openPanel.value = openPanel.value === 'specializations' ? null : 'specializations';
               }}
+              data-filter-trigger="specializations"
             >
-              Cost
+              {specializationSummary.value}
+            </button>
+            <button
+              class={[
+                'px-3 py-2 text-xs font-mono uppercase border min-w-[140px] text-left truncate transition-colors',
+                selectedCategories.value.length > 0
+                  ? 'border-[var(--accent)] text-[var(--accent)]'
+                  : 'border-[var(--border)] text-[var(--text-dim)] hover:text-[var(--text)] hover:border-[var(--text-dim)]',
+              ].join(' ')}
+              onClick$={(event) => {
+                const btn = (event.target as HTMLElement).closest('button') as HTMLElement | null;
+                const rect = btn?.getBoundingClientRect();
+                if (rect) {
+                  panelTop.value = rect.bottom + 6;
+                  panelLeft.value = rect.left;
+                }
+                openPanel.value = openPanel.value === 'categories' ? null : 'categories';
+              }}
+              data-filter-trigger="categories"
+            >
+              {categorySummary.value}
+            </button>
+            {(selectedCountries.value.length > 0 || selectedCategories.value.length > 0 || selectedSpecializations.value.length > 0) && (
+              <button
+                class="px-2 py-2 text-xs font-mono uppercase text-[var(--text-dim)] hover:text-[var(--accent)] transition-colors"
+                onClick$={() => {
+                  search.value = '';
+                  selectedCountries.value = [];
+                  selectedCategories.value = [];
+                  selectedSpecializations.value = [];
+                }}
+                title="Clear all filters"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* ── Divider ── */}
+          <div class="w-px h-7 bg-[var(--border)] hidden sm:block" />
+
+          {/* ── Sort controls ── */}
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] font-mono text-[var(--text-dim)] tracking-[0.25em] uppercase select-none">Sort</span>
+            <div class="w-px h-5 bg-[var(--border)]" />
+            <div class="flex">
+              <button
+                class={[
+                  'px-3 py-2 text-xs font-mono uppercase border border-r-0 transition-colors',
+                  sortBy.value === 'name'
+                    ? 'bg-[var(--accent)] text-black border-[var(--accent)]'
+                    : 'text-[var(--text-dim)] border-[var(--border)] hover:text-[var(--text)]'
+                ].join(' ')}
+                onClick$={() => { sortBy.value = 'name'; }}
+              >
+                Name
+              </button>
+              <button
+                class={[
+                  'px-3 py-2 text-xs font-mono uppercase border transition-colors',
+                  sortBy.value === 'cost'
+                    ? 'bg-[var(--accent)] text-black border-[var(--accent)]'
+                    : 'text-[var(--text-dim)] border-[var(--border)] hover:text-[var(--text)]'
+                ].join(' ')}
+                onClick$={() => { sortBy.value = 'cost'; }}
+              >
+                Cost
+              </button>
+            </div>
+            <button
+              class="px-2 py-2 text-xs font-mono uppercase border border-[var(--border)] text-[var(--text-dim)] hover:text-[var(--text)] transition-colors"
+              onClick$={() => {
+                sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc';
+              }}
+              title={sortDir.value === 'asc' ? 'Ascending' : 'Descending'}
+            >
+              {sortDir.value === 'asc' ? '↑' : '↓'}
             </button>
           </div>
-          <button
-            class="px-3 py-2 text-xs font-mono uppercase border border-[var(--border)] text-[var(--text-dim)] hover:text-[var(--text)]"
-            onClick$={() => {
-              search.value = '';
-              selectedCountries.value = [];
-              selectedCategories.value = [];
-              selectedSpecializations.value = [];
-            }}
-          >
-            Clear Filters
-          </button>
         </div>
       </div>
 

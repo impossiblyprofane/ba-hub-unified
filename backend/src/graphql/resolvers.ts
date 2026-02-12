@@ -195,6 +195,307 @@ const resolveOptionTurrets = (option: {
     .filter((turret): turret is NonNullable<typeof turret> => Boolean(turret));
 };
 
+/* ───────────────────────────────────────────────────────────────────
+ * unitDetail resolver helpers — resolves a unit with option overrides
+ * applied server-side (armor, mobility, sensors, abilities, turrets)
+ * ─────────────────────────────────────────────────────────────────── */
+
+const TURRET_FIELDS = [
+  'Turret0Id', 'Turret1Id', 'Turret2Id', 'Turret3Id', 'Turret4Id',
+  'Turret5Id', 'Turret6Id', 'Turret7Id', 'Turret8Id', 'Turret9Id',
+  'Turret10Id', 'Turret11Id', 'Turret12Id', 'Turret13Id', 'Turret14Id',
+  'Turret15Id', 'Turret16Id', 'Turret17Id', 'Turret18Id', 'Turret19Id',
+  'Turret20Id',
+] as const;
+
+const buildUnitWeaponsWithOverrides = (
+  resolvedUnitId: number,
+  originalUnitId: number,
+  activeOptions: Array<Record<string, unknown>>,
+  indexes: StaticIndexes,
+): UnitWeaponSlot[] => {
+  // Channel-based turret resolution (mirrors legacy useUnitState):
+  //   1. Base channel map from TurretUnits where Turret.IsDefault only
+  //   2. Active options override channels via TurretXId fields
+  //   3. Collect active turret IDs from channel map values
+  //   4. Expand child turrets globally via ParentTurretId
+  //   5. Resolve weapons from the active turret set
+
+  // 1. Base channel map — only turrets with IsDefault populate channels
+  const channelMap = new Map<number, number>();
+  const allUnitTurrets = indexes.turretUnitsByUnitId.get(resolvedUnitId) ?? [];
+  for (const tu of allUnitTurrets) {
+    const turret = indexes.turretsById.get(tu.TurretId);
+    if (turret && (turret as any).IsDefault) {
+      channelMap.set(tu.Order ?? 0, tu.TurretId);
+    }
+  }
+
+  // 2. Apply active option overrides — TurretXId replaces channel X
+  for (const opt of activeOptions) {
+    for (let ch = 0; ch < TURRET_FIELDS.length; ch++) {
+      const val = opt[TURRET_FIELDS[ch]] as number | undefined;
+      if (isPositiveId(val)) {
+        channelMap.set(ch, val);
+      }
+    }
+  }
+
+  // 3. Collect turret instances from channel values (preserve multiplicity!)
+  //    The same turret ID on multiple channels = mirrored pylons, each producing
+  //    a separate weapon entry (e.g., 4 channels with CBU x1 → 4 weapon entries).
+  const channelTurretIds: number[] = [];
+  const uniqueTurretIds = new Set<number>();
+  for (const tid of channelMap.values()) {
+    if (isPositiveId(tid)) {
+      channelTurretIds.push(tid);
+      uniqueTurretIds.add(tid);
+    }
+  }
+
+  if (channelTurretIds.length === 0) {
+    return [];
+  }
+
+  // 4. Global child expansion via ParentTurretId (recursive)
+  //    Children are expanded once per unique parent, not per channel instance.
+  const expandedChildIds = new Set<number>();
+  const expandChildren = (parentId: number) => {
+    const children = indexes.turretsByParentTurretId.get(parentId) ?? [];
+    for (const child of children) {
+      if (!expandedChildIds.has(child.Id) && !uniqueTurretIds.has(child.Id)) {
+        expandedChildIds.add(child.Id);
+        expandChildren(child.Id);
+      }
+    }
+  };
+  for (const tid of uniqueTurretIds) {
+    expandChildren(tid);
+  }
+
+  // 5. Resolve weapons — one entry per channel occurrence (preserves pylon counts),
+  //    plus one entry per expanded child turret.
+  const results: UnitWeaponSlot[] = [];
+  const ammoUnitId = originalUnitId;
+
+  const resolveWeaponsForTurret = (tid: number) => {
+    const turret = indexes.turretsById.get(tid);
+    if (!turret) return;
+    const turretWeapons = sortByOrder(
+      indexes.turretWeaponsByTurretId.get(turret.Id) ?? [],
+    );
+    for (const tw of turretWeapons) {
+      const weapon = indexes.weaponsById.get(tw.WeaponId);
+      if (!weapon) continue;
+      results.push({
+        weapon,
+        turret,
+        ammunition: buildWeaponAmmoSlots(ammoUnitId, weapon.Id, indexes),
+      });
+    }
+  };
+
+  // Channel turrets — iterate ALL channel values (with duplicates)
+  for (const tid of channelTurretIds) {
+    resolveWeaponsForTurret(tid);
+  }
+
+  // Expanded children — once each
+  for (const tid of expandedChildIds) {
+    resolveWeaponsForTurret(tid);
+  }
+
+  return results;
+};
+
+const buildUnitDetailResult = (
+  unitId: number,
+  optionIds: number[] | null | undefined,
+  ctx: GraphQLContext,
+) => {
+  const { data, indexes } = ctx;
+  const baseUnit = indexes.unitsById.get(unitId);
+  if (!baseUnit) return null;
+
+  // 1. Modifications & selected options
+  const modifications = sortByOrder(
+    indexes.modificationsByUnitId.get(unitId) ?? [],
+  );
+
+  const modSlots = modifications.map(mod => {
+    const options = sortByOrder(
+      indexes.optionsByModificationId.get(mod.Id) ?? [],
+    );
+    const selected = optionIds?.length
+      ? options.find(opt => optionIds.includes(opt.Id)) ?? null
+      : null;
+    const finalOption = selected ?? options.find(opt => opt.IsDefault) ?? options[0] ?? null;
+    return {
+      modification: mod,
+      options,
+      selectedOptionId: finalOption?.Id ?? 0,
+      _opt: finalOption,
+    };
+  });
+
+  const activeOptions = modSlots
+    .map(s => s._opt)
+    .filter((o): o is NonNullable<typeof o> => Boolean(o));
+
+  // 2. Unit replacement, display name, cost
+  let resolvedUnit = baseUnit;
+  let displayName = baseUnit.Name ?? '';
+  let totalCost = baseUnit.Cost ?? 0;
+
+  for (const opt of activeOptions) {
+    if (isPositiveId(opt.ReplaceUnitId)) {
+      const replacement = indexes.unitsById.get(opt.ReplaceUnitId);
+      if (replacement) resolvedUnit = replacement;
+    }
+    if (opt.ReplaceUnitName) displayName = opt.ReplaceUnitName;
+    if (opt.ConcatenateWithUnitName) displayName = `${displayName} ${opt.ConcatenateWithUnitName}`;
+    totalCost += opt.Cost ?? 0;
+  }
+
+  // 3. Armor (option override → base unit default)
+  let armor = null;
+  const armorOpt = activeOptions.find(o => isPositiveId(o.ArmorId));
+  if (armorOpt) {
+    armor = indexes.armorsById.get(armorOpt.ArmorId) ?? null;
+  } else {
+    const links = indexes.unitArmorsByUnitId.get(resolvedUnit.Id) ?? [];
+    if (links.length) armor = indexes.armorsById.get(links[0].ArmorId) ?? null;
+  }
+
+  // 4. Mobility & fly preset
+  let mobility = null;
+  let flyPreset = null;
+  const mobOpt = activeOptions.find(o => isPositiveId(o.MobilityId));
+  if (mobOpt) {
+    mobility = indexes.mobilityById.get(mobOpt.MobilityId) ?? null;
+  } else {
+    const links = indexes.unitPropulsionsByUnitId.get(resolvedUnit.Id) ?? [];
+    if (links.length) mobility = indexes.mobilityById.get(links[0].MobilityId) ?? null;
+  }
+  if (mobility && isPositiveId((mobility as any).FlyPresetId)) {
+    flyPreset = indexes.flyPresetsById.get((mobility as any).FlyPresetId) ?? null;
+  }
+
+  // 5. Sensors
+  const sensors: unknown[] = [];
+  const sMain = activeOptions.find(o => isPositiveId(o.MainSensorId));
+  const sExtra = activeOptions.find(o => isPositiveId(o.ExtraSensorId));
+  if (sMain) {
+    const s = indexes.sensorsById.get(sMain.MainSensorId);
+    if (s) sensors.push(s);
+  } else {
+    for (const link of indexes.sensorUnitsByUnitId.get(resolvedUnit.Id) ?? []) {
+      const s = indexes.sensorsById.get(link.SensorId);
+      if (s) sensors.push(s);
+    }
+  }
+  if (sExtra) {
+    const s = indexes.sensorsById.get(sExtra.ExtraSensorId);
+    if (s && !sensors.some((e: any) => e.Id === s.Id)) sensors.push(s);
+  }
+
+  // 6. Abilities — start with base unit abilities, then merge option-specified abilities
+  const abilityMap = new Map<number, unknown>();
+  // Base unit abilities — only include IsDefault abilities; non-default ones come via Options
+  for (const link of indexes.unitAbilitiesByUnitId.get(resolvedUnit.Id) ?? []) {
+    const a = indexes.abilitiesById.get(link.AbilityId) as { Id: number; IsDefault?: boolean } | undefined;
+    if (a && a.IsDefault !== false) abilityMap.set(link.AbilityId, a);
+  }
+  // Option abilities overlay (add / replace by Id)
+  for (const opt of activeOptions) {
+    for (const id of [opt.Ability1Id, opt.Ability2Id, opt.Ability3Id]) {
+      if (isPositiveId(id)) {
+        const a = indexes.abilitiesById.get(id);
+        if (a) abilityMap.set(id, a);
+      }
+    }
+  }
+  const abilities = [...abilityMap.values()];
+
+  // 7. Weapons (with turret overrides)
+  let weapons = buildUnitWeaponsWithOverrides(
+    resolvedUnit.Id,
+    unitId,
+    activeOptions as unknown as Array<Record<string, unknown>>,
+    indexes,
+  );
+
+  // 7b. For infantry / squad units — build weapons from squad member weapon IDs
+  //     when no turret-based weapons exist.
+  if (weapons.length === 0) {
+    const members = indexes.squadMembersByUnitId.get(resolvedUnit.Id) ?? [];
+    if (members.length > 0) {
+      const seenWeaponIds: number[] = [];
+      for (const member of members) {
+        for (const wid of [member.PrimaryWeaponId, member.SpecialWeaponId]) {
+          if (isPositiveId(wid)) {
+            seenWeaponIds.push(wid);
+          }
+        }
+      }
+      // Produce one weapon entry per squad-member weapon reference (dupes included)
+      // so that the frontend merge logic can aggregate them properly.
+      for (const wid of seenWeaponIds) {
+        const weapon = indexes.weaponsById.get(wid);
+        if (!weapon) continue;
+        weapons.push({
+          weapon,
+          turret: null,
+          ammunition: buildWeaponAmmoSlots(unitId, wid, indexes),
+        });
+      }
+    }
+  }
+
+  // 8. Squad members
+  const squadMembers = [...(indexes.squadMembersByUnitId.get(resolvedUnit.Id) ?? [])]
+    .sort((a, b) => (a.DeathPriority ?? 0) - (b.DeathPriority ?? 0));
+
+  // 9. Country
+  const country = isPositiveId(baseUnit.CountryId)
+    ? indexes.countriesById.get(baseUnit.CountryId) ?? null
+    : null;
+
+  // 10. Availability (specializations + transports)
+  const specAvails = data.specializationAvailabilities.filter(sa => sa.UnitId === unitId);
+  const availability = specAvails
+    .map(sa => {
+      const spec = indexes.specializationsById.get(sa.SpecializationId);
+      if (!spec) return null;
+      const transports = (indexes.transportAvailabilitiesBySpecAvailabilityId.get(sa.Id) ?? [])
+        .map(ta => indexes.unitsById.get(ta.UnitId))
+        .filter((u): u is NonNullable<typeof u> => Boolean(u));
+      return {
+        specialization: spec,
+        maxAvailability: sa.MaxAvailabilityXp0,
+        transports,
+      };
+    })
+    .filter(Boolean);
+
+  return {
+    unit: resolvedUnit,
+    baseUnit,
+    displayName,
+    totalCost,
+    country,
+    armor,
+    mobility,
+    flyPreset,
+    sensors,
+    abilities,
+    weapons,
+    modifications: modSlots.map(({ _opt, ...rest }) => rest),
+    squadMembers,
+    availability,
+  };
+};
+
 // GraphQL resolvers
 export const resolvers = {
   Query: {
@@ -308,6 +609,8 @@ export const resolvers = {
         roles: uniqNumbers(units.map(unit => unit.Role)),
       };
     },
+    unitDetail: (_: unknown, args: { id: number; optionIds?: number[] }, ctx: any) =>
+      buildUnitDetailResult(args.id, args.optionIds, ctx as GraphQLContext),
   },
   Mutation: {
     ping: () => 'pong',

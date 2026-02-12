@@ -46,6 +46,7 @@ export interface StaticIndexes {
   specializationAvailabilitiesBySpecializationId: Map<number, SpecializationAvailability[]>;
   transportAvailabilitiesBySpecAvailabilityId: Map<number, TransportAvailability[]>;
   transportAvailabilitiesByUnitId: Map<number, TransportAvailability[]>;
+  turretsByParentTurretId: Map<number, Turret[]>;
 }
 
 function mapById<T extends { Id: number }>(items: T[]): Map<number, T> {
@@ -99,5 +100,9 @@ export function buildIndexes(data: StaticData): StaticIndexes {
       ta => ta.SpecializationAvailabilityId,
     ),
     transportAvailabilitiesByUnitId: groupBy(data.transportAvailabilities, ta => ta.UnitId),
+    turretsByParentTurretId: groupBy(
+      data.turrets.filter(t => t.ParentTurretId > 0),
+      t => t.ParentTurretId,
+    ),
   };
 }

@@ -277,7 +277,7 @@ export default component$(() => {
       {/* Main Content — offset for collapsed nav width */}
       <div class="pl-0 md:pl-20 min-h-screen flex flex-col">
         <main class="flex-1 pt-20 md:pt-16 pb-8 flex justify-center">
-          <div class="w-full max-w-5xl px-4 md:px-8" style={{ viewTransitionName: 'page-content' }}>
+          <div class="w-full max-w-6xl px-4 md:px-8" style={{ viewTransitionName: 'page-content' }}>
             <Slot />
           </div>
         </main>
