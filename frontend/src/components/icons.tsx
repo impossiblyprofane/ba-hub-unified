@@ -104,6 +104,21 @@ export const IconSearch = component$<IconProps>(({ size = 20, class: cls }) => (
   </svg>
 ));
 
+export const IconMenu = component$<IconProps>(({ size = 20, class: cls }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class={cls}>
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <line x1="3" y1="12" x2="21" y2="12" />
+    <line x1="3" y1="18" x2="21" y2="18" />
+  </svg>
+));
+
+export const IconClose = component$<IconProps>(({ size = 20, class: cls }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class={cls}>
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+));
+
 // ── Feature card icons ──
 
 export const IconShield = component$<IconProps>(({ size = 20, class: cls }) => (

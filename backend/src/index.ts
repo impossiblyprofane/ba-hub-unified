@@ -4,10 +4,15 @@ import websocket from '@fastify/websocket';
 import cors from '@fastify/cors';
 import { schema } from './graphql/schema.js';
 import { resolvers } from './graphql/resolvers.js';
+import { loadStaticData } from './data/loader.js';
+import { buildIndexes } from './data/indexes.js';
 
 const PORT = process.env.PORT || 3001;
 
 async function buildServer() {
+  const data = await loadStaticData();
+  const indexes = buildIndexes(data);
+
   const fastify = Fastify({
     logger: {
       level: process.env.LOG_LEVEL || 'info',
@@ -27,6 +32,7 @@ async function buildServer() {
   await fastify.register(mercurius, {
     schema,
     resolvers,
+    context: () => ({ data, indexes }),
     graphiql: true, // GraphiQL interface at /graphiql
     subscription: true, // Enable subscriptions via WebSocket
   });

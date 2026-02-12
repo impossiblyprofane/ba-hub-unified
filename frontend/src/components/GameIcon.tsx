@@ -35,6 +35,8 @@ const variantClass: Record<IconVariant, string> = {
 
 export const GameIcon = component$<GameIconProps>(
   ({ src, size = 20, class: cls, alt = '', variant = 'original', glow = false }) => {
+    const resolvedSize = Math.max(1, Math.round(size));
+    const inlineSize = `${resolvedSize}px`;
     const classes = [
       'game-icon',
       variantClass[variant],
@@ -46,11 +48,11 @@ export const GameIcon = component$<GameIconProps>(
       <img
         src={src}
         alt={alt}
-        width={size}
-        height={size}
+        width={resolvedSize}
+        height={resolvedSize}
         loading="lazy"
         class={classes}
-        style={{ width: `${size}px`, height: `${size}px` }}
+        style={{ width: inlineSize, height: inlineSize }}
         onError$={(e) => {
           const img = e.target as HTMLImageElement;
           if (!img.dataset.fallback) {
