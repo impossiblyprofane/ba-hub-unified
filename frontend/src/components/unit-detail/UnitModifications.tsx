@@ -6,17 +6,21 @@ import type { UnitDetailModSlot } from '~/routes/arsenal/[unitid]';
 type Props = {
   modifications: UnitDetailModSlot[];
   onOptionChange$: PropFunction<(modId: number, optionId: number, mods: UnitDetailModSlot[]) => void>;
+  compact?: boolean;
+  fill?: boolean;
 };
 
-export const UnitModifications = component$<Props>(({ modifications, onOptionChange$ }) => {
+export const UnitModifications = component$<Props>(({ modifications, onOptionChange$, compact, fill }) => {
   const i18n = useI18n();
 
   return (
-    <div class="border border-[var(--border)] bg-[var(--bg-raised)] p-4">
-      <p class="text-[10px] font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] mb-3">
+    <div
+      class={`border border-[var(--border)] bg-[var(--bg-raised)] ${compact ? 'p-3' : 'p-4'} ${fill ? 'h-full flex flex-col' : ''}`}
+    >
+      <p class={`${compact ? 'text-[9px] mb-2' : 'text-[10px] mb-3'} font-mono tracking-[0.3em] uppercase text-[var(--text-dim)]`}>
         Modifications
       </p>
-      <div class="flex flex-col gap-3">
+      <div class={`flex flex-col ${compact ? 'gap-2' : 'gap-3'} ${fill ? 'flex-1' : ''}`}>
         {modifications.map(slot => {
           const modName = getGameLocaleValueOrKey(
             GAME_LOCALES.modopts, slot.modification.UIName || slot.modification.Name, i18n.locale,
@@ -25,21 +29,21 @@ export const UnitModifications = component$<Props>(({ modifications, onOptionCha
           const selectedIcon = selectedOpt?.OptionPicture ? toOptionPicturePath(selectedOpt.OptionPicture) : null;
           return (
             <div key={slot.modification.Id}>
-              <label class="block text-[10px] font-mono uppercase tracking-widest text-[var(--text-dim)] mb-1">
+              <label class={`${compact ? 'text-[9px]' : 'text-[10px]'} block font-mono uppercase tracking-widest text-[var(--text-dim)] mb-1 truncate`}>
                 {modName}
               </label>
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-2 min-w-0">
                 {selectedIcon && (
                   <img
                     src={selectedIcon}
                     width={32} height={32}
-                    class="w-8 h-8 object-contain shrink-0 brightness-0 invert opacity-80"
+                    class={`${compact ? 'w-7 h-7' : 'w-8 h-8'} object-contain shrink-0 brightness-0 invert opacity-80`}
                     alt=""
                   />
                 )}
                 <select
-                  class="flex-1 bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] text-sm px-2.5 py-2 font-mono
-                         focus:outline-none focus:border-[var(--accent)] transition-colors cursor-pointer"
+                  class={`flex-1 bg-[var(--bg)] border border-[var(--border)] text-[var(--text)] ${compact ? 'text-xs px-2 py-1.5' : 'text-sm px-2.5 py-2'} font-mono min-w-0
+                         focus:outline-none focus:border-[var(--accent)] transition-colors cursor-pointer truncate`}
                   value={slot.selectedOptionId}
                   onChange$={(e) => {
                     const newId = parseInt((e.target as HTMLSelectElement).value, 10);

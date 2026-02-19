@@ -423,3 +423,18 @@ html, body {
           sepia(1) saturate(5) hue-rotate(175deg)
           drop-shadow(0 0 3px rgba(70, 151, 195, 0.2));
 }
+
+/* Unit viewer portrait scaling — stepwise per breakpoint */
+.unit-portrait-bg {
+  background-size: contain;
+}
+@media (min-width: 768px) {
+  .unit-portrait-bg {
+    background-size: contain;
+  }
+}
+@media (min-width: 1024px) {
+  .unit-portrait-bg {
+    background-size: contain;
+  }
+}

@@ -91,10 +91,10 @@ export const schema = `
     Width: Float
     Height: Float
     Weight: Float
-    Stealth: Int
+    Stealth: Float
     InfantrySlots: Int
-    MaxStress: Int
-    WaterDiveOffset: Int
+    MaxStress: Float
+    WaterDiveOffset: Float
     InBuildLevel: Int
     country: Country
     abilities: [Ability!]!

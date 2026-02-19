@@ -377,7 +377,7 @@ export default component$(() => {
   const isSelected = (list: number[], id: number) => list.includes(id);
 
   return (
-    <div class="max-w-7xl mx-auto">
+    <div class="w-full max-w-[2000px] mx-auto">
       <div class="mb-6">
         <p class="text-[var(--accent)] text-xs font-mono tracking-[0.35em] uppercase mb-3">Unit Database</p>
         <div class="flex items-end justify-between gap-6">
@@ -637,7 +637,8 @@ export default component$(() => {
       )}
 
       <div
-        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3"
+        class="grid gap-3"
+        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))' }}
         ref={gridRef}
       >
         {filteredCards.value.map((card) => {

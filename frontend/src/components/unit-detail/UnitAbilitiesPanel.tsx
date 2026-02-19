@@ -4,44 +4,46 @@ import { RichTooltip, TipRow } from '~/components/ui/RichTooltip';
 import { UtilIconPaths } from '~/lib/iconPaths';
 import type { UnitDetailAbility } from '~/routes/arsenal/[unitid]';
 
-type Props = { abilities: UnitDetailAbility[] };
+type Props = { abilities: UnitDetailAbility[]; compact?: boolean; fill?: boolean };
 
 /**
  * Abilities panel — each ability shown as a row with icon, label, key stats.
  * Rich tooltips give full detailed breakdowns on hover.
  */
-export const UnitAbilitiesPanel = component$<Props>(({ abilities }) => {
+export const UnitAbilitiesPanel = component$<Props>(({ abilities, compact, fill }) => {
   // Filter out empty/placeholder abilities (no type flags set)
   const displayable = abilities.filter(a => isDisplayableAbility(a));
   if (displayable.length === 0) return null;
 
   return (
-    <div class="border border-[var(--border)] bg-[var(--bg-raised)] p-4">
-      <p class="text-[10px] font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] mb-3">
+    <div
+      class={`border border-[var(--border)] bg-[var(--bg-raised)] p-0 ${fill ? 'h-full flex flex-col' : ''}`}
+    >
+      <p class={`font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] ${compact ? 'text-[9px] px-2 py-2' : 'text-[10px] px-3 py-2'} border-b border-[var(--border)]`}>
         Abilities
       </p>
-      <div class="flex flex-col gap-2">
+      <div class={`flex flex-col ${compact ? 'gap-1.5' : 'gap-2'} ${fill ? 'flex-1 overflow-y-auto' : ''}`}>
         {displayable.map(ability => (
-          <AbilityRow key={ability.Id} ability={ability} />
+          <AbilityRow key={ability.Id} ability={ability} compact={compact} />
         ))}
       </div>
     </div>
   );
 });
 
-const AbilityRow = component$<{ ability: UnitDetailAbility }>(({ ability }) => {
+const AbilityRow = component$<{ ability: UnitDetailAbility; compact?: boolean }>(({ ability, compact }) => {
   const info = getAbilityDisplay(ability);
 
   return (
     <RichTooltip>
-      <div class="flex items-start gap-2 p-2 bg-[var(--bg)]/40 cursor-help">
-        <GameIcon src={info.icon} size={18} variant="accent" alt={info.label} class="mt-0.5 shrink-0" />
+      <div class={`flex items-start ${compact ? 'gap-1.5 p-1' : 'gap-2 p-1.5'} bg-[var(--bg)]/40 cursor-help`}>
+        <GameIcon src={info.icon} size={compact ? 16 : 20} variant="accent" alt={info.label} class="mt-0.5 shrink-0" />
         <div class="flex-1 min-w-0">
-          <p class="text-xs font-semibold text-[var(--text)]">{info.label}</p>
+          <p class={`${compact ? 'text-[11px]' : 'text-xs'} font-semibold text-[var(--text)]`}>{info.label}</p>
           {info.stats.length > 0 && (
-            <div class="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+            <div class={`flex flex-wrap ${compact ? 'gap-x-2' : 'gap-x-3'} gap-y-0.5 mt-0.5`}>
               {info.stats.map(s => (
-                <span key={s.key} class="text-[10px] font-mono text-[var(--text-dim)]">
+                <span key={s.key} class={`${compact ? 'text-[9px]' : 'text-[10px]'} font-mono text-[var(--text-dim)]`}>
                   {s.key}: <span class="text-[var(--text)]">{s.value}</span>
                 </span>
               ))}

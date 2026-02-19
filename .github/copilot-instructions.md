@@ -19,6 +19,16 @@
 - GraphQL schema/resolvers are defined in separate files and wired into Mercurius. See [backend/src/graphql/schema.ts](backend/src/graphql/schema.ts) and [backend/src/graphql/resolvers.ts](backend/src/graphql/resolvers.ts).
 - Qwik routes live under [frontend/src/routes](frontend/src/routes) using `component$` and `DocumentHead` (example: [frontend/src/routes/index.tsx](frontend/src/routes/index.tsx)).
 - Metadata-only SSR is intentionally minimal for crawlers and does not render full SPA content. Changes to SEO metadata should coordinate [frontend/server/index.ts](frontend/server/index.ts) and Qwik `DocumentHead`.
+- UI layout conventions:
+  - Unit viewer width is intentionally constrained (target `max-w-[1600px]`) even when the global container is wider.
+  - Global page container max width is `2000px`; layouts should scale within it.
+  - Prefer minimal padding: avoid layered padding (container + element + sub-element). Use a single, deliberate padding layer if needed, and default to spacing/gaps instead of padding.
+  - Titled data panels use a header strip (title + bottom border) and avoid nested padding inside content; keep spacing consistent and minimal.
+  - Modifications panel is exempt from the header-strip standardization.
+  - Squad Composition groups duplicate loadouts into a single tile with a quantity count.
+  - Unit portrait should use `background-size: contain` to fit the full icon.
+  - Arsenal grid should scale columns with available width (auto-fit/minmax).
+  - Mobility "DROP" is a core stat icon (icon-only), not a separate pill.
 
 ## Integration points
 - Frontend expects backend GraphQL at http://localhost:3001/graphql in dev (see [docker/README.md](docker/README.md) for ports).

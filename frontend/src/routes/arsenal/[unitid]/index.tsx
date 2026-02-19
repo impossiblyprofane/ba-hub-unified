@@ -265,6 +265,7 @@ export default component$(() => {
   // Selected option IDs — empty = use server defaults
   const selectedOptionIds = useSignal<number[]>([]);
   const isRefetching = useSignal(false);
+  const cachedData = useSignal<UnitDetailData | null>(null);
 
   // Reactive data resource
   const unitResource = useResource$<UnitDetailData>(async ({ track, cleanup }) => {
@@ -315,7 +316,7 @@ export default component$(() => {
   });
 
   return (
-    <div class="max-w-[1400px] mx-auto">
+    <div class="w-full max-w-[1600px] mx-auto">
       {/* Back link */}
       <Link
         href="/arsenal"
@@ -326,11 +327,25 @@ export default component$(() => {
 
       <Resource
         value={unitResource}
-        onPending={() => (
-          <div class="border border-[var(--border)] bg-[var(--bg-raised)] p-8">
-            <div class="text-sm font-mono text-[var(--text-dim)] animate-pulse">Loading unit data…</div>
-          </div>
-        )}
+        onPending={() => {
+          if (cachedData.value) {
+            return (
+              <div class="relative">
+                <UnitDetailView
+                  data={cachedData.value}
+                  isRefetching={true}
+                  onOptionChange$={handleOptionChange$}
+                />
+                <div class="absolute inset-0 bg-black/10 backdrop-blur-[1px] pointer-events-none" />
+              </div>
+            );
+          }
+          return (
+            <div class="border border-[var(--border)] bg-[var(--bg-raised)] p-8">
+              <div class="text-sm font-mono text-[var(--text-dim)] animate-pulse">Loading unit data…</div>
+            </div>
+          );
+        }}
         onRejected={(err) => (
           <div class="border border-[var(--border)] bg-[var(--bg-raised)] p-8">
             <p class="text-[var(--red)] text-sm font-mono">Error: {(err as Error).message}</p>
@@ -339,13 +354,16 @@ export default component$(() => {
             </Link>
           </div>
         )}
-        onResolved={(data) => (
-          <UnitDetailView
-            data={data}
-            isRefetching={isRefetching.value}
-            onOptionChange$={handleOptionChange$}
-          />
-        )}
+        onResolved={(data) => {
+          cachedData.value = data;
+          return (
+            <UnitDetailView
+              data={data}
+              isRefetching={isRefetching.value}
+              onOptionChange$={handleOptionChange$}
+            />
+          );
+        }}
       />
     </div>
   );
@@ -359,6 +377,13 @@ type UnitDetailViewProps = {
   onOptionChange$: (modId: number, optionId: number, mods: UnitDetailModSlot[]) => void;
 };
 
+type SquadGroup = {
+  key: string;
+  count: number;
+  primaryWeapon: UnitDetailSquadMember['primaryWeapon'];
+  specialWeapon: UnitDetailSquadMember['specialWeapon'];
+};
+
 const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetching, onOptionChange$ }) => {
   const unit = data.unit;
   const catLabel = CATEGORY_LABELS[unit.CategoryType] ?? '???';
@@ -368,6 +393,60 @@ const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetching, on
   // ECM: find the active ECM ability (multiplier between 0 and 1 = accuracy reduction)
   const ecmAbility = data.abilities.find(a => a.ECMAccuracyMultiplier > 0 && a.ECMAccuracyMultiplier < 1);
   const ecmPct = ecmAbility ? Math.round((1 - ecmAbility.ECMAccuracyMultiplier) * 100) : 0;
+
+  const squadGroups: SquadGroup[] = (() => {
+    const groups = new Map<string, SquadGroup>();
+    data.squadMembers.forEach((member) => {
+      const pw = member.primaryWeapon;
+      const sw = member.specialWeapon;
+      const key = `${pw?.Id ?? 0}-${sw?.Id ?? 0}`;
+      const existing = groups.get(key);
+      if (existing) {
+        existing.count += 1;
+        return;
+      }
+      groups.set(key, {
+        key,
+        count: 1,
+        primaryWeapon: pw,
+        specialWeapon: sw,
+      });
+    });
+    return Array.from(groups.values());
+  })();
+
+  const renderSquadGrid = (colsClass: string) => (
+    <div class={`grid ${colsClass} gap-1`}>
+      {squadGroups.map((group) => {
+        const pw = group.primaryWeapon;
+        const sw = group.specialWeapon;
+        const pwIcon = pw?.HUDIcon ? toWeaponIconPath(pw.HUDIcon) : null;
+        const swIcon = sw?.HUDIcon ? toWeaponIconPath(sw.HUDIcon) : null;
+        const tooltip = [
+          `x${group.count}`,
+          pw ? `Primary: ${pw.HUDName || pw.Name}` : null,
+          sw ? `Special: ${sw.HUDName || sw.Name}` : null,
+        ].filter(Boolean).join('\n');
+        return (
+          <div
+            key={group.key}
+            class="relative flex flex-col items-center gap-1 p-0 bg-[var(--bg)]/40"
+            title={tooltip}
+          >
+            <span class="absolute top-1 left-1 right-1 text-[10px] font-mono text-[var(--accent)] text-center">x{group.count}</span>
+            <div class="mt-5 flex flex-col items-center gap-1">
+              {pwIcon && (
+                <img src={pwIcon} width={56} height={56} class="w-14 h-14 object-contain brightness-0 invert opacity-80" alt={pw?.HUDName || ''} />
+              )}
+              {swIcon && (
+                <img src={swIcon} width={56} height={56} class="w-14 h-14 object-contain opacity-80" alt={sw?.HUDName || ''} style={{ filter: 'brightness(0) invert(1) sepia(1) saturate(5) hue-rotate(170deg)' }} />
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 
   return (
     <div class={`relative transition-opacity ${isRefetching ? 'opacity-70' : ''}`}>
@@ -396,11 +475,191 @@ const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetching, on
         </div>
       </div>
 
-      {/* ── Main grid: 3 columns on desktop ───────────────────── */}
-      <div class="grid grid-cols-1 md:grid-cols-[300px_1fr_300px] gap-3">
+      {/* ── Mobile Layout (< md) - Single column stacked ─────────────────────── */}
+      <div class="md:hidden flex flex-col gap-4">
 
-        {/* Left column: stats panels */}
-        <div class="flex flex-col gap-3">
+        {/* Portrait */}
+        <div class="border border-[var(--border)] bg-[var(--bg-raised)] relative overflow-hidden">
+          <div
+            class="unit-portrait-bg aspect-[3/2] bg-[#0b0f14] bg-no-repeat bg-center"
+            style={{ backgroundImage: `url(${portraitUrl})` }}
+          >
+            {data.armor && <UnitArmorDiagram armor={data.armor} />}
+            {ecmPct > 0 && (
+              <div class="absolute top-2 right-2 z-10 flex items-center gap-1.5 bg-black/80 backdrop-blur-sm border border-[var(--accent)]/40 px-2 py-1">
+                <GameIcon src={UtilIconPaths.TRAIT_ECM} size={18} variant="accent" alt="ECM" />
+                <span class="text-sm font-semibold text-[var(--accent)] font-mono">{ecmPct}%</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Core Stats */}
+        <div class="border border-[var(--border)] bg-[var(--bg-raised)] p-3">
+          <div class="flex flex-wrap justify-center gap-2">
+            {data.armor && (
+              <>
+                <StatBadge icon={UtilIconPaths.STAT_HEALTH_VEH} label="HP" value={data.armor.MaxHealthPoints} compact />
+                <StatBadge icon={UtilIconPaths.STAT_ARMOR} label="Armor" value={data.armor.ArmorValue} compact />
+              </>
+            )}
+            <StatBadge icon={UtilIconPaths.STAT_WEIGHT} label="Weight" value={unit.Weight ? `${(unit.Weight / 1000).toFixed(1)}t` : '—'} compact />
+            <StatBadge icon={UtilIconPaths.STAT_STEALTH} label="Stealth" value={unit.Stealth !== undefined ? (1 / Math.max(0.1, unit.Stealth)).toFixed(2) : '—'} compact />
+            {unit.InfantrySlots > 0 && (
+              <StatBadge icon={UtilIconPaths.STAT_SEATS} label="Seats" value={unit.InfantrySlots} compact />
+            )}
+            {data.mobility?.HeavyLiftWeight ? (
+              <StatBadge icon={UtilIconPaths.STAT_HEAVYLIFT} label="Lift" value={data.mobility.HeavyLiftWeight} compact />
+            ) : null}
+          </div>
+        </div>
+
+        {/* Modifications */}
+        {data.modifications.length > 0 && (
+          <UnitModifications
+            modifications={data.modifications}
+            onOptionChange$={onOptionChange$}
+            compact
+          />
+        )}
+
+        {/* Mobility & Sensors (2-col on sm+) */}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="space-y-4">
+            {data.mobility && (
+              <UnitMobilityPanel
+                mobility={data.mobility}
+                flyPreset={data.flyPreset}
+                unitType={unit.Type}
+                compact
+              />
+            )}
+            {data.sensors.length > 0 && (
+              <UnitSensorsPanel
+                sensors={data.sensors}
+                abilities={data.abilities}
+                compact
+              />
+            )}
+          </div>
+          <div class="space-y-4">
+            {data.abilities.length > 0 && (
+              <UnitAbilitiesPanel abilities={data.abilities} compact />
+            )}
+            {data.availability.length > 0 && (
+              <UnitAvailabilityPanel availability={data.availability} compact />
+            )}
+          </div>
+        </div>
+
+        {/* Squad Composition */}
+        {data.squadMembers.length > 0 && (
+          <div>
+            <div class="border border-[var(--border)] bg-[var(--bg-raised)] p-0">
+              <p class="text-[10px] font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] m-0 px-2 py-2 border-b border-[var(--border)]">Squad Composition</p>
+              {renderSquadGrid('grid-cols-4 sm:grid-cols-4')}
+            </div>
+          </div>
+        )}
+
+        {/* Weapons */}
+        {data.weapons.length > 0 && (
+          <div>
+            <UnitWeaponsPanel weapons={data.weapons} unitId={unit.Id} />
+          </div>
+        )}
+      </div>
+
+      {/* ── Tablet Layout (md - lg) - Portrait full width + 2 columns ───────── */}
+      <div class="hidden md:flex lg:hidden flex-col gap-4">
+        <div class="border border-[var(--border)] bg-[var(--bg-raised)] relative overflow-hidden">
+          <div
+            class="unit-portrait-bg aspect-[3/2] bg-[#0b0f14] bg-no-repeat bg-center"
+            style={{ backgroundImage: `url(${portraitUrl})` }}
+          >
+            {data.armor && <UnitArmorDiagram armor={data.armor} />}
+            {ecmPct > 0 && (
+              <div class="absolute top-2 right-2 z-10 flex items-center gap-1.5 bg-black/80 backdrop-blur-sm border border-[var(--accent)]/40 px-2 py-1">
+                <GameIcon src={UtilIconPaths.TRAIT_ECM} size={18} variant="accent" alt="ECM" />
+                <span class="text-sm font-semibold text-[var(--accent)] font-mono">{ecmPct}%</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div class="border border-[var(--border)] bg-[var(--bg-raised)] p-3">
+          <div class="flex flex-wrap justify-center gap-2">
+            {data.armor && (
+              <>
+                <StatBadge icon={UtilIconPaths.STAT_HEALTH_VEH} label="HP" value={data.armor.MaxHealthPoints} compact />
+                <StatBadge icon={UtilIconPaths.STAT_ARMOR} label="Armor" value={data.armor.ArmorValue} compact />
+              </>
+            )}
+            <StatBadge icon={UtilIconPaths.STAT_WEIGHT} label="Weight" value={unit.Weight ? `${(unit.Weight / 1000).toFixed(1)}t` : '—'} compact />
+            <StatBadge icon={UtilIconPaths.STAT_STEALTH} label="Stealth" value={unit.Stealth !== undefined ? (1 / Math.max(0.1, unit.Stealth)).toFixed(2) : '—'} compact />
+            {unit.InfantrySlots > 0 && (
+              <StatBadge icon={UtilIconPaths.STAT_SEATS} label="Seats" value={unit.InfantrySlots} compact />
+            )}
+            {data.mobility?.HeavyLiftWeight ? (
+              <StatBadge icon={UtilIconPaths.STAT_HEAVYLIFT} label="Lift" value={data.mobility.HeavyLiftWeight} compact />
+            ) : null}
+          </div>
+        </div>
+
+        {data.squadMembers.length > 0 && (
+          <div class="border border-[var(--border)] bg-[var(--bg-raised)] p-0">
+            <p class="text-[9px] font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] m-0 px-2 py-2 border-b border-[var(--border)]">Squad Composition</p>
+            {renderSquadGrid('grid-cols-4')}
+          </div>
+        )}
+
+        <div class="grid grid-cols-2 gap-4">
+          <div class="flex flex-col gap-4">
+            {data.abilities.length > 0 && (
+              <UnitAbilitiesPanel abilities={data.abilities} compact />
+            )}
+            {data.mobility && (
+              <UnitMobilityPanel
+                mobility={data.mobility}
+                flyPreset={data.flyPreset}
+                unitType={unit.Type}
+                compact
+              />
+            )}
+            {data.sensors.length > 0 && (
+              <UnitSensorsPanel
+                sensors={data.sensors}
+                abilities={data.abilities}
+                compact
+              />
+            )}
+          </div>
+
+          <div class="flex flex-col gap-4">
+            {data.availability.length > 0 && (
+              <UnitAvailabilityPanel availability={data.availability} compact />
+            )}
+            {data.modifications.length > 0 && (
+              <UnitModifications
+                modifications={data.modifications}
+                onOptionChange$={onOptionChange$}
+                compact
+              />
+            )}
+          </div>
+        </div>
+      </div>
+
+      {data.weapons.length > 0 && (
+        <div class="hidden md:block lg:hidden mt-4">
+          <UnitWeaponsPanel weapons={data.weapons} unitId={unit.Id} />
+        </div>
+      )}
+
+      {/* ── Desktop Layout (lg+) - 3-column grid ─────────────────────────────── */}
+      <div class="hidden lg:grid lg:grid-cols-[1fr_1.2fr_1fr] gap-4">
+        {/* Left Column: Abilities, Mobility, Sensors */}
+        <div class="flex flex-col gap-4 justify-between">
           {data.abilities.length > 0 && (
             <UnitAbilitiesPanel abilities={data.abilities} />
           )}
@@ -419,14 +678,13 @@ const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetching, on
           )}
         </div>
 
-        {/* Center column: portrait + armor + core stats */}
-        <div class="flex flex-col gap-3 max-w-lg mx-auto w-full">
-          {/* Portrait with armor + ECM overlay */}
+        {/* Center Column: Core (Portrait, Stats) */}
+        <div class="flex flex-col gap-4">
           <div class="border border-[var(--border)] bg-[var(--bg-raised)] relative overflow-hidden">
-            <div
-              class="aspect-[3/2] bg-[#0b0f14] bg-no-repeat bg-center"
-              style={{ backgroundImage: `url(${portraitUrl})`, backgroundSize: '115%' }}
-            >
+          <div
+            class="unit-portrait-bg aspect-[3/2] bg-[#0b0f14] bg-no-repeat bg-center"
+            style={{ backgroundImage: `url(${portraitUrl})` }}
+          >
               {data.armor && <UnitArmorDiagram armor={data.armor} />}
               {ecmPct > 0 && (
                 <div class="absolute top-2 right-2 z-10 flex items-center gap-1.5 bg-black/80 backdrop-blur-sm border border-[var(--accent)]/40 px-2 py-1">
@@ -437,7 +695,6 @@ const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetching, on
             </div>
           </div>
 
-          {/* Core stats row */}
           <div class="border border-[var(--border)] bg-[var(--bg-raised)] p-4">
             <div class="flex flex-wrap justify-center gap-3">
               {data.armor && (
@@ -447,7 +704,7 @@ const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetching, on
                 </>
               )}
               <StatBadge icon={UtilIconPaths.STAT_WEIGHT} label="Weight" value={unit.Weight ? `${(unit.Weight / 1000).toFixed(1)}t` : '—'} />
-              <StatBadge icon={UtilIconPaths.STAT_STEALTH} label="Stealth" value={unit.Stealth} />
+              <StatBadge icon={UtilIconPaths.STAT_STEALTH} label="Stealth" value={unit.Stealth !== undefined ? (1 / Math.max(0.1, unit.Stealth)).toFixed(2) : '—'} />
               {unit.InfantrySlots > 0 && (
                 <StatBadge icon={UtilIconPaths.STAT_SEATS} label="Seats" value={unit.InfantrySlots} />
               )}
@@ -456,64 +713,33 @@ const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetching, on
               ) : null}
             </div>
           </div>
-
         </div>
 
-        {/* Right column: modifications + availability */}
-        <div class="flex flex-col gap-3">
+        {/* Right Column: Availability, Squad, Modifications */}
+        <div class="flex flex-col gap-4 justify-between">
+          {data.availability.length > 0 && (
+            <UnitAvailabilityPanel availability={data.availability} />
+          )}
+
+          {data.squadMembers.length > 0 && (
+            <div class="border border-[var(--border)] bg-[var(--bg-raised)] p-0">
+              <p class="text-[10px] font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] m-0 px-2 py-2 border-b border-[var(--border)]">Squad Composition</p>
+              {renderSquadGrid('grid-cols-4')}
+            </div>
+          )}
+
           {data.modifications.length > 0 && (
             <UnitModifications
               modifications={data.modifications}
               onOptionChange$={onOptionChange$}
             />
           )}
-          {data.availability.length > 0 && (
-            <UnitAvailabilityPanel availability={data.availability} />
-          )}
-          {data.squadMembers.length > 0 && (
-            <div class="border border-[var(--border)] bg-[var(--bg-raised)] p-4">
-              <p class="text-[10px] font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] mb-3">Squad Composition</p>
-              <div class="grid grid-cols-3 gap-1.5">
-                {data.squadMembers.map((member, idx) => {
-                  const pw = member.primaryWeapon;
-                  const sw = member.specialWeapon;
-                  const pwIcon = pw?.HUDIcon ? toWeaponIconPath(pw.HUDIcon) : null;
-                  const swIcon = sw?.HUDIcon ? toWeaponIconPath(sw.HUDIcon) : null;
-                  const tooltip = [
-                    `#${idx + 1} (priority ${member.DeathPriority})`,
-                    pw ? `Primary: ${pw.HUDName || pw.Name}` : null,
-                    sw ? `Special: ${sw.HUDName || sw.Name}` : null,
-                  ].filter(Boolean).join('\n');
-                  return (
-                    <div
-                      key={member.Id}
-                      class="flex flex-col items-center gap-1 p-1.5 bg-[var(--bg)]/40"
-                      title={tooltip}
-                    >
-                      <span class="text-[9px] font-mono text-[var(--text-dim)]">#{idx + 1}</span>
-                      <div class="flex items-center gap-1">
-                        {pwIcon && (
-                          <img src={pwIcon} width={16} height={16} class="w-4 h-4 object-contain brightness-0 invert opacity-80" alt={pw?.HUDName || ''} />
-                        )}
-                        {swIcon && (
-                          <img src={swIcon} width={16} height={16} class="w-4 h-4 object-contain opacity-80" alt={sw?.HUDName || ''} style={{ filter: 'brightness(0) invert(1) sepia(1) saturate(5) hue-rotate(170deg)' }} />
-                        )}
-                        {!pwIcon && !swIcon && (
-                          <span class="text-[10px] text-[var(--text-dim)]">—</span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* ── Full-width weapons section below grid ─────────────── */}
+      {/* ── Desktop Weapons Section (full width) ─────────────────────────────── */}
       {data.weapons.length > 0 && (
-        <div class="mt-3">
+        <div class="hidden lg:block mt-4">
           <UnitWeaponsPanel weapons={data.weapons} unitId={unit.Id} />
         </div>
       )}
@@ -523,11 +749,20 @@ const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetching, on
 
 /* ── Stat Badge ─────────────────────────────────────────────────── */
 
-const StatBadge = component$<{ icon: string; label: string; value: number | string }>(
-  ({ icon, label, value }) => (
-    <div class="flex flex-col items-center gap-1 p-2 bg-[var(--bg)]/40" title={label}>
-      <GameIcon src={icon} size={22} variant="white" alt={label} />
-      <span class="text-sm font-semibold text-[var(--text)] text-center">{value}</span>
+const StatBadge = component$<{ icon: string; label: string; value: number | string; compact?: boolean }>(
+  ({ icon, label, value, compact }) => (
+    <div
+      class={
+        compact
+          ? 'flex items-center gap-2 px-2 py-1 bg-[var(--bg)]/40'
+          : 'flex flex-col items-center gap-1 p-2 bg-[var(--bg)]/40'
+      }
+      title={label}
+    >
+      <GameIcon src={icon} size={compact ? 16 : 22} variant="white" alt={label} />
+      <span class={compact ? 'text-xs font-semibold text-[var(--text)]' : 'text-sm font-semibold text-[var(--text)] text-center'}>
+        {value}
+      </span>
     </div>
   ),
 );

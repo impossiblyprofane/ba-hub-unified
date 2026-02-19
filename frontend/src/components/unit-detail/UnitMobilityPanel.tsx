@@ -7,9 +7,11 @@ type Props = {
   mobility: UnitDetailMobility;
   flyPreset: UnitDetailFlyPreset | null;
   unitType: number;
+  compact?: boolean;
+  fill?: boolean;
 };
 
-export const UnitMobilityPanel = component$<Props>(({ mobility, flyPreset, unitType }) => {
+export const UnitMobilityPanel = component$<Props>(({ mobility, flyPreset, unitType, compact, fill }) => {
   const isInfantry = unitType === 2;
   const isHelicopter = unitType === 8;
   const isAircraft = unitType === 16;
@@ -23,7 +25,7 @@ export const UnitMobilityPanel = component$<Props>(({ mobility, flyPreset, unitT
         : UtilIconPaths.MOBILITY_FORWARD_VEH;
 
   // Build stats array based on unit type
-  const stats: Array<{ icon: string; label: string; value: string; unit: string }> = [];
+  const stats: Array<{ icon: string; label: string; value: string; unit: string; iconOnly?: boolean }> = [];
 
   if (isAircraft && flyPreset) {
     // Aircraft: speed = MaxSpeedRoad halved, afterburner uses flyPreset ratio
@@ -59,45 +61,51 @@ export const UnitMobilityPanel = component$<Props>(({ mobility, flyPreset, unitT
       stats.push({ icon: UtilIconPaths.TRAIT_AMPHIBIOUS, label: 'Water', value: `${Math.round(mobility.MaxSpeedWater)}`, unit: '' });
     }
   }
+  if (mobility.IsAirDroppable) {
+    stats.push({ icon: UtilIconPaths.TRAIT_AIRDROP, label: 'Air-droppable', value: '', unit: '', iconOnly: true });
+  }
 
   // Determine columns: max 4, match count when <= 4
   const cols = Math.min(stats.length, 4);
   const gridClass = cols <= 2 ? 'grid-cols-2' : cols === 3 ? 'grid-cols-3' : 'grid-cols-4';
 
   return (
-    <div class="border border-[var(--border)] bg-[var(--bg-raised)] p-4">
-      <p class="text-[10px] font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] mb-3">
+    <div
+      class={`border border-[var(--border)] bg-[var(--bg-raised)] p-0 ${fill ? 'h-full flex flex-col' : ''}`}
+    >
+      <p class={`font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] ${compact ? 'text-[9px] px-2 py-2' : 'text-[10px] px-3 py-2'} border-b border-[var(--border)]`}>
         Mobility — km/h
       </p>
 
-      <div class={`grid ${gridClass} gap-1.5`}>
-        {stats.map(s => (
-          <div key={s.label} class="flex flex-col items-center gap-1.5 p-3 bg-[var(--bg)]/40" title={s.label}>
-            <GameIcon src={s.icon} size={24} variant="white" alt={s.label} />
-            <span class="text-base font-semibold text-[var(--text)]">
-              {s.value}
-              {s.unit && <span class="text-xs font-mono text-[var(--text-dim)] ml-0.5">{s.unit}</span>}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {/* Trait pills */}
-      {mobility.IsAirDroppable && (
-        <div class="flex flex-wrap gap-1.5 mt-2">
-          <TraitPill icon={UtilIconPaths.TRAIT_AIRDROP} label="DROP" tip="Air-droppable" />
+      {compact ? (
+        <div class={`flex flex-wrap gap-2 ${fill ? 'flex-1' : ''} content-start`}>
+          {stats.map(s => (
+            <div key={s.label} class="flex items-center gap-2 px-2 py-1 bg-[var(--bg)]/40" title={s.label}>
+              <GameIcon src={s.icon} size={16} variant="white" alt={s.label} />
+              {!s.iconOnly && (
+                <span class="text-xs font-semibold text-[var(--text)]">
+                  {s.value}
+                  {s.unit && <span class="text-[10px] font-mono text-[var(--text-dim)] ml-0.5">{s.unit}</span>}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div class={`grid ${gridClass} gap-1.5`}>
+          {stats.map(s => (
+            <div key={s.label} class="flex flex-col items-center gap-1.5 p-3 bg-[var(--bg)]/40" title={s.label}>
+              <GameIcon src={s.icon} size={s.iconOnly ? 28 : 26} variant="white" alt={s.label} />
+              {!s.iconOnly && (
+                <span class="text-base font-semibold text-[var(--text)]">
+                  {s.value}
+                  {s.unit && <span class="text-xs font-mono text-[var(--text-dim)] ml-0.5">{s.unit}</span>}
+                </span>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>
   );
 });
-
-const TraitPill = component$<{ icon: string; label: string; tip: string }>(({ icon, label, tip }) => (
-  <span
-    class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[var(--tag)] text-[var(--tag-text)] text-[9px] font-mono uppercase tracking-wider"
-    title={tip}
-  >
-    <GameIcon src={icon} size={11} variant="accent" alt={tip} />
-    {label}
-  </span>
-));
