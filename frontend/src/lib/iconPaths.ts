@@ -15,7 +15,7 @@ export const IconPaths = {
 
 // Dynamic path builder functions
 export function toUnitIconPath(unitThumbnailPath: string): string {
-  return encodeIconPath(IconPaths.Unit + unitThumbnailPath + ".png");
+  return encodeIconPath(IconPaths.Unit + unitThumbnailPath.toUpperCase() + ".png");
 }
 
 export function toCountryIconPath(countryThumbnailPath: string): string {
@@ -31,7 +31,7 @@ export function toSpecializationCoverPath(specializationThumbnailPath: string): 
 }
 
 export function toWeaponIconPath(weaponId: string): string {
-  return encodeIconPath(IconPaths.Weapon + weaponId + ".png");
+  return encodeIconPath(IconPaths.Weapon + weaponId.toUpperCase() + ".png");
 }
 
 /**
@@ -43,14 +43,14 @@ export function toOptionPicturePath(optionPicture: string): string {
   const category = parts.length > 1 ? parts[0] : '';
   const fileName = parts[parts.length - 1];
   if (category === 'Weapons') {
-    return encodeIconPath(IconPaths.Weapon + fileName + ".png");
+    return encodeIconPath(IconPaths.Weapon + fileName.toUpperCase() + ".png");
   }
   // Modifications and others → outline directory
-  return encodeIconPath(IconPaths.Modification + "outline/" + fileName + ".png");
+  return encodeIconPath(IconPaths.Modification + "outline/" + fileName.toUpperCase() + ".png");
 }
 
 export function toAmmunitionIconPath(ammunitionId: string): string {
-  return encodeIconPath(IconPaths.Ammunition + ammunitionId + ".png");
+  return encodeIconPath(IconPaths.Ammunition + ammunitionId.toUpperCase() + ".png");
 }
 
 export function toPortraitIconPath(unitId: string): string {

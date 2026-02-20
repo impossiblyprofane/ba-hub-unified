@@ -24,9 +24,9 @@ export const UnitSensorsPanel = component$<Props>(({ sensors, abilities, compact
 
   return (
     <div
-      class={`border border-[var(--border)] bg-[var(--bg-raised)] p-0 ${fill ? 'h-full flex flex-col' : ''}`}
+      class={`p-0 bg-gradient-to-b from-[var(--bg)] to-[var(--bg)]/70 ${fill ? 'h-full flex flex-col' : ''}`}
     >
-      <p class={`font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] ${compact ? 'text-[9px] px-2 py-2' : 'text-[10px] px-3 py-2'} border-b border-[var(--border)]`}>
+      <p class={`font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] ${compact ? 'text-[9px] px-2 py-2' : 'text-[10px] px-3 py-2'} border-b border-[var(--border)]/30`}>
         Optics
       </p>
 
@@ -57,7 +57,7 @@ export const UnitSensorsPanel = component$<Props>(({ sensors, abilities, compact
       ) : (
         <div class="flex-1 flex flex-col justify-start">
           {/* Base optics — vertical icon + value */}
-          <div class="grid grid-cols-3 gap-1.5">
+          <div class="grid grid-cols-3 gap-1">
             <VStatCell icon={UtilIconPaths.STAT_OPTICS} tooltip="Ground optics" value={`${ground}m`} />
             <VStatCell icon={UtilIconPaths.TRAIT_AIR_ALT_DOWN} tooltip="Low-altitude optics" value={`${lowAlt}m`} />
             <VStatCell icon={UtilIconPaths.TRAIT_AIR_ALT_UP} tooltip="High-altitude optics" value={`${highAlt}m`} />
@@ -65,17 +65,17 @@ export const UnitSensorsPanel = component$<Props>(({ sensors, abilities, compact
 
           {/* Radar-enhanced values */}
           {radar && (
-            <div class="grid grid-cols-3 gap-1.5 mt-1.5">
-              <div class="flex items-center justify-center p-2" title="Radar">
+            <div class="grid grid-cols-3 gap-1 mt-0.5">
+              <div class="flex items-center justify-center p-1.5" title="Radar">
                 <GameIcon src={UtilIconPaths.TRAIT_RADAR} size={16} variant="accent" alt="Radar" />
               </div>
               {radarLow !== null && (
-                <div class="flex flex-col items-center justify-center gap-1 p-2 bg-[var(--accent)]/10" title="Radar-enhanced low-alt optics">
+                <div class="flex flex-col items-center justify-center gap-0.5 p-1.5 bg-[var(--accent)]/10" title="Radar-enhanced low-alt optics">
                   <span class="text-sm font-semibold text-[var(--accent)]">{radarLow}m</span>
                 </div>
               )}
               {radarHigh !== null && (
-                <div class="flex flex-col items-center justify-center gap-1 p-2 bg-[var(--accent)]/10" title="Radar-enhanced high-alt optics">
+                <div class="flex flex-col items-center justify-center gap-0.5 p-1.5 bg-[var(--accent)]/10" title="Radar-enhanced high-alt optics">
                   <span class="text-sm font-semibold text-[var(--accent)]">{radarHigh}m</span>
                 </div>
               )}
@@ -89,7 +89,7 @@ export const UnitSensorsPanel = component$<Props>(({ sensors, abilities, compact
 
 const VStatCell = component$<{ icon: string; tooltip: string; value: string; label?: string; compact?: boolean }>(
   ({ icon, tooltip, value, label, compact }) => (
-    <div class={`flex flex-col items-center ${compact ? 'gap-1 p-2' : 'gap-1.5 p-2.5'} bg-[var(--bg)]/40`} title={tooltip}>
+    <div class={`flex flex-col items-center ${compact ? 'gap-0.5 p-1.5' : 'gap-1 p-2'} bg-[var(--bg)]/40`} title={tooltip}>
       <GameIcon src={icon} size={compact ? 16 : 20} variant="white" alt={tooltip} />
       {label && <span class={`${compact ? 'text-[8px]' : 'text-[9px]'} font-mono text-[var(--text-dim)]`}>{label}</span>}
       <span class={`${compact ? 'text-xs' : 'text-sm'} font-semibold text-[var(--text)]`}>{value}</span>

@@ -15,12 +15,12 @@ export const UnitModifications = component$<Props>(({ modifications, onOptionCha
 
   return (
     <div
-      class={`border border-[var(--border)] bg-[var(--bg-raised)] ${compact ? 'p-3' : 'p-4'} ${fill ? 'h-full flex flex-col' : ''}`}
+      class={`p-0 bg-gradient-to-b from-[var(--bg)] to-[var(--bg)]/70 ${fill ? 'h-full flex flex-col' : ''}`}
     >
-      <p class={`${compact ? 'text-[9px] mb-2' : 'text-[10px] mb-3'} font-mono tracking-[0.3em] uppercase text-[var(--text-dim)]`}>
+      <p class={`font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] ${compact ? 'text-[9px] px-2 py-2' : 'text-[10px] px-3 py-2'} border-b border-[var(--border)]/30`}>
         Modifications
       </p>
-      <div class={`flex flex-col ${compact ? 'gap-2' : 'gap-3'} ${fill ? 'flex-1' : ''}`}>
+      <div class={`flex flex-col ${compact ? 'gap-2 p-3' : 'gap-3 p-4'} ${fill ? 'flex-1' : ''}`}>
         {modifications.map(slot => {
           const modName = getGameLocaleValueOrKey(
             GAME_LOCALES.modopts, slot.modification.UIName || slot.modification.Name, i18n.locale,

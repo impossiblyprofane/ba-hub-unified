@@ -350,7 +350,13 @@ const buildUnitDetailResult = (
   for (const opt of activeOptions) {
     if (isPositiveId(opt.ReplaceUnitId)) {
       const replacement = indexes.unitsById.get(opt.ReplaceUnitId);
-      if (replacement) resolvedUnit = replacement;
+      if (replacement) {
+        resolvedUnit = replacement;
+        // If no explicit name override, inherit the replacement unit's name
+        if (!opt.ReplaceUnitName && !opt.ConcatenateWithUnitName) {
+          displayName = replacement.Name ?? displayName;
+        }
+      }
     }
     if (opt.ReplaceUnitName) displayName = opt.ReplaceUnitName;
     if (opt.ConcatenateWithUnitName) displayName = `${displayName} ${opt.ConcatenateWithUnitName}`;
@@ -438,15 +444,16 @@ const buildUnitDetailResult = (
           }
         }
       }
-      // Produce one weapon entry per squad-member weapon reference (dupes included)
-      // so that the frontend merge logic can aggregate them properly.
+      // Use resolvedUnit.Id for ammo lookups — when an option replaces the unit,
+      // the weapon-ammunition entries are keyed under the replacement unit's ID.
+      const ammoLookupUnitId = resolvedUnit.Id;
       for (const wid of seenWeaponIds) {
         const weapon = indexes.weaponsById.get(wid);
         if (!weapon) continue;
         weapons.push({
           weapon,
           turret: null,
-          ammunition: buildWeaponAmmoSlots(unitId, wid, indexes),
+          ammunition: buildWeaponAmmoSlots(ammoLookupUnitId, wid, indexes),
         });
       }
     }

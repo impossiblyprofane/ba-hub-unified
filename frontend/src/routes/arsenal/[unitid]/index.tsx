@@ -5,7 +5,6 @@ import { GameIcon } from '~/components/GameIcon';
 import { useI18n, t } from '~/lib/i18n';
 import {
   toCountryIconPath, toPortraitIconPath,
-  toWeaponIconPath,
   UtilIconPaths,
 } from '~/lib/iconPaths';
 import { UnitModifications } from '~/components/unit-detail/UnitModifications';
@@ -15,6 +14,7 @@ import { UnitSensorsPanel } from '~/components/unit-detail/UnitSensorsPanel';
 import { UnitAbilitiesPanel } from '~/components/unit-detail/UnitAbilitiesPanel';
 import { UnitWeaponsPanel } from '~/components/unit-detail/UnitWeaponsPanel';
 import { UnitAvailabilityPanel } from '~/components/unit-detail/UnitAvailabilityPanel';
+import { SquadCompositionPanel } from '~/components/unit-detail/SquadCompositionPanel';
 
 /* ── Types ──────────────────────────────────────────────────────── */
 
@@ -56,11 +56,16 @@ export type UnitDetailSensor = {
 export type UnitDetailAbility = {
   Id: number; Name: string; IsDefault: boolean; ECMAccuracyMultiplier: number;
   IsRadar: boolean; RadarLowAltOpticsModifier: number; RadarHighAltOpticsModifier: number;
+  RadarLowAltWeaponRangeModifier: number; RadarHighAltWeaponRangeModifier: number;
+  IsRadarStatic: boolean; RadarSwitchCooldown: number;
   IsLaserDesignator: boolean; LaserMaxRange: number; LaserUsableInMove: boolean;
   IsInfantrySprint: boolean; SprintDuration: number; SprintCooldown: number;
   IsSmoke: boolean; SmokeAmmunitionQuantity: number; SmokeCooldown: number;
   IsAPS: boolean; APSQuantity: number; APSCooldown: number; APSHitboxProportion: number;
-  IsDecoy: boolean; DecoyQuantity: number; DecoyCooldown: number; DecoyDuration: number;
+  APSSupplyCost: number; APSResupplyTime: number;
+  IsDecoy: boolean; DecoyQuantity: number; DecoyAccuracyMultiplier: number;
+  DecoyCooldown: number; DecoyDuration: number;
+  DecoySupplyCost: number; DecoyResupplyTime: number;
 };
 
 export type UnitDetailAmmo = {
@@ -69,11 +74,16 @@ export type UnitDetailAmmo = {
   GroundRange: number; LowAltRange: number; HighAltRange: number; MinimalRange: number;
   TargetType: number; ArmorTargeted: number; TrajectoryType: number;
   TopArmorAttack: boolean; LaserGuided: boolean; CanBeIntercepted: boolean;
+  NoDamageFalloff: boolean; IgnoreCover: number;
   HealthAOERadius: number; StressAOERadius: number;
   MuzzleVelocity: number; MaxSpeed: number;
   DispersionHorizontalRadius: number; DispersionVerticalRadius: number;
   SupplyCost: number; ResupplyTime: number;
   GenerateSmoke: boolean; Seeker: number; SeekerAngle: number;
+  MaxSeekerDistance: number; CanBeTargeted: boolean; CanReaquire: boolean;
+  AimStartDelay: number; MainEngineIgnitionDelay: number;
+  RotationSpeed: number; BurnTime: number;
+  Airburst: boolean;
   HUDMultiplier: number; CriticMultiplier: number;
 };
 
@@ -173,11 +183,13 @@ const UNIT_DETAIL_QUERY = `
       abilities {
         Id Name IsDefault ECMAccuracyMultiplier
         IsRadar RadarLowAltOpticsModifier RadarHighAltOpticsModifier
+        RadarLowAltWeaponRangeModifier RadarHighAltWeaponRangeModifier
+        IsRadarStatic RadarSwitchCooldown
         IsLaserDesignator LaserMaxRange LaserUsableInMove
         IsInfantrySprint SprintDuration SprintCooldown
         IsSmoke SmokeAmmunitionQuantity SmokeCooldown
-        IsAPS APSQuantity APSCooldown APSHitboxProportion
-        IsDecoy DecoyQuantity DecoyCooldown DecoyDuration
+        IsAPS APSQuantity APSCooldown APSHitboxProportion APSSupplyCost APSResupplyTime
+        IsDecoy DecoyQuantity DecoyAccuracyMultiplier DecoyCooldown DecoyDuration DecoySupplyCost DecoyResupplyTime
       }
       weapons {
         weapon {
@@ -207,6 +219,10 @@ const UNIT_DETAIL_QUERY = `
             DispersionHorizontalRadius DispersionVerticalRadius
             SupplyCost ResupplyTime
             GenerateSmoke Seeker SeekerAngle
+            MaxSeekerDistance CanBeTargeted CanReaquire
+            AimStartDelay MainEngineIgnitionDelay
+            RotationSpeed BurnTime
+            NoDamageFalloff IgnoreCover Airburst
             HUDMultiplier CriticMultiplier
           }
         }
@@ -341,13 +357,13 @@ export default component$(() => {
             );
           }
           return (
-            <div class="border border-[var(--border)] bg-[var(--bg-raised)] p-8">
+            <div class="p-8">
               <div class="text-sm font-mono text-[var(--text-dim)] animate-pulse">Loading unit data…</div>
             </div>
           );
         }}
         onRejected={(err) => (
-          <div class="border border-[var(--border)] bg-[var(--bg-raised)] p-8">
+          <div class="p-8">
             <p class="text-[var(--red)] text-sm font-mono">Error: {(err as Error).message}</p>
             <Link href="/arsenal" class="text-xs text-[var(--accent)] mt-4 inline-block">
               Return to Arsenal
@@ -377,13 +393,6 @@ type UnitDetailViewProps = {
   onOptionChange$: (modId: number, optionId: number, mods: UnitDetailModSlot[]) => void;
 };
 
-type SquadGroup = {
-  key: string;
-  count: number;
-  primaryWeapon: UnitDetailSquadMember['primaryWeapon'];
-  specialWeapon: UnitDetailSquadMember['specialWeapon'];
-};
-
 const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetching, onOptionChange$ }) => {
   const unit = data.unit;
   const catLabel = CATEGORY_LABELS[unit.CategoryType] ?? '???';
@@ -394,95 +403,23 @@ const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetching, on
   const ecmAbility = data.abilities.find(a => a.ECMAccuracyMultiplier > 0 && a.ECMAccuracyMultiplier < 1);
   const ecmPct = ecmAbility ? Math.round((1 - ecmAbility.ECMAccuracyMultiplier) * 100) : 0;
 
-  const squadGroups: SquadGroup[] = (() => {
-    const groups = new Map<string, SquadGroup>();
-    data.squadMembers.forEach((member) => {
-      const pw = member.primaryWeapon;
-      const sw = member.specialWeapon;
-      const key = `${pw?.Id ?? 0}-${sw?.Id ?? 0}`;
-      const existing = groups.get(key);
-      if (existing) {
-        existing.count += 1;
-        return;
-      }
-      groups.set(key, {
-        key,
-        count: 1,
-        primaryWeapon: pw,
-        specialWeapon: sw,
-      });
-    });
-    return Array.from(groups.values());
-  })();
-
-  const renderSquadGrid = (colsClass: string) => (
-    <div class={`grid ${colsClass} gap-1`}>
-      {squadGroups.map((group) => {
-        const pw = group.primaryWeapon;
-        const sw = group.specialWeapon;
-        const pwIcon = pw?.HUDIcon ? toWeaponIconPath(pw.HUDIcon) : null;
-        const swIcon = sw?.HUDIcon ? toWeaponIconPath(sw.HUDIcon) : null;
-        const tooltip = [
-          `x${group.count}`,
-          pw ? `Primary: ${pw.HUDName || pw.Name}` : null,
-          sw ? `Special: ${sw.HUDName || sw.Name}` : null,
-        ].filter(Boolean).join('\n');
-        return (
-          <div
-            key={group.key}
-            class="relative flex flex-col items-center gap-1 p-0 bg-[var(--bg)]/40"
-            title={tooltip}
-          >
-            <span class="absolute top-1 left-1 right-1 text-[10px] font-mono text-[var(--accent)] text-center">x{group.count}</span>
-            <div class="mt-5 flex flex-col items-center gap-1">
-              {pwIcon && (
-                <img src={pwIcon} width={56} height={56} class="w-14 h-14 object-contain brightness-0 invert opacity-80" alt={pw?.HUDName || ''} />
-              )}
-              {swIcon && (
-                <img src={swIcon} width={56} height={56} class="w-14 h-14 object-contain opacity-80" alt={sw?.HUDName || ''} style={{ filter: 'brightness(0) invert(1) sepia(1) saturate(5) hue-rotate(170deg)' }} />
-              )}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
+  // Directional armor check — when present, the single ArmorValue is redundant (shown on portrait overlay)
+  const hasDirArmor = data.armor
+    ? (data.armor.KinArmorFront > 0 || data.armor.HeatArmorFront > 0 ||
+       data.armor.KinArmorRear > 0 || data.armor.HeatArmorRear > 0)
+    : false;
 
   return (
     <div class={`relative transition-opacity ${isRefetching ? 'opacity-70' : ''}`}>
-      {/* ── Header ────────────────────────────────────────────── */}
-      <div class="border border-[var(--border)] bg-[var(--bg-raised)] p-5 mb-3">
-        <div class="flex items-start justify-between gap-4">
-          <div class="flex items-center gap-4 min-w-0">
-            {countryFlagUrl && (
-              <img src={countryFlagUrl} alt={data.country?.Name} width={32} height={20} class="border border-[var(--border)]" />
-            )}
-            <div class="min-w-0">
-              <p class="text-xs font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] mb-1">
-                {catLabel}
-              </p>
-              <h1 class="text-2xl font-semibold text-[var(--text)] truncate">
-                {data.displayName}
-              </h1>
-            </div>
-          </div>
-          <div class="flex items-center gap-3 shrink-0">
-            <div class="text-right">
-              <p class="text-xs font-mono tracking-widest uppercase text-[var(--text-dim)]">Cost</p>
-              <p class="text-xl font-semibold text-[var(--accent)]">{data.totalCost}</p>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* ── Mobile Layout (< md) - Single column stacked ─────────────────────── */}
       <div class="md:hidden flex flex-col gap-4">
 
-        {/* Portrait */}
-        <div class="border border-[var(--border)] bg-[var(--bg-raised)] relative overflow-hidden">
+        {/* Portrait + Name Inlay + Dimensions */}
+        <div class="overflow-hidden">
           <div
-            class="unit-portrait-bg aspect-[3/2] bg-[#0b0f14] bg-no-repeat bg-center"
-            style={{ backgroundImage: `url(${portraitUrl})` }}
+            class="unit-portrait-bg aspect-[3/2] bg-no-repeat bg-center relative"
+            style={{ backgroundImage: `url(${portraitUrl}), radial-gradient(ellipse, var(--bg) 30%, transparent 80%)` }}
           >
             {data.armor && <UnitArmorDiagram armor={data.armor} />}
             {ecmPct > 0 && (
@@ -492,18 +429,35 @@ const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetching, on
               </div>
             )}
           </div>
+          <div class="px-3 py-2 border-b border-[var(--border)]/30 bg-gradient-to-b from-[var(--bg)] to-[var(--bg)]/70">
+            <div class="flex items-center justify-center gap-2">
+              <span class="text-[10px] font-mono tracking-[0.2em] uppercase text-[var(--text-dim)]">{catLabel}</span>
+              {countryFlagUrl && (
+                <img src={countryFlagUrl} alt={data.country?.Name} width={36} height={22} class="border border-[var(--border)]" />
+              )}
+              <h2 class="text-base font-semibold text-[var(--text)]">{data.displayName}</h2>
+            </div>
+          </div>
+          {(unit.Length > 0 || unit.Width > 0 || unit.Height > 0) && (
+            <div class="flex items-center justify-center gap-4 px-3 py-1.5 border-t border-[var(--border)]/30 bg-gradient-to-b from-[var(--bg)]/70 to-[var(--bg)]/40">
+              <span class="text-[9px] font-mono text-[var(--text-dim)]" title="Length">L <span class="text-[var(--text)]">{unit.Length?.toFixed(1) ?? '—'}</span>m</span>
+              <span class="text-[9px] font-mono text-[var(--text-dim)]" title="Width">W <span class="text-[var(--text)]">{unit.Width?.toFixed(1) ?? '—'}</span>m</span>
+              <span class="text-[9px] font-mono text-[var(--text-dim)]" title="Height">H <span class="text-[var(--text)]">{unit.Height?.toFixed(1) ?? '—'}</span>m</span>
+            </div>
+          )}
         </div>
 
         {/* Core Stats */}
-        <div class="border border-[var(--border)] bg-[var(--bg-raised)] p-3">
+        <div class="p-3 bg-gradient-to-b from-[var(--bg)] to-[var(--bg)]/70">
           <div class="flex flex-wrap justify-center gap-2">
+            <StatBadge icon={UtilIconPaths.STAT_COST} label="Cost" value={data.totalCost} compact />
             {data.armor && (
               <>
                 <StatBadge icon={UtilIconPaths.STAT_HEALTH_VEH} label="HP" value={data.armor.MaxHealthPoints} compact />
-                <StatBadge icon={UtilIconPaths.STAT_ARMOR} label="Armor" value={data.armor.ArmorValue} compact />
+                {!hasDirArmor && <StatBadge icon={UtilIconPaths.STAT_ARMOR} label="Armor" value={data.armor.ArmorValue} compact />}
               </>
             )}
-            <StatBadge icon={UtilIconPaths.STAT_WEIGHT} label="Weight" value={unit.Weight ? `${(unit.Weight / 1000).toFixed(1)}t` : '—'} compact />
+            <StatBadge icon={UtilIconPaths.STAT_WEIGHT} label="Weight" value={unit.Weight ? `${unit.Weight}kg` : '—'} compact />
             <StatBadge icon={UtilIconPaths.STAT_STEALTH} label="Stealth" value={unit.Stealth !== undefined ? (1 / Math.max(0.1, unit.Stealth)).toFixed(2) : '—'} compact />
             {unit.InfantrySlots > 0 && (
               <StatBadge icon={UtilIconPaths.STAT_SEATS} label="Seats" value={unit.InfantrySlots} compact />
@@ -554,28 +508,23 @@ const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetching, on
 
         {/* Squad Composition */}
         {data.squadMembers.length > 0 && (
-          <div>
-            <div class="border border-[var(--border)] bg-[var(--bg-raised)] p-0">
-              <p class="text-[10px] font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] m-0 px-2 py-2 border-b border-[var(--border)]">Squad Composition</p>
-              {renderSquadGrid('grid-cols-4 sm:grid-cols-4')}
-            </div>
-          </div>
+          <SquadCompositionPanel members={data.squadMembers} compact />
         )}
 
         {/* Weapons */}
         {data.weapons.length > 0 && (
           <div>
-            <UnitWeaponsPanel weapons={data.weapons} unitId={unit.Id} />
+            <UnitWeaponsPanel weapons={data.weapons} unitId={unit.Id} abilities={data.abilities} />
           </div>
         )}
       </div>
 
       {/* ── Tablet Layout (md - lg) - Portrait full width + 2 columns ───────── */}
       <div class="hidden md:flex lg:hidden flex-col gap-4">
-        <div class="border border-[var(--border)] bg-[var(--bg-raised)] relative overflow-hidden">
+        <div class="overflow-hidden">
           <div
-            class="unit-portrait-bg aspect-[3/2] bg-[#0b0f14] bg-no-repeat bg-center"
-            style={{ backgroundImage: `url(${portraitUrl})` }}
+            class="unit-portrait-bg aspect-[3/2] bg-no-repeat bg-center relative"
+            style={{ backgroundImage: `url(${portraitUrl}), radial-gradient(ellipse, var(--bg) 30%, transparent 80%)` }}
           >
             {data.armor && <UnitArmorDiagram armor={data.armor} />}
             {ecmPct > 0 && (
@@ -585,17 +534,34 @@ const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetching, on
               </div>
             )}
           </div>
+          <div class="px-3 py-2 border-b border-[var(--border)]/30 bg-gradient-to-b from-[var(--bg)] to-[var(--bg)]/70">
+            <div class="flex items-center justify-center gap-2">
+              <span class="text-[10px] font-mono tracking-[0.2em] uppercase text-[var(--text-dim)]">{catLabel}</span>
+              {countryFlagUrl && (
+                <img src={countryFlagUrl} alt={data.country?.Name} width={36} height={22} class="border border-[var(--border)]" />
+              )}
+              <h2 class="text-base font-semibold text-[var(--text)]">{data.displayName}</h2>
+            </div>
+          </div>
+          {(unit.Length > 0 || unit.Width > 0 || unit.Height > 0) && (
+            <div class="flex items-center justify-center gap-4 px-3 py-1.5 border-t border-[var(--border)]/30 bg-gradient-to-b from-[var(--bg)]/70 to-[var(--bg)]/40">
+              <span class="text-[9px] font-mono text-[var(--text-dim)]" title="Length">L <span class="text-[var(--text)]">{unit.Length?.toFixed(1) ?? '—'}</span>m</span>
+              <span class="text-[9px] font-mono text-[var(--text-dim)]" title="Width">W <span class="text-[var(--text)]">{unit.Width?.toFixed(1) ?? '—'}</span>m</span>
+              <span class="text-[9px] font-mono text-[var(--text-dim)]" title="Height">H <span class="text-[var(--text)]">{unit.Height?.toFixed(1) ?? '—'}</span>m</span>
+            </div>
+          )}
         </div>
 
-        <div class="border border-[var(--border)] bg-[var(--bg-raised)] p-3">
+        <div class="p-3 bg-gradient-to-b from-[var(--bg)] to-[var(--bg)]/70">
           <div class="flex flex-wrap justify-center gap-2">
+            <StatBadge icon={UtilIconPaths.STAT_COST} label="Cost" value={data.totalCost} compact />
             {data.armor && (
               <>
                 <StatBadge icon={UtilIconPaths.STAT_HEALTH_VEH} label="HP" value={data.armor.MaxHealthPoints} compact />
-                <StatBadge icon={UtilIconPaths.STAT_ARMOR} label="Armor" value={data.armor.ArmorValue} compact />
+                {!hasDirArmor && <StatBadge icon={UtilIconPaths.STAT_ARMOR} label="Armor" value={data.armor.ArmorValue} compact />}
               </>
             )}
-            <StatBadge icon={UtilIconPaths.STAT_WEIGHT} label="Weight" value={unit.Weight ? `${(unit.Weight / 1000).toFixed(1)}t` : '—'} compact />
+            <StatBadge icon={UtilIconPaths.STAT_WEIGHT} label="Weight" value={unit.Weight ? `${unit.Weight}kg` : '—'} compact />
             <StatBadge icon={UtilIconPaths.STAT_STEALTH} label="Stealth" value={unit.Stealth !== undefined ? (1 / Math.max(0.1, unit.Stealth)).toFixed(2) : '—'} compact />
             {unit.InfantrySlots > 0 && (
               <StatBadge icon={UtilIconPaths.STAT_SEATS} label="Seats" value={unit.InfantrySlots} compact />
@@ -607,10 +573,7 @@ const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetching, on
         </div>
 
         {data.squadMembers.length > 0 && (
-          <div class="border border-[var(--border)] bg-[var(--bg-raised)] p-0">
-            <p class="text-[9px] font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] m-0 px-2 py-2 border-b border-[var(--border)]">Squad Composition</p>
-            {renderSquadGrid('grid-cols-4')}
-          </div>
+          <SquadCompositionPanel members={data.squadMembers} compact />
         )}
 
         <div class="grid grid-cols-2 gap-4">
@@ -652,7 +615,7 @@ const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetching, on
 
       {data.weapons.length > 0 && (
         <div class="hidden md:block lg:hidden mt-4">
-          <UnitWeaponsPanel weapons={data.weapons} unitId={unit.Id} />
+          <UnitWeaponsPanel weapons={data.weapons} unitId={unit.Id} abilities={data.abilities} />
         </div>
       )}
 
@@ -660,31 +623,37 @@ const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetching, on
       <div class="hidden lg:grid lg:grid-cols-[1fr_1.2fr_1fr] gap-4">
         {/* Left Column: Abilities, Mobility, Sensors */}
         <div class="flex flex-col gap-4 justify-between">
-          {data.abilities.length > 0 && (
+          {data.abilities.length > 0 ? (
             <UnitAbilitiesPanel abilities={data.abilities} />
+          ) : (
+            <EmptyPanel label="Abilities" />
           )}
-          {data.mobility && (
+          {data.mobility ? (
             <UnitMobilityPanel
               mobility={data.mobility}
               flyPreset={data.flyPreset}
               unitType={unit.Type}
             />
+          ) : (
+            <EmptyPanel label="Mobility" />
           )}
-          {data.sensors.length > 0 && (
+          {data.sensors.length > 0 ? (
             <UnitSensorsPanel
               sensors={data.sensors}
               abilities={data.abilities}
             />
+          ) : (
+            <EmptyPanel label="Optics" />
           )}
         </div>
 
-        {/* Center Column: Core (Portrait, Stats) */}
+        {/* Center Column: Core (Portrait, Name, Stats) */}
         <div class="flex flex-col gap-4">
-          <div class="border border-[var(--border)] bg-[var(--bg-raised)] relative overflow-hidden">
-          <div
-            class="unit-portrait-bg aspect-[3/2] bg-[#0b0f14] bg-no-repeat bg-center"
-            style={{ backgroundImage: `url(${portraitUrl})` }}
-          >
+          <div class="overflow-hidden">
+            <div
+              class="unit-portrait-bg aspect-[3/2] bg-no-repeat bg-center relative"
+              style={{ backgroundImage: `url(${portraitUrl}), radial-gradient(ellipse, var(--bg) 30%, transparent 80%)` }}
+            >
               {data.armor && <UnitArmorDiagram armor={data.armor} />}
               {ecmPct > 0 && (
                 <div class="absolute top-2 right-2 z-10 flex items-center gap-1.5 bg-black/80 backdrop-blur-sm border border-[var(--accent)]/40 px-2 py-1">
@@ -693,17 +662,34 @@ const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetching, on
                 </div>
               )}
             </div>
+            <div class="px-4 py-2 border-b border-[var(--border)]/30 bg-gradient-to-b from-[var(--bg)] to-[var(--bg)]/70">
+              <div class="flex items-center justify-center gap-2.5">
+                <span class="text-[10px] font-mono tracking-[0.2em] uppercase text-[var(--text-dim)]">{catLabel}</span>
+                {countryFlagUrl && (
+                  <img src={countryFlagUrl} alt={data.country?.Name} width={40} height={25} class="border border-[var(--border)]" />
+                )}
+                <h2 class="text-lg font-semibold text-[var(--text)]">{data.displayName}</h2>
+              </div>
+            </div>
+            {(unit.Length > 0 || unit.Width > 0 || unit.Height > 0) && (
+              <div class="flex items-center justify-center gap-5 px-4 py-1.5 border-t border-[var(--border)]/30 bg-gradient-to-b from-[var(--bg)]/70 to-[var(--bg)]/40">
+                <span class="text-[10px] font-mono text-[var(--text-dim)]" title="Length">L <span class="text-[var(--text)]">{unit.Length?.toFixed(1) ?? '—'}</span>m</span>
+                <span class="text-[10px] font-mono text-[var(--text-dim)]" title="Width">W <span class="text-[var(--text)]">{unit.Width?.toFixed(1) ?? '—'}</span>m</span>
+                <span class="text-[10px] font-mono text-[var(--text-dim)]" title="Height">H <span class="text-[var(--text)]">{unit.Height?.toFixed(1) ?? '—'}</span>m</span>
+              </div>
+            )}
           </div>
 
-          <div class="border border-[var(--border)] bg-[var(--bg-raised)] p-4">
+          <div class="p-4 bg-gradient-to-b from-[var(--bg)] to-[var(--bg)]/70">
             <div class="flex flex-wrap justify-center gap-3">
+              <StatBadge icon={UtilIconPaths.STAT_COST} label="Cost" value={data.totalCost} />
               {data.armor && (
                 <>
                   <StatBadge icon={UtilIconPaths.STAT_HEALTH_VEH} label="HP" value={data.armor.MaxHealthPoints} />
-                  <StatBadge icon={UtilIconPaths.STAT_ARMOR} label="Armor" value={data.armor.ArmorValue} />
+                  {!hasDirArmor && <StatBadge icon={UtilIconPaths.STAT_ARMOR} label="Armor" value={data.armor.ArmorValue} />}
                 </>
               )}
-              <StatBadge icon={UtilIconPaths.STAT_WEIGHT} label="Weight" value={unit.Weight ? `${(unit.Weight / 1000).toFixed(1)}t` : '—'} />
+              <StatBadge icon={UtilIconPaths.STAT_WEIGHT} label="Weight" value={unit.Weight ? `${unit.Weight}kg` : '—'} />
               <StatBadge icon={UtilIconPaths.STAT_STEALTH} label="Stealth" value={unit.Stealth !== undefined ? (1 / Math.max(0.1, unit.Stealth)).toFixed(2) : '—'} />
               {unit.InfantrySlots > 0 && (
                 <StatBadge icon={UtilIconPaths.STAT_SEATS} label="Seats" value={unit.InfantrySlots} />
@@ -717,15 +703,14 @@ const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetching, on
 
         {/* Right Column: Availability, Squad, Modifications */}
         <div class="flex flex-col gap-4 justify-between">
-          {data.availability.length > 0 && (
+          {data.availability.length > 0 ? (
             <UnitAvailabilityPanel availability={data.availability} />
+          ) : (
+            <EmptyPanel label="Availability" />
           )}
 
           {data.squadMembers.length > 0 && (
-            <div class="border border-[var(--border)] bg-[var(--bg-raised)] p-0">
-              <p class="text-[10px] font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] m-0 px-2 py-2 border-b border-[var(--border)]">Squad Composition</p>
-              {renderSquadGrid('grid-cols-4')}
-            </div>
+            <SquadCompositionPanel members={data.squadMembers} />
           )}
 
           {data.modifications.length > 0 && (
@@ -740,17 +725,181 @@ const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetching, on
       {/* ── Desktop Weapons Section (full width) ─────────────────────────────── */}
       {data.weapons.length > 0 && (
         <div class="hidden lg:block mt-4">
-          <UnitWeaponsPanel weapons={data.weapons} unitId={unit.Id} />
+          <UnitWeaponsPanel weapons={data.weapons} unitId={unit.Id} abilities={data.abilities} />
         </div>
       )}
+
+      {/* ── Style Experiments ────────────────────────────────────────────────── */}
+      <div class="mt-12 border-t border-[var(--border)]/30 pt-6">
+        <p class="text-[10px] font-mono tracking-[0.3em] uppercase text-[var(--text-dim)]/50 mb-4">Style Experiments</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+          {/* Variant A: Accent top-line */}
+          <div class="border-t-2 border-t-[var(--accent)]/60 border border-[var(--border)]/30">
+            <p class="text-[9px] font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] px-3 py-2 border-b border-[var(--border)]/20">
+              A — Accent Top Line
+            </p>
+            <div class="p-3">
+              <span class="text-xs font-mono text-[var(--text-dim)]">Panel content here. Border-only with a coloured top accent strip to anchor the eye.</span>
+            </div>
+          </div>
+
+          {/* Variant B: Gradient fade border */}
+          <div class="relative overflow-hidden">
+            <div class="absolute inset-0 border border-[var(--border)]/20" />
+            <div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--accent)]/40 to-transparent" />
+            <div class="relative">
+              <p class="text-[9px] font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] px-3 py-2 border-b border-[var(--border)]/20">
+                B — Gradient Top Edge
+              </p>
+              <div class="p-3">
+                <span class="text-xs font-mono text-[var(--text-dim)]">Panel with a gradient line at top. Subtle fade-in from the edges, no solid background.</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Variant C: Frosted glass */}
+          <div class="bg-white/[0.03] backdrop-blur-sm border border-[var(--border)]/20">
+            <p class="text-[9px] font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] px-3 py-2 border-b border-[var(--border)]/20">
+              C — Frosted Glass
+            </p>
+            <div class="p-3">
+              <span class="text-xs font-mono text-[var(--text-dim)]">Very subtle white tint with backdrop blur. Gives depth without solid colour.</span>
+            </div>
+          </div>
+
+          {/* Variant D: Glow border */}
+          <div class="border border-[var(--accent)]/15 shadow-[0_0_12px_-3px_var(--accent)]">
+            <p class="text-[9px] font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] px-3 py-2 border-b border-[var(--accent)]/10">
+              D — Accent Glow
+            </p>
+            <div class="p-3">
+              <span class="text-xs font-mono text-[var(--text-dim)]">Faint accent-coloured border with outer glow. Draws attention without fill.</span>
+            </div>
+          </div>
+
+          {/* Variant E: Left accent bar */}
+          <div class="border-l-2 border-l-[var(--accent)]/50 border border-[var(--border)]/20">
+            <p class="text-[9px] font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] px-3 py-2 border-b border-[var(--border)]/20">
+              E — Left Accent Bar
+            </p>
+            <div class="p-3">
+              <span class="text-xs font-mono text-[var(--text-dim)]">Thick left border in accent colour. Clean military feel, easy to scan vertically.</span>
+            </div>
+          </div>
+
+          {/* Variant F: Inset shadow */}
+          <div class="border border-[var(--border)]/30 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]">
+            <p class="text-[9px] font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] px-3 py-2 border-b border-[var(--border)]/20">
+              F — Inner Highlight
+            </p>
+            <div class="p-3">
+              <span class="text-xs font-mono text-[var(--text-dim)]">Barely visible top inset shadow creates depth. Minimal borders, very flat.</span>
+            </div>
+          </div>
+
+          {/* Variant G: Gradient bg fade */}
+          <div class="border border-[var(--border)]/20 bg-gradient-to-b from-[var(--bg-raised)]/40 to-transparent">
+            <p class="text-[9px] font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] px-3 py-2 border-b border-[var(--border)]/20">
+              G — Top-Down Fade
+            </p>
+            <div class="p-3">
+              <span class="text-xs font-mono text-[var(--text-dim)]">Gradient from subtle raised bg at top fading to transparent. Panel dissolves into page.</span>
+            </div>
+          </div>
+
+          {/* Variant H: No border, divider only */}
+          <div>
+            <p class="text-[9px] font-mono tracking-[0.3em] uppercase text-[var(--accent)]/50 px-3 py-2 border-b border-[var(--border)]/30">
+              H — Divider Only ★
+            </p>
+            <div class="p-3">
+              <span class="text-xs font-mono text-[var(--text-dim)]">No box borders at all. Just a divider line under the header. Maximum transparency.</span>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Portrait bottom variations */}
+        <p class="text-[10px] font-mono tracking-[0.3em] uppercase text-[var(--text-dim)]/50 mt-8 mb-4">Portrait Bottom Variants</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+          {/* PB-1: Current — solid bg */}
+          <div>
+            <p class="text-[9px] font-mono tracking-[0.3em] uppercase text-[var(--accent)]/50 px-3 py-2 border-b border-[var(--border)]/30">PB-1 — Solid BG (current) ★</p>
+            <div class="overflow-hidden">
+              <div class="aspect-[3/1] bg-no-repeat bg-center unit-portrait-bg" style={{ backgroundImage: `url(${portraitUrl}), radial-gradient(ellipse, var(--bg) 30%, transparent 80%)` }} />
+              <div class="px-3 py-2 border-b border-[var(--border)]/30 bg-[var(--bg)]">
+                <div class="flex items-center justify-center gap-2">
+                  <span class="text-[10px] font-mono tracking-[0.2em] uppercase text-[var(--text-dim)]">{catLabel}</span>
+                  <span class="text-sm font-semibold text-[var(--text)]">{data.displayName}</span>
+                </div>
+              </div>
+              <div class="flex items-center justify-center gap-4 px-3 py-1.5 border-t border-[var(--border)]/30 bg-[var(--bg)]">
+                <span class="text-[9px] font-mono text-[var(--text-dim)]">Solid var(--bg). Grid fully suppressed.</span>
+              </div>
+            </div>
+          </div>
+
+          {/* PB-2: Gradient fade — slight grid creep */}
+          <div>
+            <p class="text-[9px] font-mono tracking-[0.3em] uppercase text-[var(--accent)]/50 px-3 py-2 border-b border-[var(--border)]/30">PB-2 — Gradient Fade</p>
+            <div class="overflow-hidden">
+              <div class="aspect-[3/1] bg-no-repeat bg-center unit-portrait-bg" style={{ backgroundImage: `url(${portraitUrl}), radial-gradient(ellipse, var(--bg) 30%, transparent 80%)` }} />
+              <div class="px-3 py-2 border-b border-[var(--border)]/30 bg-gradient-to-b from-[var(--bg)] to-[var(--bg)]/70">
+                <div class="flex items-center justify-center gap-2">
+                  <span class="text-[10px] font-mono tracking-[0.2em] uppercase text-[var(--text-dim)]">{catLabel}</span>
+                  <span class="text-sm font-semibold text-[var(--text)]">{data.displayName}</span>
+                </div>
+              </div>
+              <div class="flex items-center justify-center gap-4 px-3 py-1.5 border-t border-[var(--border)]/30 bg-gradient-to-b from-[var(--bg)]/70 to-[var(--bg)]/40">
+                <span class="text-[9px] font-mono text-[var(--text-dim)]">Gradient fade. Slight grid creep at bottom edge.</span>
+              </div>
+            </div>
+          </div>
+
+          {/* PB-3: Transparent — full grid visible */}
+          <div>
+            <p class="text-[9px] font-mono tracking-[0.3em] uppercase text-[var(--accent)]/50 px-3 py-2 border-b border-[var(--border)]/30">PB-3 — Transparent</p>
+            <div class="overflow-hidden">
+              <div class="aspect-[3/1] bg-no-repeat bg-center unit-portrait-bg" style={{ backgroundImage: `url(${portraitUrl}), radial-gradient(ellipse, var(--bg) 30%, transparent 80%)` }} />
+              <div class="px-3 py-2 border-b border-[var(--border)]/30">
+                <div class="flex items-center justify-center gap-2">
+                  <span class="text-[10px] font-mono tracking-[0.2em] uppercase text-[var(--text-dim)]">{catLabel}</span>
+                  <span class="text-sm font-semibold text-[var(--text)]">{data.displayName}</span>
+                </div>
+              </div>
+              <div class="flex items-center justify-center gap-4 px-3 py-1.5 border-t border-[var(--border)]/30">
+                <span class="text-[9px] font-mono text-[var(--text-dim)]">No bg. Grid fully visible through name/dims.</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
     </div>
   );
 });
 
+/* ── Empty Panel ────────────────────────────────────────────────── */
+
+const EmptyPanel = component$<{ label: string; compact?: boolean; fill?: boolean }>(({ label, compact, fill }) => (
+  <div
+    class={`p-0 bg-gradient-to-b from-[var(--bg)] to-[var(--bg)]/70 ${fill ? 'h-full flex flex-col' : ''}`}
+  >
+    <p class={`font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] ${compact ? 'text-[9px] px-2 py-2' : 'text-[10px] px-3 py-2'} border-b border-[var(--border)]/30`}>
+      {label}
+    </p>
+    <div class="flex-1 flex items-center justify-center p-4">
+      <span class="text-xs font-mono text-[var(--text-dim)]/50 uppercase tracking-widest">No {label}</span>
+    </div>
+  </div>
+));
+
 /* ── Stat Badge ─────────────────────────────────────────────────── */
 
-const StatBadge = component$<{ icon: string; label: string; value: number | string; compact?: boolean }>(
-  ({ icon, label, value, compact }) => (
+const StatBadge = component$<{ icon: string; label: string; value: number | string; compact?: boolean; accent?: boolean }>(
+  ({ icon, label, value, compact, accent }) => (
     <div
       class={
         compact
@@ -759,8 +908,8 @@ const StatBadge = component$<{ icon: string; label: string; value: number | stri
       }
       title={label}
     >
-      <GameIcon src={icon} size={compact ? 16 : 22} variant="white" alt={label} />
-      <span class={compact ? 'text-xs font-semibold text-[var(--text)]' : 'text-sm font-semibold text-[var(--text)] text-center'}>
+      <GameIcon src={icon} size={compact ? 16 : 22} variant={accent ? 'accent' : 'white'} alt={label} />
+      <span class={`${compact ? 'text-xs' : 'text-sm text-center'} font-semibold ${accent ? 'text-[var(--accent)]' : 'text-[var(--text)]'}`}>
         {value}
       </span>
     </div>

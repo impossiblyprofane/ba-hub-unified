@@ -1,9 +1,9 @@
 import { component$, useSignal } from '@builder.io/qwik';
 import { GameIcon } from '~/components/GameIcon';
 import { UtilIconPaths, toWeaponIconPath, toAmmunitionIconPath } from '~/lib/iconPaths';
-import type { UnitDetailWeapon, UnitDetailAmmo } from '~/routes/arsenal/[unitid]';
+import type { UnitDetailWeapon, UnitDetailAmmo, UnitDetailAbility } from '~/routes/arsenal/[unitid]';
 
-type Props = { weapons: UnitDetailWeapon[]; unitId: number };
+type Props = { weapons: UnitDetailWeapon[]; unitId: number; abilities?: UnitDetailAbility[] };
 
 /* ── Target type icons ─────────────────────────────────────────── */
 
@@ -129,9 +129,16 @@ function hasAnyAltRange(weapons: UnitDetailWeapon[]): { hasLowAlt: boolean; hasH
 
 /* ── Weapons Panel ─────────────────────────────────────────────── */
 
-export const UnitWeaponsPanel = component$<Props>(({ weapons }) => {
+export const UnitWeaponsPanel = component$<Props>(({ weapons, abilities }) => {
   const merged = mergeWeapons(weapons);
   const { hasLowAlt, hasHighAlt } = hasAnyAltRange(weapons);
+
+  // Extract radar weapon range modifiers if present
+  const radar = abilities?.find(a => a.IsRadar) ?? null;
+  const radarLowAltWpnMod = radar?.RadarLowAltWeaponRangeModifier ?? 0;
+  const radarHighAltWpnMod = radar?.RadarHighAltWeaponRangeModifier ?? 0;
+  const hasRadarRange = radarLowAltWpnMod > 0 && radarLowAltWpnMod !== 1
+    || radarHighAltWpnMod > 0 && radarHighAltWpnMod !== 1;
 
   return (
     <div class="flex flex-col gap-4">
@@ -143,6 +150,8 @@ export const UnitWeaponsPanel = component$<Props>(({ weapons }) => {
           isMerged={g.isMerged}
           showLowAlt={hasLowAlt}
           showHighAlt={hasHighAlt}
+          radarLowAltMod={hasRadarRange ? radarLowAltWpnMod : 0}
+          radarHighAltMod={hasRadarRange ? radarHighAltWpnMod : 0}
         />
       ))}
     </div>
@@ -157,9 +166,11 @@ type WeaponSectionProps = {
   isMerged: boolean;
   showLowAlt: boolean;
   showHighAlt: boolean;
+  radarLowAltMod: number;
+  radarHighAltMod: number;
 };
 
-const WeaponSection = component$<WeaponSectionProps>(({ entry, count, isMerged, showLowAlt, showHighAlt }) => {
+const WeaponSection = component$<WeaponSectionProps>(({ entry, count, isMerged, showLowAlt, showHighAlt, radarLowAltMod, radarHighAltMod }) => {
   const { weapon, turret, ammunition } = entry;
   const weaponIcon = weapon.HUDIcon ? toWeaponIconPath(weapon.HUDIcon) : null;
 
@@ -172,9 +183,9 @@ const WeaponSection = component$<WeaponSectionProps>(({ entry, count, isMerged, 
   const aim = aimMin === aimMax ? `${aimMin}s` : `${aimMin}–${aimMax}s`;
 
   return (
-    <div class="border border-[var(--border)] bg-[var(--bg-raised)]">
+    <div class="bg-gradient-to-b from-[var(--bg)] to-[var(--bg)]/70 border-l-2 border-l-[var(--accent)]/30">
       {/* Weapon header bar */}
-      <div class="flex items-center gap-3 px-4 py-3 border-b border-[var(--border)]">
+      <div class="flex items-center gap-3 px-4 py-3 border-b border-[var(--border)]/30">
         {weaponIcon && <GameIcon src={weaponIcon} size={24} variant="white" alt={weapon.Name} />}
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2">
@@ -208,6 +219,9 @@ const WeaponSection = component$<WeaponSectionProps>(({ entry, count, isMerged, 
           )}
           {weapon.StabilizerQuality > 0 && (
             <span>STAB <span class="text-[var(--text)] font-semibold">{weapon.StabilizerQuality}</span></span>
+          )}
+          {weapon.TimeBetweenShotsInBurst > 0 && weapon.ShotsPerBurstMax > 1 && (
+            <span>ROF <span class="text-[var(--text)] font-semibold">{weapon.TimeBetweenShotsInBurst}s</span></span>
           )}
         </div>
 
@@ -264,6 +278,8 @@ const WeaponSection = component$<WeaponSectionProps>(({ entry, count, isMerged, 
                   showLowAlt={showLowAlt}
                   showHighAlt={showHighAlt}
                   colSpanTotal={10 + (showLowAlt ? 1 : 0) + (showHighAlt ? 1 : 0)}
+                  radarLowAltMod={radarLowAltMod}
+                  radarHighAltMod={radarHighAltMod}
                 />
               ))}
             </tbody>
@@ -282,9 +298,11 @@ type AmmoTableRowProps = {
   showLowAlt: boolean;
   showHighAlt: boolean;
   colSpanTotal: number;
+  radarLowAltMod: number;
+  radarHighAltMod: number;
 };
 
-const AmmoTableRow = component$<AmmoTableRowProps>(({ ammo, quantity, showLowAlt, showHighAlt, colSpanTotal }) => {
+const AmmoTableRow = component$<AmmoTableRowProps>(({ ammo, quantity, showLowAlt, showHighAlt, colSpanTotal, radarLowAltMod, radarHighAltMod }) => {
   const expanded = useSignal(false);
   const ammoIcon = ammo.HUDIcon ? toAmmunitionIconPath(ammo.HUDIcon) : null;
   const armorType = ARMOR_TYPE_LABELS[ammo.ArmorTargeted];
@@ -303,6 +321,9 @@ const AmmoTableRow = component$<AmmoTableRowProps>(({ ammo, quantity, showLowAlt
   if (ammo.GenerateSmoke) traits.push('SMK');
   if (ammo.Seeker > 0) traits.push('SEEKER');
   if (ammo.CanBeIntercepted) traits.push('APS-V');
+  if (ammo.NoDamageFalloff) traits.push('NO-FALL');
+  if (ammo.IgnoreCover > 0) traits.push('IGN-COV');
+  if (ammo.Airburst) traits.push('AIRBST');
 
   return (
     <>
@@ -357,13 +378,27 @@ const AmmoTableRow = component$<AmmoTableRowProps>(({ ammo, quantity, showLowAlt
         {/* Low Alt (conditional column) */}
         {showLowAlt && (
           <td class="px-2 py-2.5 text-right text-[var(--text)]">
-            {lowAlt > 0 ? `${lowAlt}m` : '—'}
+            {lowAlt > 0 ? (
+              <div>
+                <span>{lowAlt}m</span>
+                {radarLowAltMod > 0 && radarLowAltMod !== 1 && (
+                  <div class="text-[10px] text-[var(--accent)]">{Math.round(lowAlt * radarLowAltMod)}m</div>
+                )}
+              </div>
+            ) : '—'}
           </td>
         )}
         {/* High Alt (conditional column) */}
         {showHighAlt && (
           <td class="px-2 py-2.5 text-right text-[var(--text)]">
-            {highAlt > 0 ? `${highAlt}m` : '—'}
+            {highAlt > 0 ? (
+              <div>
+                <span>{highAlt}m</span>
+                {radarHighAltMod > 0 && radarHighAltMod !== 1 && (
+                  <div class="text-[10px] text-[var(--accent)]">{Math.round(highAlt * radarHighAltMod)}m</div>
+                )}
+              </div>
+            ) : '—'}
           </td>
         )}
         {/* Velocity */}
@@ -418,6 +453,9 @@ const AmmoTableRow = component$<AmmoTableRowProps>(({ ammo, quantity, showLowAlt
                   <AmmoStat label="Dispersion H" value={ammo.DispersionHorizontalRadius > 0 ? `${ammo.DispersionHorizontalRadius}m` : '—'} />
                   <AmmoStat label="Dispersion V" value={ammo.DispersionVerticalRadius > 0 ? `${ammo.DispersionVerticalRadius}m` : '—'} />
                   {ammo.SeekerAngle > 0 && <AmmoStat label="Seeker Angle" value={`${ammo.SeekerAngle}°`} />}
+                  {ammo.MaxSeekerDistance > 0 && <AmmoStat label="Seeker Range" value={`${Math.round(ammo.MaxSeekerDistance * 2)}m`} />}
+                  {ammo.RotationSpeed > 0 && <AmmoStat label="Turn Rate" value={`${ammo.RotationSpeed}°/s`} />}
+                  {ammo.BurnTime > 0 && <AmmoStat label="Burn Time" value={`${ammo.BurnTime}s`} />}
                 </div>
               </div>
 
@@ -427,6 +465,10 @@ const AmmoTableRow = component$<AmmoTableRowProps>(({ ammo, quantity, showLowAlt
                 <div class="flex flex-col gap-1.5">
                   <AmmoStat label="Supply Cost" value={ammo.SupplyCost > 0 ? ammo.SupplyCost : '—'} />
                   <AmmoStat label="Resupply Time" value={ammo.ResupplyTime > 0 ? `${ammo.ResupplyTime}s` : '—'} />
+                  {ammo.AimStartDelay > 0 && <AmmoStat label="Aim Delay" value={`${ammo.AimStartDelay}s`} />}
+                  {ammo.MainEngineIgnitionDelay > 0 && <AmmoStat label="Ignition Delay" value={`${ammo.MainEngineIgnitionDelay}s`} />}
+                  {ammo.CanReaquire && <AmmoStat label="Can Reacquire" value="Yes" />}
+                  {ammo.CanBeTargeted && <AmmoStat label="Targetable" value="Yes" />}
                 </div>
                 {traits.length > 0 && (
                   <div class="flex flex-wrap gap-1.5 mt-3 pt-2 border-t border-[var(--border)]">
@@ -435,6 +477,9 @@ const AmmoTableRow = component$<AmmoTableRowProps>(({ ammo, quantity, showLowAlt
                     {ammo.GenerateSmoke && <TraitPill label="SMOKE" />}
                     {ammo.Seeker > 0 && <TraitPill label="SEEKER" />}
                     {ammo.CanBeIntercepted && <TraitPill label="APS VULNERABLE" />}
+                    {ammo.NoDamageFalloff && <TraitPill label="NO FALLOFF" />}
+                    {ammo.IgnoreCover > 0 && <TraitPill label="IGNORE COVER" />}
+                    {ammo.Airburst && <TraitPill label="AIRBURST" />}
                   </div>
                 )}
               </div>

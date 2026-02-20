@@ -17,9 +17,9 @@ export const UnitAbilitiesPanel = component$<Props>(({ abilities, compact, fill 
 
   return (
     <div
-      class={`border border-[var(--border)] bg-[var(--bg-raised)] p-0 ${fill ? 'h-full flex flex-col' : ''}`}
+      class={`p-0 bg-gradient-to-b from-[var(--bg)] to-[var(--bg)]/70 ${fill ? 'h-full flex flex-col' : ''}`}
     >
-      <p class={`font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] ${compact ? 'text-[9px] px-2 py-2' : 'text-[10px] px-3 py-2'} border-b border-[var(--border)]`}>
+      <p class={`font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] ${compact ? 'text-[9px] px-2 py-2' : 'text-[10px] px-3 py-2'} border-b border-[var(--border)]/30`}>
         Abilities
       </p>
       <div class={`flex flex-col ${compact ? 'gap-1.5' : 'gap-2'} ${fill ? 'flex-1 overflow-y-auto' : ''}`}>
@@ -93,18 +93,27 @@ function getAbilityDisplay(a: UnitDetailAbility): AbilityInfo {
     };
   }
   if (a.IsRadar) {
+    const modeLabel = a.IsRadarStatic ? 'STATIC' : 'MOBILE';
     return {
       icon: UtilIconPaths.ABILITY_RADAR,
-      label: 'Radar',
+      label: `Radar (${modeLabel})`,
       stats: [
         { key: 'Low', value: `×${a.RadarLowAltOpticsModifier}` },
         { key: 'High', value: `×${a.RadarHighAltOpticsModifier}` },
       ],
-      tooltipTitle: 'Radar',
-      tooltipDesc: 'Enhances aerial detection range',
+      tooltipTitle: `Radar — ${modeLabel}`,
+      tooltipDesc: a.IsRadarStatic
+        ? 'Enhances aerial detection range; unit must be stationary'
+        : 'Enhances aerial detection range while moving',
       tooltipRows: [
-        { label: 'Low Altitude', value: `+${Math.round((a.RadarLowAltOpticsModifier - 1) * 100)}% optics (×${a.RadarLowAltOpticsModifier})` },
-        { label: 'High Altitude', value: `+${Math.round((a.RadarHighAltOpticsModifier - 1) * 100)}% optics (×${a.RadarHighAltOpticsModifier})` },
+        { label: 'Low Alt Optics', value: `×${a.RadarLowAltOpticsModifier}` },
+        { label: 'High Alt Optics', value: `×${a.RadarHighAltOpticsModifier}` },
+        ...(a.RadarLowAltWeaponRangeModifier > 0 && a.RadarLowAltWeaponRangeModifier !== 1
+          ? [{ label: 'Low Alt Wpn Range', value: `×${a.RadarLowAltWeaponRangeModifier}` }] : []),
+        ...(a.RadarHighAltWeaponRangeModifier > 0 && a.RadarHighAltWeaponRangeModifier !== 1
+          ? [{ label: 'High Alt Wpn Range', value: `×${a.RadarHighAltWeaponRangeModifier}` }] : []),
+        ...(a.RadarSwitchCooldown > 0
+          ? [{ label: 'Toggle Cooldown', value: `${a.RadarSwitchCooldown}s` }] : []),
       ],
     };
   }
@@ -121,6 +130,8 @@ function getAbilityDisplay(a: UnitDetailAbility): AbilityInfo {
         { label: 'Charges', value: String(a.APSQuantity) },
         { label: 'Cooldown', value: `${a.APSCooldown}s` },
         { label: 'Coverage', value: `${Math.round(a.APSHitboxProportion * 100)}% hitbox` },
+        ...(a.APSSupplyCost > 0 ? [{ label: 'Supply Cost', value: String(a.APSSupplyCost) }] : []),
+        ...(a.APSResupplyTime > 0 ? [{ label: 'Resupply Time', value: `${a.APSResupplyTime}s` }] : []),
       ],
     };
   }
@@ -156,6 +167,9 @@ function getAbilityDisplay(a: UnitDetailAbility): AbilityInfo {
     };
   }
   if (a.IsDecoy) {
+    const accPct = a.DecoyAccuracyMultiplier > 0
+      ? `${Math.round((1 - a.DecoyAccuracyMultiplier) * 100)}%`
+      : null;
     return {
       icon: UtilIconPaths.ABILITY_FLARES,
       label: 'Decoy / Flares',
@@ -168,6 +182,9 @@ function getAbilityDisplay(a: UnitDetailAbility): AbilityInfo {
         { label: 'Charges', value: String(a.DecoyQuantity) },
         { label: 'Duration', value: `${a.DecoyDuration}s` },
         { label: 'Cooldown', value: `${a.DecoyCooldown}s` },
+        ...(accPct ? [{ label: 'Accuracy Reduction', value: accPct }] : []),
+        ...(a.DecoySupplyCost > 0 ? [{ label: 'Supply Cost', value: String(a.DecoySupplyCost) }] : []),
+        ...(a.DecoyResupplyTime > 0 ? [{ label: 'Resupply Time', value: `${a.DecoyResupplyTime}s` }] : []),
       ],
     };
   }
