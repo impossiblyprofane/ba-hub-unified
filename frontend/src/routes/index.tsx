@@ -60,13 +60,13 @@ export default component$(() => {
   const i18n = useI18n();
 
   return (
-    <div class="max-w-6xl relative">
+    <div class="max-w-6xl mx-auto relative">
       {/* Hero Section */}
       <div class="mb-16 relative">
         <div class="hero-glow" />
 
-        <div class="corner-brackets p-6 border border-[var(--border)] bg-[var(--bg-raised)]/50 relative z-10">
-          <p class="text-[var(--accent)] text-xs tracking-[0.2em] uppercase mb-3 opacity-60" style="font-family: var(--mono)">{t(i18n, 'home.tag')}</p>
+        <div class="corner-brackets p-6 border border-[rgba(51,51,51,0.15)] bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.7)] relative z-10">
+          <p class="text-[var(--accent)] text-xs tracking-[0.3em] uppercase mb-3 opacity-60" style="font-family: var(--mono)">{t(i18n, 'home.tag')}</p>
           <h1 class="text-3xl font-bold tracking-tight mb-4 text-[var(--text)] flex items-center gap-3">
             <img src="/images/bahub.svg" alt="BA Hub" width={36} height={36} style="width: 36px; height: 36px" />
             {t(i18n, 'home.title')} — <span class="text-[var(--accent)]">{t(i18n, 'home.titleAccent')}</span>
@@ -99,7 +99,7 @@ export default component$(() => {
       </div>
 
       {/* Community callout */}
-      <div class="mt-16 flex items-center justify-between gap-4 px-5 py-3 border border-[var(--border)] bg-[var(--bg-raised)]/50 text-[11px]" style="font-family: var(--mono)">
+      <div class="mt-16 flex items-center justify-between gap-4 px-5 py-3 border border-[rgba(51,51,51,0.15)] bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.7)] text-[11px]" style="font-family: var(--mono)">
         <span class="text-[var(--text-dim)]">
           {t(i18n, 'home.community.body')}
         </span>

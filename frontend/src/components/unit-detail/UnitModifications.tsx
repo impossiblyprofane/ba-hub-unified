@@ -1,7 +1,7 @@
 import { component$, type PropFunction } from '@builder.io/qwik';
-import { useI18n, getGameLocaleValueOrKey, GAME_LOCALES } from '~/lib/i18n';
+import { useI18n, t, getGameLocaleValueOrKey, GAME_LOCALES } from '~/lib/i18n';
 import { toOptionPicturePath } from '~/lib/iconPaths';
-import type { UnitDetailModSlot } from '~/routes/arsenal/[unitid]';
+import type { UnitDetailModSlot } from '~/lib/graphql-types';
 
 type Props = {
   modifications: UnitDetailModSlot[];
@@ -15,10 +15,10 @@ export const UnitModifications = component$<Props>(({ modifications, onOptionCha
 
   return (
     <div
-      class={`p-0 bg-gradient-to-b from-[var(--bg)] to-[var(--bg)]/70 ${fill ? 'h-full flex flex-col' : ''}`}
+      class={`p-0 bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.7)] border border-[rgba(51,51,51,0.15)] ${fill ? 'h-full flex flex-col' : ''}`}
     >
-      <p class={`font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] ${compact ? 'text-[9px] px-2 py-2' : 'text-[10px] px-3 py-2'} border-b border-[var(--border)]/30`}>
-        Modifications
+      <p class={`font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] ${compact ? 'text-[9px] px-2 py-2' : 'text-[10px] px-3 py-2'} border-b border-[rgba(51,51,51,0.3)]`}>
+        {t(i18n, 'unitDetail.panel.modifications')}
       </p>
       <div class={`flex flex-col ${compact ? 'gap-2 p-3' : 'gap-3 p-4'} ${fill ? 'flex-1' : ''}`}>
         {modifications.map(slot => {

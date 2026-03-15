@@ -189,8 +189,10 @@ export const schema = `
     PenetrationAtGroundRange: Float
     NoDamageFalloff: Boolean
     TopArmorAttack: Boolean
+    IsTopArmorArmorAttack: Boolean
     HealthAOERadius: Float
     StressAOERadius: Float
+    OverpressureRadius: Float
     RadioFuseDistance: Float
     LaunchMarginAngle: Float
     MuzzleVelocity: Float

@@ -7,23 +7,31 @@
     "dev": "vite --mode ssr",
     "dev.debug": "node --inspect-brk ./node_modules/vite/bin/vite.js --mode ssr --force",
     "build": "qwik build",
+    "build.client": "vite build",
+    "build.server": "vite build -c vite.config.ts --ssr src/entry.fastify.tsx",
+    "build.types": "tsc --incremental --noEmit",
     "preview": "qwik build preview && vite preview --open",
     "serve": "tsx server/index.ts",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
+    "@ba-hub/shared": "*",
     "@builder.io/qwik": "^1.5.0",
     "@builder.io/qwik-city": "^1.5.0",
-    "fastify": "^4.26.0",
-    "@fastify/static": "^7.0.0"
+    "@fastify/static": "^7.0.0",
+    "fastify": "^4.26.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
+    "autoprefixer": "^10.4.0",
+    "ignore": "^7.0.5",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^3.4.0",
+    "tsx": "^4.7.0",
     "typescript": "^5.3.3",
     "vite": "^5.1.0",
-    "tsx": "^4.7.0",
-    "tailwindcss": "^3.4.0",
-    "postcss": "^8.4.0",
-    "autoprefixer": "^10.4.0"
+    "vitest": "^4.1.0"
   }
 }

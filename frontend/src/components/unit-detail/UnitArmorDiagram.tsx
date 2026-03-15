@@ -1,5 +1,5 @@
 import { component$ } from '@builder.io/qwik';
-import type { UnitDetailArmor } from '~/routes/arsenal/[unitid]';
+import type { UnitDetailArmor } from '~/lib/graphql-types';
 
 type Props = { armor: UnitDetailArmor };
 

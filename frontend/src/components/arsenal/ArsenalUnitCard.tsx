@@ -26,11 +26,11 @@ export const ArsenalUnitCard = component$((props: ArsenalUnitCardProps) => {
       href={props.href}
       data-native-link
       data-card-id={props.dataCardId}
-      class="relative border border-[var(--border)] bg-[var(--bg-raised)] overflow-hidden"
+      class="relative border border-[rgba(51,51,51,0.15)] overflow-hidden"
       style={{ willChange: 'transform' }}
     >
       <div
-        class="relative aspect-[4/3] bg-[#0b0f14]"
+        class="relative aspect-[4/3] bg-[#0b0f14]/25"
         style={{
           backgroundImage: `url(${props.unitIconUrl})`,
           backgroundSize: 'contain',
@@ -39,25 +39,25 @@ export const ArsenalUnitCard = component$((props: ArsenalUnitCardProps) => {
         }}
       >
         <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent" />
-        <div class="absolute top-2 left-2 px-2 py-1 text-[10px] font-mono uppercase tracking-widest bg-black/70 border border-[var(--border)]">
+        <div class="absolute top-1 left-1 px-1 py-0.5 text-[8px] font-mono uppercase tracking-widest bg-black/70 border border-[rgba(51,51,51,0.3)]">
           {props.categoryCode}
         </div>
-        <div class="absolute top-2 right-2 px-2 py-1 text-[10px] font-mono uppercase tracking-widest bg-black/70 border border-[var(--border)]">
+        <div class="absolute top-1 right-1 px-1 py-0.5 text-[8px] font-mono uppercase tracking-widest bg-black/70 border border-[rgba(51,51,51,0.3)]">
           {props.cost}
         </div>
         {(props.countryFlagUrl || props.specIconUrl) && (
-          <div class="absolute bottom-2 right-2 flex items-center gap-2">
+          <div class="absolute bottom-1 right-1 flex items-center gap-1">
             {props.specIconUrl && (
               <div
-                class="w-5 h-5 border border-[var(--border)] bg-black/70"
+                class="w-3.5 h-3.5 border border-[rgba(51,51,51,0.3)] bg-black/70"
                 onMouseEnter$={(event) => props.onTooltipShow$(event, props.specName || 'Specialization')}
                 onMouseMove$={props.onTooltipMove$}
                 onMouseLeave$={props.onTooltipHide$}
               >
                 <img
                   src={props.specIconUrl}
-                  width={20}
-                  height={20}
+                  width={14}
+                  height={14}
                   class="w-full h-full object-cover"
                   alt={props.specName || 'Specialization'}
                 />
@@ -65,15 +65,15 @@ export const ArsenalUnitCard = component$((props: ArsenalUnitCardProps) => {
             )}
             {props.countryFlagUrl && (
               <div
-                class="w-6 h-4 border border-[var(--border)] bg-black/70"
+                class="w-4 h-3 border border-[rgba(51,51,51,0.3)] bg-black/70"
                 onMouseEnter$={(event) => props.onTooltipShow$(event, props.countryName || 'Country')}
                 onMouseMove$={props.onTooltipMove$}
                 onMouseLeave$={props.onTooltipHide$}
               >
                 <img
                   src={props.countryFlagUrl}
-                  width={24}
-                  height={16}
+                  width={16}
+                  height={12}
                   class="w-full h-full object-cover"
                   alt={props.countryName || 'Country'}
                 />
@@ -82,19 +82,19 @@ export const ArsenalUnitCard = component$((props: ArsenalUnitCardProps) => {
           </div>
         )}
         {(props.seats || props.lift) && (
-          <div class="absolute bottom-2 left-2 flex flex-col gap-2 text-[10px] font-mono text-[var(--text)] tracking-widest">
+          <div class="absolute bottom-1 left-1 flex flex-col gap-1 text-[8px] font-mono text-[var(--text)] tracking-widest">
             {typeof props.seats === 'number' && props.seats > 0 && (
               <span
-                class="flex items-center gap-1 bg-black/70 px-2 py-1 border border-[var(--border)] font-semibold"
+                class="flex items-center gap-0.5 bg-black/70 px-1 py-0.5 border border-[rgba(51,51,51,0.3)] font-semibold"
                 onMouseEnter$={(event) => props.onTooltipShow$(event, 'Seats')}
                 onMouseMove$={props.onTooltipMove$}
                 onMouseLeave$={props.onTooltipHide$}
               >
                 <img
                   src={UtilIconPaths.STAT_SEATS}
-                  width={12}
-                  height={12}
-                  class="w-3 h-3"
+                  width={10}
+                  height={10}
+                  class="w-2.5 h-2.5"
                   alt="Seats"
                 />
                 {props.seats}
@@ -102,16 +102,16 @@ export const ArsenalUnitCard = component$((props: ArsenalUnitCardProps) => {
             )}
             {typeof props.lift === 'number' && props.lift > 0 && (
               <span
-                class="flex items-center gap-1 bg-black/70 px-2 py-1 border border-[var(--border)] font-semibold"
+                class="flex items-center gap-0.5 bg-black/70 px-1 py-0.5 border border-[rgba(51,51,51,0.3)] font-semibold"
                 onMouseEnter$={(event) => props.onTooltipShow$(event, 'Lift')}
                 onMouseMove$={props.onTooltipMove$}
                 onMouseLeave$={props.onTooltipHide$}
               >
                 <img
                   src={UtilIconPaths.STAT_HEAVYLIFT}
-                  width={12}
-                  height={12}
-                  class="w-3 h-3"
+                  width={10}
+                  height={10}
+                  class="w-2.5 h-2.5"
                   alt="Lift"
                 />
                 {props.lift}
@@ -120,8 +120,8 @@ export const ArsenalUnitCard = component$((props: ArsenalUnitCardProps) => {
           </div>
         )}
       </div>
-      <div class="border-t border-[var(--border)] bg-[var(--bg-raised)] px-2 py-2 text-center">
-        <p class="text-[11px] font-semibold uppercase tracking-wider text-[var(--text)] leading-tight truncate">
+      <div class="border-t border-[rgba(51,51,51,0.15)] bg-[rgba(26,26,26,0.4)] px-1 py-1 text-center">
+        <p class="text-[9px] font-semibold uppercase tracking-wider text-[var(--text)] leading-tight truncate">
           {props.unitName}
         </p>
       </div>

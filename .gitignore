@@ -4,3 +4,7 @@ dist/
 *.log
 .env
 .DS_Store
+
+# AI / Copilot
+.github/copilot-instructions.md
+.github/skills/

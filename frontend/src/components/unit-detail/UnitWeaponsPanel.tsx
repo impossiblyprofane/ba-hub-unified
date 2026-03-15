@@ -1,7 +1,10 @@
 import { component$, useSignal } from '@builder.io/qwik';
 import { GameIcon } from '~/components/GameIcon';
 import { UtilIconPaths, toWeaponIconPath, toAmmunitionIconPath } from '~/lib/iconPaths';
-import type { UnitDetailWeapon, UnitDetailAmmo, UnitDetailAbility } from '~/routes/arsenal/[unitid]';
+import { seekerTypeToString, seekerTypeDescription } from '~/lib/seeker-types';
+import { trajectoryTypeToString, trajectoryTypeDescription } from '~/lib/trajectory-types';
+import { useI18n, t } from '~/lib/i18n';
+import type { UnitDetailWeapon, UnitDetailAmmo, UnitDetailAbility } from '~/lib/graphql-types';
 
 type Props = { weapons: UnitDetailWeapon[]; unitId: number; abilities?: UnitDetailAbility[] };
 
@@ -171,6 +174,7 @@ type WeaponSectionProps = {
 };
 
 const WeaponSection = component$<WeaponSectionProps>(({ entry, count, isMerged, showLowAlt, showHighAlt, radarLowAltMod, radarHighAltMod }) => {
+  const i18nWs = useI18n();
   const { weapon, turret, ammunition } = entry;
   const weaponIcon = weapon.HUDIcon ? toWeaponIconPath(weapon.HUDIcon) : null;
 
@@ -183,9 +187,9 @@ const WeaponSection = component$<WeaponSectionProps>(({ entry, count, isMerged, 
   const aim = aimMin === aimMax ? `${aimMin}s` : `${aimMin}–${aimMax}s`;
 
   return (
-    <div class="bg-gradient-to-b from-[var(--bg)] to-[var(--bg)]/70 border-l-2 border-l-[var(--accent)]/30">
+    <div class="bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.7)] border border-[rgba(51,51,51,0.15)] border-l-[3px] border-l-[var(--accent)]">
       {/* Weapon header bar */}
-      <div class="flex items-center gap-3 px-4 py-3 border-b border-[var(--border)]/30">
+      <div class="flex items-center gap-3 px-4 py-3 border-b border-[rgba(51,51,51,0.3)]">
         {weaponIcon && <GameIcon src={weaponIcon} size={24} variant="white" alt={weapon.Name} />}
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2">
@@ -209,6 +213,15 @@ const WeaponSection = component$<WeaponSectionProps>(({ entry, count, isMerged, 
           )}
         </div>
 
+        {/* Trait badges */}
+        <div class="flex flex-wrap gap-1 shrink-0 mr-4">
+          {weapon.AutoLoaded && <TraitPill label="AUTO" title="Auto Loaded" />}
+          {weapon.IsVerticalLauncher && <TraitPill label="VLS" title="Vertical Launch System" />}
+          {!weapon.CanShootOnTheMove && <TraitPill label="STATIC" title="Cannot fire on the move" />}
+          {weapon.MultiTargetTracking > 1 && <TraitPill label={`MTT ×${weapon.MultiTargetTracking}`} title={`Multi-Target Tracking: ${weapon.MultiTargetTracking}`} />}
+          {weapon.SimultaneousTracking > 1 && <TraitPill label={`SIM ×${weapon.SimultaneousTracking}`} title={`Simultaneous Tracking: ${weapon.SimultaneousTracking}`} />}
+        </div>
+
         {/* Weapon stats row */}
         <div class="flex items-center gap-4 text-xs font-mono text-[var(--text-dim)] shrink-0">
           <span>MAG <span class="text-[var(--text)] font-semibold">{mag}</span></span>
@@ -224,15 +237,6 @@ const WeaponSection = component$<WeaponSectionProps>(({ entry, count, isMerged, 
             <span>ROF <span class="text-[var(--text)] font-semibold">{weapon.TimeBetweenShotsInBurst}s</span></span>
           )}
         </div>
-
-        {/* Trait badges */}
-        <div class="flex gap-1 shrink-0">
-          {weapon.AutoLoaded && <TraitPill label="AUTO" />}
-          {weapon.IsVerticalLauncher && <TraitPill label="VLS" />}
-          {!weapon.CanShootOnTheMove && <TraitPill label="STATIC" />}
-          {weapon.MultiTargetTracking > 1 && <TraitPill label={`MTT ×${weapon.MultiTargetTracking}`} />}
-          {weapon.SimultaneousTracking > 1 && <TraitPill label={`SIM ×${weapon.SimultaneousTracking}`} />}
-        </div>
       </div>
 
       {/* Ammo table */}
@@ -242,30 +246,30 @@ const WeaponSection = component$<WeaponSectionProps>(({ entry, count, isMerged, 
             <colgroup>
               <col />
               <col style={{ width: '55px' }} />
-              <col style={{ width: '80px' }} />
+              <col style={{ width: '70px' }} />
+              <col style={{ width: '45px' }} />
               <col style={{ width: '50px' }} />
-              <col style={{ width: '50px' }} />
-              <col style={{ width: '80px' }} />
-              <col style={{ width: '105px' }} />
+              <col style={{ width: '70px' }} />
+              <col style={{ width: '95px' }} />
               {showLowAlt && <col style={{ width: '70px' }} />}
               {showHighAlt && <col style={{ width: '70px' }} />}
               <col style={{ width: '60px' }} />
-              <col style={{ width: '95px' }} />
+              <col style={{ width: '120px' }} />
               <col style={{ width: '24px' }} />
             </colgroup>
             <thead>
-              <tr class="text-[11px] uppercase tracking-widest text-[var(--text-dim)] border-b border-[var(--border)]">
-                <th class="text-left px-4 py-2 font-normal">Ammunition</th>
-                <th class="text-center px-2 py-2 font-normal">Type</th>
-                <th class="text-center px-2 py-2 font-normal">Targets</th>
-                <th class="text-right px-2 py-2 font-normal">Dmg</th>
-                <th class="text-right px-2 py-2 font-normal">Stress</th>
-                <th class="text-right px-2 py-2 font-normal">Pen</th>
-                <th class="text-right px-2 py-2 font-normal">Range</th>
-                {showLowAlt && <th class="text-right px-2 py-2 font-normal whitespace-nowrap">Low Alt</th>}
-                {showHighAlt && <th class="text-right px-2 py-2 font-normal whitespace-nowrap">High Alt</th>}
-                <th class="text-right px-2 py-2 font-normal">Velocity</th>
-                <th class="text-left px-2 py-2 font-normal">Traits</th>
+              <tr class="text-[11px] uppercase tracking-widest text-[var(--text-dim)] border-b border-[rgba(51,51,51,0.3)] bg-[rgba(26,26,26,0.4)]">
+                <th class="text-left px-4 py-2 font-normal">{t(i18nWs, 'unitDetail.weapons.ammunition')}</th>
+                <th class="text-center px-2 py-2 font-normal">{t(i18nWs, 'unitDetail.weapons.type')}</th>
+                <th class="text-center px-2 py-2 font-normal">{t(i18nWs, 'unitDetail.weapons.targets')}</th>
+                <th class="text-right px-2 py-2 font-normal">{t(i18nWs, 'unitDetail.weapons.dmg')}</th>
+                <th class="text-right px-2 py-2 font-normal">{t(i18nWs, 'unitDetail.weapons.stress')}</th>
+                <th class="text-right px-2 py-2 font-normal">{t(i18nWs, 'unitDetail.weapons.pen')}</th>
+                <th class="text-right px-2 py-2 font-normal">{t(i18nWs, 'unitDetail.weapons.range')}</th>
+                {showLowAlt && <th class="text-right px-2 py-2 font-normal whitespace-nowrap">{t(i18nWs, 'unitDetail.weapons.lowAlt')}</th>}
+                {showHighAlt && <th class="text-right px-2 py-2 font-normal whitespace-nowrap">{t(i18nWs, 'unitDetail.weapons.highAlt')}</th>}
+                <th class="text-right px-2 py-2 font-normal">{t(i18nWs, 'unitDetail.weapons.velocity')}</th>
+                <th class="text-left px-2 py-2 font-normal">{t(i18nWs, 'unitDetail.weapons.traits')}</th>
                 <th class="px-1 py-2"></th>
               </tr>
             </thead>
@@ -303,6 +307,7 @@ type AmmoTableRowProps = {
 };
 
 const AmmoTableRow = component$<AmmoTableRowProps>(({ ammo, quantity, showLowAlt, showHighAlt, colSpanTotal, radarLowAltMod, radarHighAltMod }) => {
+  const i18n = useI18n();
   const expanded = useSignal(false);
   const ammoIcon = ammo.HUDIcon ? toAmmunitionIconPath(ammo.HUDIcon) : null;
   const armorType = ARMOR_TYPE_LABELS[ammo.ArmorTargeted];
@@ -315,28 +320,47 @@ const AmmoTableRow = component$<AmmoTableRowProps>(({ ammo, quantity, showLowAlt
   const targetBits = getTargetBits(ammo.TargetType);
 
   // Collect trait labels
-  const traits: string[] = [];
-  if (ammo.TopArmorAttack) traits.push('TOP');
-  if (ammo.LaserGuided) traits.push('LGM');
-  if (ammo.GenerateSmoke) traits.push('SMK');
-  if (ammo.Seeker > 0) traits.push('SEEKER');
-  if (ammo.CanBeIntercepted) traits.push('APS-V');
-  if (ammo.NoDamageFalloff) traits.push('NO-FALL');
-  if (ammo.IgnoreCover > 0) traits.push('IGN-COV');
-  if (ammo.Airburst) traits.push('AIRBST');
+  const traits: { label: string; variant?: string; title?: string }[] = [];
+
+  const trajectoryLabel = t(i18n, trajectoryTypeToString(ammo.TrajectoryType));
+  const trajectoryDescKey = trajectoryTypeDescription(ammo.TrajectoryType);
+  const trajectoryDesc = trajectoryDescKey ? t(i18n, trajectoryDescKey) : '';
+
+  const seekerLabel = ammo.Seeker > 0
+    ? (t(i18n, seekerTypeToString(ammo.Seeker)) || 'GUIDED')
+    : null;
+  const seekerDescKey = ammo.Seeker > 0 ? seekerTypeDescription(ammo.Seeker) : '';
+  const seekerDesc = seekerDescKey ? t(i18n, seekerDescKey) : null;
+
+  if (ammo.TopArmorAttack || ammo.IsTopArmorArmorAttack) traits.push({ label: 'TOP', variant: 'warn', title: 'Top Attack' });
+  if (ammo.LaserGuided) traits.push({ label: 'LSR', variant: 'accent', title: 'Laser Guided' });
+  if (ammo.GenerateSmoke) traits.push({ label: 'SMK', title: 'Generates Smoke' });
+  if (ammo.CanBeIntercepted) traits.push({ label: 'APS', title: 'Vulnerable to Active Protection Systems' });
+  if (ammo.NoDamageFalloff) traits.push({ label: 'NO-FALL', title: 'No Damage Falloff' });
+  if (ammo.IgnoreCover > 0) traits.push({ label: 'IGN-COV', title: 'Ignores Cover' });
+  if (ammo.Airburst) traits.push({ label: 'AIRBST', title: 'Airburst' });
+  if (ammo.CanReaquire) traits.push({ label: 'REACQ', variant: 'accent', title: 'Can Reacquire Target' });
+  if (ammo.CanBeTargeted) traits.push({ label: 'TGTABLE', variant: 'warn', title: 'Targetable by Point Defense' });
+  if (ammo.OverpressureRadius > 0) traits.push({ label: 'OVPR', variant: 'warn', title: `Overpressure ${ammo.OverpressureRadius}m` });
+  if (ammo.RadioFuseDistance > 0) traits.push({ label: 'PROX', title: `Proximity Fuse ${ammo.RadioFuseDistance}m` });
+  if (ammo.DamageOverTimeDuration > 0) traits.push({ label: 'FIRE', variant: 'fire', title: `Fire Duration ${ammo.DamageOverTimeDuration}s` });
 
   return (
     <>
       <tr
-        class="border-b border-[var(--border)] last:border-b-0 hover:bg-[var(--bg-hover)] transition-colors cursor-pointer"
+        class={`border-b border-[rgba(51,51,51,0.3)] last:border-b-0 transition-colors cursor-pointer ${expanded.value ? 'bg-[var(--bg-hover)]' : 'hover:bg-[var(--bg-hover)]'}`}
         onClick$={() => (expanded.value = !expanded.value)}
       >
         {/* Name + icon with quantity prefix */}
         <td class="px-4 py-2.5 text-left overflow-hidden">
-          <div class="flex items-center gap-1.5">
-            <span class="text-[var(--text-dim)] text-xs shrink-0">{quantity}×</span>
-            {ammoIcon && <GameIcon src={ammoIcon} size={18} variant="white" alt={ammo.Name} />}
-            <span class="text-[var(--text)] truncate">{ammo.HUDName || ammo.Name}</span>
+          <div class="flex items-center gap-2 min-w-0 pr-2">
+            <span class="text-[var(--text-dim)] text-xs shrink-0 w-5 text-right whitespace-nowrap">{quantity}×</span>
+            {ammoIcon && <div class="shrink-0 flex items-center justify-center w-[18px]"><GameIcon src={ammoIcon} size={18} variant="white" alt={ammo.Name} /></div>}
+            <span class="text-[var(--text)] truncate w-40 shrink-0">{ammo.HUDName || ammo.Name}</span>
+            <div class="flex flex-wrap gap-1 shrink-0 ml-1">
+              {trajectoryLabel && <TraitPill label={trajectoryLabel} title={trajectoryDesc || 'Trajectory'} />}
+              {seekerLabel && <TraitPill label={seekerLabel} variant="accent" title={seekerDesc || 'Seeker'} />}
+            </div>
           </div>
         </td>
         {/* Armor type */}
@@ -409,7 +433,7 @@ const AmmoTableRow = component$<AmmoTableRowProps>(({ ammo, quantity, showLowAlt
         <td class="px-2 py-2.5 text-left">
           <div class="flex flex-wrap gap-1">
             {traits.map(t => (
-              <TraitPill key={t} label={t} />
+              <TraitPill key={t.label} label={t.label} variant={t.variant} title={t.title} />
             ))}
           </div>
         </td>
@@ -421,12 +445,12 @@ const AmmoTableRow = component$<AmmoTableRowProps>(({ ammo, quantity, showLowAlt
 
       {/* Expanded detail row — organized groups */}
       {expanded.value && (
-        <tr class="bg-[var(--bg)]/60">
+        <tr class="bg-[rgba(26,26,26,0.4)] border-b border-[rgba(51,51,51,0.3)]">
           <td colSpan={colSpanTotal} class="px-4 py-4">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono">
 
               {/* Group: Damage & Penetration */}
-              <div class="border border-[var(--border)] bg-[var(--bg-raised)]/50 p-3">
+              <div class="border border-[rgba(51,51,51,0.3)] bg-[var(--bg)] p-3 shadow-inner">
                 <p class="text-[10px] uppercase tracking-[0.2em] text-[var(--text-dim)] mb-2 font-semibold">Damage & Penetration</p>
                 <div class="flex flex-col gap-1.5">
                   <AmmoStat label="Damage" value={ammo.Damage} />
@@ -435,15 +459,18 @@ const AmmoTableRow = component$<AmmoTableRowProps>(({ ammo, quantity, showLowAlt
                   <AmmoStat label="Pen (far)" value={ammo.PenetrationAtGroundRange} />
                   <AmmoStat label="AOE (HP)" value={ammo.HealthAOERadius > 0 ? `${ammo.HealthAOERadius}m` : '—'} />
                   <AmmoStat label="AOE (Stress)" value={ammo.StressAOERadius > 0 ? `${ammo.StressAOERadius}m` : '—'} />
+                  {ammo.OverpressureRadius > 0 && <AmmoStat label="Overpressure" value={`${ammo.OverpressureRadius}m`} />}
+                  {ammo.RadioFuseDistance > 0 && <AmmoStat label="Proximity Fuse" value={`${ammo.RadioFuseDistance}m`} />}
                   <AmmoStat label="Crit Multiplier" value={ammo.CriticMultiplier || '—'} />
                   <AmmoStat label="HUD Multiplier" value={ammo.HUDMultiplier || '—'} />
                 </div>
               </div>
 
               {/* Group: Range & Trajectory */}
-              <div class="border border-[var(--border)] bg-[var(--bg-raised)]/50 p-3">
+              <div class="border border-[rgba(51,51,51,0.3)] bg-[var(--bg)] p-3 shadow-inner">
                 <p class="text-[10px] uppercase tracking-[0.2em] text-[var(--text-dim)] mb-2 font-semibold">Range & Trajectory</p>
                 <div class="flex flex-col gap-1.5">
+                  <AmmoStat label="Trajectory" value={trajectoryTypeToString(ammo.TrajectoryType)} />
                   <AmmoStat label="Ground Range" value={range > 0 ? `${range}m` : '—'} />
                   <AmmoStat label="Min Range" value={minRange > 0 ? `${minRange}m` : '—'} />
                   {ammo.LowAltRange > 0 && <AmmoStat label="Low Alt Range" value={`${lowAlt}m`} />}
@@ -460,26 +487,24 @@ const AmmoTableRow = component$<AmmoTableRowProps>(({ ammo, quantity, showLowAlt
               </div>
 
               {/* Group: Supply & Traits */}
-              <div class="border border-[var(--border)] bg-[var(--bg-raised)]/50 p-3">
+              <div class="border border-[rgba(51,51,51,0.3)] bg-[var(--bg)] p-3 shadow-inner">
                 <p class="text-[10px] uppercase tracking-[0.2em] text-[var(--text-dim)] mb-2 font-semibold">Supply & Traits</p>
                 <div class="flex flex-col gap-1.5">
                   <AmmoStat label="Supply Cost" value={ammo.SupplyCost > 0 ? ammo.SupplyCost : '—'} />
                   <AmmoStat label="Resupply Time" value={ammo.ResupplyTime > 0 ? `${ammo.ResupplyTime}s` : '—'} />
                   {ammo.AimStartDelay > 0 && <AmmoStat label="Aim Delay" value={`${ammo.AimStartDelay}s`} />}
                   {ammo.MainEngineIgnitionDelay > 0 && <AmmoStat label="Ignition Delay" value={`${ammo.MainEngineIgnitionDelay}s`} />}
+                  {ammo.DamageOverTimeDuration > 0 && <AmmoStat label="Fire Duration" value={`${ammo.DamageOverTimeDuration}s`} />}
                   {ammo.CanReaquire && <AmmoStat label="Can Reacquire" value="Yes" />}
                   {ammo.CanBeTargeted && <AmmoStat label="Targetable" value="Yes" />}
                 </div>
-                {traits.length > 0 && (
-                  <div class="flex flex-wrap gap-1.5 mt-3 pt-2 border-t border-[var(--border)]">
-                    {ammo.TopArmorAttack && <TraitPill label="TOP ATTACK" />}
-                    {ammo.LaserGuided && <TraitPill label="LASER GUIDED" />}
-                    {ammo.GenerateSmoke && <TraitPill label="SMOKE" />}
-                    {ammo.Seeker > 0 && <TraitPill label="SEEKER" />}
-                    {ammo.CanBeIntercepted && <TraitPill label="APS VULNERABLE" />}
-                    {ammo.NoDamageFalloff && <TraitPill label="NO FALLOFF" />}
-                    {ammo.IgnoreCover > 0 && <TraitPill label="IGNORE COVER" />}
-                    {ammo.Airburst && <TraitPill label="AIRBURST" />}
+                {(traits.length > 0 || trajectoryLabel || seekerLabel) && (
+                  <div class="flex flex-wrap gap-1.5 mt-3 pt-2 border-t border-[rgba(51,51,51,0.3)]">
+                    {trajectoryLabel && <TraitPill label={trajectoryLabel} title={trajectoryDesc || 'Trajectory'} />}
+                    {seekerLabel && <TraitPill label={seekerLabel} variant="accent" title={seekerDesc || 'Seeker'} />}
+                    {traits.map(t => (
+                      <TraitPill key={t.label} label={t.label} variant={t.variant} title={t.title} />
+                    ))}
                   </div>
                 )}
               </div>
@@ -501,8 +526,18 @@ const AmmoStat = component$<{ label: string; value: number | string }>(({ label,
   </div>
 ));
 
-const TraitPill = component$<{ label: string }>(({ label }) => (
-  <span class="px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-wider bg-[var(--tag)] text-[var(--tag-text)]">
+const TRAIT_VARIANT_CLASSES: Record<string, string> = {
+  default: 'bg-[var(--tag)] text-[var(--tag-text)]',
+  accent: 'bg-[var(--accent)]/20 text-[var(--accent)]',
+  warn: 'bg-[#e8a050]/20 text-[#e8a050]',
+  fire: 'bg-[#e05040]/20 text-[#e05040]',
+};
+
+const TraitPill = component$<{ label: string; variant?: string; title?: string }>(({ label, variant, title }) => (
+  <span 
+    class={`px-1 py-0.5 text-[9px] leading-none font-mono uppercase tracking-wider rounded-sm ${TRAIT_VARIANT_CLASSES[variant || 'default'] || TRAIT_VARIANT_CLASSES.default}`}
+    title={title}
+  >
     {label}
   </span>
 ));

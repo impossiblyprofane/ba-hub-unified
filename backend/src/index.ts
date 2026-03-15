@@ -13,10 +13,43 @@ async function buildServer() {
   const data = await loadStaticData();
   const indexes = buildIndexes(data);
 
+  // Keep mutable references for hot-reloading
+  let currentData = data;
+  let currentIndexes = indexes;
+
   const fastify = Fastify({
     logger: {
       level: process.env.LOG_LEVEL || 'info',
     },
+  });
+
+  // Hot-reload endpoint (requires RELOAD_SECRET env var)
+  const RELOAD_SECRET = process.env.RELOAD_SECRET;
+
+  fastify.post('/api/reload-data', async (request, reply) => {
+    if (!RELOAD_SECRET) {
+      fastify.log.warn('RELOAD_SECRET not configured — reload endpoint disabled');
+      return reply.status(404).send({ success: false, error: 'Endpoint not available' });
+    }
+
+    const auth = request.headers['authorization'];
+    if (auth !== `Bearer ${RELOAD_SECRET}`) {
+      return reply.status(401).send({ success: false, error: 'Unauthorized' });
+    }
+
+    try {
+      fastify.log.info('Reloading static data...');
+      const newData = await loadStaticData();
+      const newIndexes = buildIndexes(newData);
+      
+      currentData = newData;
+      currentIndexes = newIndexes;
+      
+      return { success: true, message: 'Data reloaded successfully' };
+    } catch (err) {
+      fastify.log.error(err, 'Failed to reload data');
+      return reply.status(500).send({ success: false, error: 'Failed to reload data' });
+    }
   });
 
   // CORS for frontend
@@ -32,9 +65,17 @@ async function buildServer() {
   await fastify.register(mercurius, {
     schema,
     resolvers,
-    context: () => ({ data, indexes }),
+    context: () => ({ data: currentData, indexes: currentIndexes }),
     graphiql: true, // GraphiQL interface at /graphiql
     subscription: true, // Enable subscriptions via WebSocket
+  });
+
+  // Cache headers for GraphQL responses — data is static, so cache aggressively
+  fastify.addHook('onSend', async (request, reply, payload) => {
+    if (request.url === '/graphql' && request.method === 'POST') {
+      reply.header('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+    }
+    return payload;
   });
 
   return fastify;

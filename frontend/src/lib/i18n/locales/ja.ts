@@ -4,7 +4,7 @@ const ja: TranslationDict = {
   'nav.home': 'ホーム',
   'nav.arsenal': '兵器庫',
   'nav.deckArsenal': 'デッキ一覧',
-  'nav.deckBuilder': 'デッキ編集',
+  'nav.builder': 'デッキ編集',
   'nav.maps': 'マップ',
   'nav.statistics': '統計',
   'nav.guides': 'ガイド',
@@ -43,6 +43,13 @@ const ja: TranslationDict = {
   'footer.bugReport': 'バグ報告',
   'footer.disclaimer': 'Slitherine SoftwareおよびSteel Balalaikaとは提携・承認されていません。',
   'footer.rights': 'Broken Arrowはそれぞれの所有者の商標です。',
+
+  // ── Seeker Types ──
+  'unitViewer.weapons.types.seeker.none': 'なし',
+  'unitViewer.weapons.types.seeker.active': 'アクティブ',
+  'unitViewer.weapons.types.seeker.passive': 'パッシブ',
+  'unitViewer.weapons.types.seeker.sead': '対レーダー (SEAD)',
+  'unitViewer.weapons.types.seeker.laser': 'レーザー',
 };
 
 export default ja;

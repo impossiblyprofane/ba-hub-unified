@@ -1,61 +1,21 @@
-import { $, component$, useComputed$, useSignal, useOnDocument, useVisibleTask$ } from '@builder.io/qwik';
+import { $, component$, useComputed$, useSignal, useStore, useOnDocument, useVisibleTask$ } from '@builder.io/qwik';
 import { routeLoader$ } from '@builder.io/qwik-city';
 import type { DocumentHead } from '@builder.io/qwik-city';
-import { GAME_LOCALES, getGameLocaleValueOrKey, useI18n } from '~/lib/i18n';
+import { GAME_LOCALES, getGameLocaleValueOrKey, useI18n, t } from '~/lib/i18n';
 import { toCountryIconPath, toSpecializationIconPath, toUnitIconPath } from '~/lib/iconPaths';
 import { ArsenalUnitCard } from '~/components/arsenal/ArsenalUnitCard';
 import { TooltipOverlay } from '~/components/ui/TooltipOverlay';
-
-type ArsenalUnit = {
-  Id: number;
-  Name: string;
-  HUDName?: string | null;
-  CountryId: number;
-  CategoryType: number;
-  Cost: number;
-  ThumbnailFileName: string;
-  IsUnitModification: boolean;
-  DisplayInArmory: boolean;
-};
-
-type ArsenalCard = {
-  unit: ArsenalUnit;
-  isTransport: boolean;
-  specializationIds: number[];
-  transportCapacity: number;
-  cargoCapacity: number;
-  availableTransports: number[];
-  defaultModificationOptions: Array<{ optCost: number }>;
-};
-
-type Country = {
-  Id: number;
-  Name: string;
-  FlagFileName: string;
-};
-
-type Specialization = {
-  Id: number;
-  CountryId: number;
-  UIName: string;
-  UIDescription: string;
-  Icon: string;
-};
-
-type ArsenalPageData = {
-  arsenalUnitsCards: ArsenalCard[];
-  countries: Country[];
-  specializations: Specialization[];
-};
+import type { ArsenalCard, ArsenalPageData } from '~/lib/graphql-types';
+import { ARSENAL_PAGE_QUERY } from '~/lib/queries/arsenal';
 
 const CATEGORY_DEFS = [
-  { id: 0, code: 'REC', label: 'Recon' },
-  { id: 1, code: 'INF', label: 'Infantry' },
-  { id: 2, code: 'VEH', label: 'Vehicle' },
-  { id: 3, code: 'SUP', label: 'Support' },
-  { id: 5, code: 'HEL', label: 'Helicopter' },
-  { id: 6, code: 'AIR', label: 'Airplane' },
-  { id: 7, code: 'TRN', label: 'Transport' },
+  { id: 0, code: 'REC', label: 'Recon', i18nKey: 'arsenal.category.rec' },
+  { id: 1, code: 'INF', label: 'Infantry', i18nKey: 'arsenal.category.inf' },
+  { id: 2, code: 'VEH', label: 'Vehicle', i18nKey: 'arsenal.category.veh' },
+  { id: 3, code: 'SUP', label: 'Support', i18nKey: 'arsenal.category.sup' },
+  { id: 5, code: 'HEL', label: 'Helicopter', i18nKey: 'arsenal.category.hel' },
+  { id: 6, code: 'AIR', label: 'Airplane', i18nKey: 'arsenal.category.air' },
+  { id: 7, code: 'TRN', label: 'Transport', i18nKey: 'arsenal.category.trn' },
 ];
 
 const CATEGORY_CODE = new Map(CATEGORY_DEFS.map(cat => [cat.id, cat.code]));
@@ -63,48 +23,11 @@ const CATEGORY_CODE = new Map(CATEGORY_DEFS.map(cat => [cat.id, cat.code]));
 
 export const useArsenalData = routeLoader$(async () => {
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
-  const query = `
-    query ArsenalPageData {
-      arsenalUnitsCards {
-        unit {
-          Id
-          Name
-          HUDName
-          CountryId
-          CategoryType
-          Cost
-          ThumbnailFileName
-          IsUnitModification
-          DisplayInArmory
-        }
-        isTransport
-        specializationIds
-        transportCapacity
-        cargoCapacity
-        availableTransports
-        defaultModificationOptions {
-          optCost
-        }
-      }
-      countries {
-        Id
-        Name
-        FlagFileName
-      }
-      specializations {
-        Id
-        CountryId
-        UIName
-        UIDescription
-        Icon
-      }
-    }
-  `;
 
   const response = await fetch(apiUrl, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ query }),
+    body: JSON.stringify({ query: ARSENAL_PAGE_QUERY }),
   });
 
   if (!response.ok) {
@@ -127,7 +50,7 @@ export default component$(() => {
   const selectedCountries = useSignal<number[]>([]);
   const selectedCategories = useSignal<number[]>([]);
   const selectedSpecializations = useSignal<number[]>([]);
-  const sortBy = useSignal<'name' | 'cost'>('name');
+  const sortBy = useSignal<'name' | 'cost' | 'category' | 'specialization'>('name');
   const sortDir = useSignal<'asc' | 'desc'>('asc');
   const openPanel = useSignal<null | 'countries' | 'categories' | 'specializations'>(null);
   const panelTop = useSignal(0);
@@ -138,6 +61,7 @@ export default component$(() => {
   const tooltipX = useSignal(0);
   const tooltipY = useSignal(0);
   const tooltipVisible = useSignal(false);
+  const collapsedGroups = useStore<Record<string, boolean>>({});
 
   const showTooltip = $((event: MouseEvent, text: string) => {
     tooltipText.value = text;
@@ -198,7 +122,7 @@ export default component$(() => {
   });
 
   const countrySummary = useComputed$(() => {
-    if (selectedCountries.value.length === 0) return 'Countries';
+    if (selectedCountries.value.length === 0) return t(i18n, 'arsenal.filter.countries');
     const names = dataSignal.value.countries
       .filter((country) => selectedCountries.value.includes(country.Id))
       .map((country) => country.Name);
@@ -207,16 +131,16 @@ export default component$(() => {
   });
 
   const categorySummary = useComputed$(() => {
-    if (selectedCategories.value.length === 0) return 'Categories';
+    if (selectedCategories.value.length === 0) return t(i18n, 'arsenal.filter.categories');
     const names = CATEGORY_DEFS
       .filter((cat) => selectedCategories.value.includes(cat.id))
-      .map((cat) => cat.label);
+      .map((cat) => t(i18n, cat.i18nKey));
     if (names.length <= 2) return names.join(', ');
     return `${names.slice(0, 2).join(', ')} +${names.length - 2}`;
   });
 
   const specializationSummary = useComputed$(() => {
-    if (selectedSpecializations.value.length === 0) return 'Specializations';
+    if (selectedSpecializations.value.length === 0) return t(i18n, 'arsenal.filter.specializations');
     const names = dataSignal.value.specializations
       .filter((spec) => selectedSpecializations.value.includes(spec.Id))
       .map((spec) => specNameById.value.get(spec.Id) || spec.UIName);
@@ -311,6 +235,17 @@ export default component$(() => {
       if (sortBy.value === 'cost') {
         return getCost(a) - getCost(b);
       }
+      if (sortBy.value === 'category') {
+        const catDiff = a.unit.CategoryType - b.unit.CategoryType;
+        if (catDiff !== 0) return catDiff;
+        return a.unit.Name.localeCompare(b.unit.Name);
+      }
+      if (sortBy.value === 'specialization') {
+        const aSpec = a.specializationIds[0] ?? Infinity;
+        const bSpec = b.specializationIds[0] ?? Infinity;
+        if (aSpec !== bSpec) return aSpec - bSpec;
+        return a.unit.Name.localeCompare(b.unit.Name);
+      }
       return a.unit.Name.localeCompare(b.unit.Name);
     });
 
@@ -379,37 +314,37 @@ export default component$(() => {
   return (
     <div class="w-full max-w-[2000px] mx-auto">
       <div class="mb-6">
-        <p class="text-[var(--accent)] text-xs font-mono tracking-[0.35em] uppercase mb-3">Unit Database</p>
+        <p class="text-[var(--accent)] text-xs font-mono tracking-[0.3em] uppercase mb-3">{t(i18n, 'arsenal.tag')}</p>
         <div class="flex items-end justify-between gap-6">
           <div>
-            <h1 class="text-3xl font-semibold text-[var(--text)] tracking-tight">Arsenal Browser</h1>
+            <h1 class="text-3xl font-semibold text-[var(--text)] tracking-tight">{t(i18n, 'arsenal.title')}</h1>
             <p class="text-sm text-[var(--text-dim)] mt-2 max-w-2xl">
-              Browse and compare every available unit with tactical overlays, fast filters, and instant cost breakdowns.
+              {t(i18n, 'arsenal.subtitle')}
             </p>
           </div>
           <div class="text-xs font-mono tracking-widest text-[var(--text-dim)] uppercase">
-            {filteredCards.value.length} / {dataSignal.value.arsenalUnitsCards.length} Units
+            {filteredCards.value.length} / {dataSignal.value.arsenalUnitsCards.length} {t(i18n, 'arsenal.units')}
           </div>
         </div>
       </div>
 
       <div class="flex flex-col gap-4 mb-8">
-        <div class="bg-[var(--bg-raised)] border border-[var(--border)] p-3">
-          <label class="text-[10px] font-mono text-[var(--text-dim)] tracking-[0.3em] uppercase">Search</label>
+        <div class="p-0 bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.7)]">
+          <label class="text-[10px] font-mono text-[var(--text-dim)] tracking-[0.3em] uppercase px-3 py-2 border-b border-[rgba(51,51,51,0.3)] block">{t(i18n, 'arsenal.search')}</label>
           <input
             value={search.value}
             onInput$={(event) => {
               search.value = (event.target as HTMLInputElement).value;
             }}
-            placeholder="Search units"
-            class="w-full mt-2 bg-transparent text-sm text-[var(--text)] border border-[var(--border)] px-3 py-2 focus:outline-none focus:border-[var(--accent)]"
+            placeholder={t(i18n, 'arsenal.search.placeholder')}
+            class="w-full bg-transparent text-sm text-[var(--text)] border border-[var(--border)] px-3 py-2 mx-0 focus:outline-none focus:border-[var(--accent)]"
           />
         </div>
 
         <div class="flex flex-wrap items-center gap-6">
           {/* ── Filter dropdowns ── */}
           <div class="flex items-center gap-2">
-            <span class="text-[10px] font-mono text-[var(--text-dim)] tracking-[0.25em] uppercase select-none">Filter</span>
+            <span class="text-[10px] font-mono text-[var(--text-dim)] tracking-[0.25em] uppercase select-none">{t(i18n, 'arsenal.filter.label')}</span>
             <div class="w-px h-5 bg-[var(--border)]" />
             <button
               class={[
@@ -492,7 +427,7 @@ export default component$(() => {
 
           {/* ── Sort controls ── */}
           <div class="flex items-center gap-2">
-            <span class="text-[10px] font-mono text-[var(--text-dim)] tracking-[0.25em] uppercase select-none">Sort</span>
+            <span class="text-[10px] font-mono text-[var(--text-dim)] tracking-[0.25em] uppercase select-none">{t(i18n, 'arsenal.sort.label')}</span>
             <div class="w-px h-5 bg-[var(--border)]" />
             <div class="flex">
               <button
@@ -504,18 +439,40 @@ export default component$(() => {
                 ].join(' ')}
                 onClick$={() => { sortBy.value = 'name'; }}
               >
-                Name
+                {t(i18n, 'arsenal.sort.name')}
               </button>
               <button
                 class={[
-                  'px-3 py-2 text-xs font-mono uppercase border transition-colors',
+                  'px-3 py-2 text-xs font-mono uppercase border border-r-0 transition-colors',
                   sortBy.value === 'cost'
                     ? 'bg-[var(--accent)] text-black border-[var(--accent)]'
                     : 'text-[var(--text-dim)] border-[var(--border)] hover:text-[var(--text)]'
                 ].join(' ')}
                 onClick$={() => { sortBy.value = 'cost'; }}
               >
-                Cost
+                {t(i18n, 'arsenal.sort.cost')}
+              </button>
+              <button
+                class={[
+                  'px-3 py-2 text-xs font-mono uppercase border border-r-0 transition-colors',
+                  sortBy.value === 'category'
+                    ? 'bg-[var(--accent)] text-black border-[var(--accent)]'
+                    : 'text-[var(--text-dim)] border-[var(--border)] hover:text-[var(--text)]'
+                ].join(' ')}
+                onClick$={() => { sortBy.value = 'category'; }}
+              >
+                {t(i18n, 'arsenal.sort.category')}
+              </button>
+              <button
+                class={[
+                  'px-3 py-2 text-xs font-mono uppercase border transition-colors',
+                  sortBy.value === 'specialization'
+                    ? 'bg-[var(--accent)] text-black border-[var(--accent)]'
+                    : 'text-[var(--text-dim)] border-[var(--border)] hover:text-[var(--text)]'
+                ].join(' ')}
+                onClick$={() => { sortBy.value = 'specialization'; }}
+              >
+                {t(i18n, 'arsenal.sort.spec')}
               </button>
             </div>
             <button
@@ -523,7 +480,7 @@ export default component$(() => {
               onClick$={() => {
                 sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc';
               }}
-              title={sortDir.value === 'asc' ? 'Ascending' : 'Descending'}
+              title={sortDir.value === 'asc' ? t(i18n, 'arsenal.sort.ascending') : t(i18n, 'arsenal.sort.descending')}
             >
               {sortDir.value === 'asc' ? '↑' : '↓'}
             </button>
@@ -533,7 +490,7 @@ export default component$(() => {
 
       {openPanel.value && (
         <div
-          class="arsenal-filter-panel fixed z-40 bg-[var(--bg-raised)] border border-[var(--border)] p-4 max-h-[60vh] overflow-auto"
+          class="arsenal-filter-panel fixed z-40 bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.9)] backdrop-blur-sm border border-[rgba(51,51,51,0.3)] p-4 max-h-[60vh] overflow-auto"
           style={{
             top: `${panelTop.value}px`,
             left: `${panelLeft.value}px`,
@@ -542,15 +499,15 @@ export default component$(() => {
         >
           <div class="flex items-center justify-between mb-3">
             <p class="text-xs font-mono uppercase tracking-[0.3em] text-[var(--text-dim)]">
-              {openPanel.value === 'countries' && 'Countries'}
-              {openPanel.value === 'categories' && 'Categories'}
-              {openPanel.value === 'specializations' && 'Specializations'}
+              {openPanel.value === 'countries' && t(i18n, 'arsenal.filter.countries')}
+              {openPanel.value === 'categories' && t(i18n, 'arsenal.filter.categories')}
+              {openPanel.value === 'specializations' && t(i18n, 'arsenal.filter.specializations')}
             </p>
             <button
               class="text-xs font-mono uppercase text-[var(--text-dim)] hover:text-[var(--text)]"
               onClick$={() => { openPanel.value = null; }}
             >
-              Close
+              {t(i18n, 'arsenal.panel.close')}
             </button>
           </div>
 
@@ -597,7 +554,7 @@ export default component$(() => {
                   ].join(' ')}
                   onClick$={() => toggleSelection(selectedCategories, cat.id)}
                 >
-                  <span>{cat.label}</span>
+                  <span>{t(i18n, cat.i18nKey)}</span>
                   <span class="text-[10px] opacity-70">{cat.code}</span>
                 </button>
               ))}
@@ -636,50 +593,170 @@ export default component$(() => {
         </div>
       )}
 
-      <div
-        class="grid gap-3"
-        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))' }}
-        ref={gridRef}
-      >
-        {filteredCards.value.map((card) => {
-          const unit = card.unit;
-          const country = dataSignal.value.countries.find((c) => c.Id === unit.CountryId);
-          const primarySpecId = card.specializationIds[0];
-          const specName = primarySpecId
-            ? specNameById.value.get(primarySpecId) || ''
-            : '';
-          const specIcon = primarySpecId
-            ? dataSignal.value.specializations.find((spec) => spec.Id === primarySpecId)?.Icon
-            : undefined;
-          const cost = unit.Cost + (card.defaultModificationOptions?.reduce((sum, opt) => sum + (opt.optCost ?? 0), 0) ?? 0);
-          const unitIconUrl = toUnitIconPath(unit.ThumbnailFileName);
-          const countryFlagUrl = country ? toCountryIconPath(country.FlagFileName) : undefined;
-          const specIconUrl = specIcon ? toSpecializationIconPath(specIcon) : undefined;
-          const seats = card.transportCapacity > 0 ? card.transportCapacity : undefined;
-          const lift = card.cargoCapacity > 0 ? Math.round(card.cargoCapacity) : undefined;
+      {(sortBy.value === 'category' || sortBy.value === 'specialization') ? (
+        <div class="flex flex-col gap-6" ref={gridRef}>
+          {(() => {
+            const groups = new Map<string, ArsenalCard[]>();
+            filteredCards.value.forEach((card) => {
+              let groupKey: string;
+              if (sortBy.value === 'category') {
+                const catDef = CATEGORY_DEFS.find((c) => c.id === card.unit.CategoryType);
+                groupKey = catDef ? `${catDef.code} — ${t(i18n, catDef.i18nKey)}` : t(i18n, 'arsenal.group.unknown');
+              } else {
+                const primarySpecId = card.specializationIds[0];
+                groupKey = primarySpecId
+                  ? specNameById.value.get(primarySpecId) || t(i18n, 'arsenal.group.unknown')
+                  : t(i18n, 'arsenal.group.noSpecialization');
+              }
+              if (!groups.has(groupKey)) groups.set(groupKey, []);
+              groups.get(groupKey)!.push(card);
+            });
 
-          return (
-            <ArsenalUnitCard
-              key={unit.Id}
-              href={`/arsenal/${unit.Id}`}
-              dataCardId={unit.Id}
-              unitName={unit.Name}
-              unitIconUrl={unitIconUrl}
-              categoryCode={CATEGORY_CODE.get(unit.CategoryType) ?? 'UNK'}
-              cost={cost}
-              countryName={country?.Name}
-              countryFlagUrl={countryFlagUrl}
-              specName={specName}
-              specIconUrl={specIconUrl}
-              seats={seats}
-              lift={lift}
-              onTooltipShow$={showTooltip}
-              onTooltipMove$={moveTooltip}
-              onTooltipHide$={hideTooltip}
-            />
-          );
-        })}
-      </div>
+            const renderCardGrid = (cards: ArsenalCard[]) => (
+              <div
+                class="grid gap-3 md:gap-2"
+                style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))' }}
+              >
+                {cards.map((card) => {
+                  const unit = card.unit;
+                  const country = dataSignal.value.countries.find((c) => c.Id === unit.CountryId);
+                  const primarySpecId = card.specializationIds[0];
+                  const specName = primarySpecId
+                    ? specNameById.value.get(primarySpecId) || ''
+                    : '';
+                  const specIcon = primarySpecId
+                    ? dataSignal.value.specializations.find((spec) => spec.Id === primarySpecId)?.Icon
+                    : undefined;
+                  const cost = unit.Cost + (card.defaultModificationOptions?.reduce((sum, opt) => sum + (opt.optCost ?? 0), 0) ?? 0);
+                  const unitIconUrl = toUnitIconPath(unit.ThumbnailFileName);
+                  const countryFlagUrl = country ? toCountryIconPath(country.FlagFileName) : undefined;
+                  const specIconUrl = specIcon ? toSpecializationIconPath(specIcon) : undefined;
+                  const seats = card.transportCapacity > 0 ? card.transportCapacity : undefined;
+                  const lift = card.cargoCapacity > 0 ? Math.round(card.cargoCapacity) : undefined;
+
+                  return (
+                    <ArsenalUnitCard
+                      key={unit.Id}
+                      href={`/arsenal/${unit.Id}`}
+                      dataCardId={unit.Id}
+                      unitName={unit.Name}
+                      unitIconUrl={unitIconUrl}
+                      categoryCode={CATEGORY_CODE.get(unit.CategoryType) ?? 'UNK'}
+                      cost={cost}
+                      countryName={country?.Name}
+                      countryFlagUrl={countryFlagUrl}
+                      specName={specName}
+                      specIconUrl={specIconUrl}
+                      seats={seats}
+                      lift={lift}
+                      onTooltipShow$={showTooltip}
+                      onTooltipMove$={moveTooltip}
+                      onTooltipHide$={hideTooltip}
+                    />
+                  );
+                })}
+              </div>
+            );
+
+            return Array.from(groups.entries()).map(([groupLabel, cards]) => {
+              const isCollapsed = !!collapsedGroups[groupLabel];
+              return (
+                <div key={groupLabel}>
+                  <button
+                    type="button"
+                    class="flex items-center gap-3 mb-2 w-full text-left group cursor-pointer"
+                    onClick$={() => { collapsedGroups[groupLabel] = !collapsedGroups[groupLabel]; }}
+                  >
+                    <span class="text-[10px] font-mono text-[var(--text-dim)] transition-transform" style={{ display: 'inline-block', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}>▼</span>
+                    <h2 class="text-xs font-mono uppercase tracking-[0.3em] text-[var(--accent)] group-hover:text-[var(--accent-hi)] transition-colors">{groupLabel}</h2>
+                    <div class="flex-1 h-px bg-[var(--border)]" />
+                    <span class="text-[10px] font-mono text-[var(--text-dim)]">{cards.length}</span>
+                  </button>
+                  {!isCollapsed && (
+                    sortBy.value === 'specialization' ? (
+                      <div class="flex flex-col gap-4 pl-2">
+                        {(() => {
+                          const catGroups = new Map<string, ArsenalCard[]>();
+                          cards.forEach((card) => {
+                            const catDef = CATEGORY_DEFS.find((c) => c.id === card.unit.CategoryType);
+                            const catKey = catDef ? `${catDef.code} — ${t(i18n, catDef.i18nKey)}` : t(i18n, 'arsenal.group.unknown');
+                            if (!catGroups.has(catKey)) catGroups.set(catKey, []);
+                            catGroups.get(catKey)!.push(card);
+                          });
+                          return Array.from(catGroups.entries()).map(([catLabel, catCards]) => {
+                            const subKey = `${groupLabel}::${catLabel}`;
+                            const subCollapsed = !!collapsedGroups[subKey];
+                            return (
+                              <div key={catLabel}>
+                                <button
+                                  type="button"
+                                  class="flex items-center gap-2 mb-1.5 w-full text-left group cursor-pointer"
+                                  onClick$={() => { collapsedGroups[subKey] = !collapsedGroups[subKey]; }}
+                                >
+                                  <span class="text-[9px] font-mono text-[var(--text-dim)] transition-transform" style={{ display: 'inline-block', transform: subCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}>▼</span>
+                                  <h3 class="text-[11px] font-mono uppercase tracking-[0.2em] text-[var(--text-dim)] group-hover:text-[var(--text)] transition-colors">{catLabel}</h3>
+                                  <div class="flex-1 h-px bg-[var(--border)]/50" />
+                                  <span class="text-[9px] font-mono text-[var(--text-dim)]">{catCards.length}</span>
+                                </button>
+                                {!subCollapsed && renderCardGrid(catCards)}
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+                    ) : renderCardGrid(cards)
+                  )}
+                </div>
+              );
+            });
+          })()}
+        </div>
+      ) : (
+        <div
+          class="grid gap-3 md:gap-2"
+          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))' }}
+          ref={gridRef}
+        >
+          {filteredCards.value.map((card) => {
+            const unit = card.unit;
+            const country = dataSignal.value.countries.find((c) => c.Id === unit.CountryId);
+            const primarySpecId = card.specializationIds[0];
+            const specName = primarySpecId
+              ? specNameById.value.get(primarySpecId) || ''
+              : '';
+            const specIcon = primarySpecId
+              ? dataSignal.value.specializations.find((spec) => spec.Id === primarySpecId)?.Icon
+              : undefined;
+            const cost = unit.Cost + (card.defaultModificationOptions?.reduce((sum, opt) => sum + (opt.optCost ?? 0), 0) ?? 0);
+            const unitIconUrl = toUnitIconPath(unit.ThumbnailFileName);
+            const countryFlagUrl = country ? toCountryIconPath(country.FlagFileName) : undefined;
+            const specIconUrl = specIcon ? toSpecializationIconPath(specIcon) : undefined;
+            const seats = card.transportCapacity > 0 ? card.transportCapacity : undefined;
+            const lift = card.cargoCapacity > 0 ? Math.round(card.cargoCapacity) : undefined;
+
+            return (
+              <ArsenalUnitCard
+                key={unit.Id}
+                href={`/arsenal/${unit.Id}`}
+                dataCardId={unit.Id}
+                unitName={unit.Name}
+                unitIconUrl={unitIconUrl}
+                categoryCode={CATEGORY_CODE.get(unit.CategoryType) ?? 'UNK'}
+                cost={cost}
+                countryName={country?.Name}
+                countryFlagUrl={countryFlagUrl}
+                specName={specName}
+                specIconUrl={specIconUrl}
+                seats={seats}
+                lift={lift}
+                onTooltipShow$={showTooltip}
+                onTooltipMove$={moveTooltip}
+                onTooltipHide$={hideTooltip}
+              />
+            );
+          })}
+        </div>
+      )}
       <TooltipOverlay
         text={tooltipText.value}
         x={tooltipX.value}

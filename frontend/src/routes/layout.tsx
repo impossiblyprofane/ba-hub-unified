@@ -8,7 +8,7 @@ import { LanguageSelectorButton, LanguageSelectorDropdown, useLocaleMenuProvider
 import { useI18nProvider, useI18n, t, setLocale, LOCALES, type Locale } from '~/lib/i18n';
 
 // Metadata for SEO (will be customized per route)
-export const onGet: RequestHandler = async ({ headers, url }) => {
+export const onGet: RequestHandler = async ({ headers }) => {
   // Metadata-only SSR for link previews
   headers.set('Cache-Control', 'public, max-age=3600');
 };
@@ -17,7 +17,7 @@ const NAV_ITEMS = [
   { i18nKey: 'nav.home', href: '/', icon: encodeIconPath(UtilIconPaths.ORDER_BACK_TO_BASE) },
   { i18nKey: 'nav.arsenal', href: '/arsenal', icon: encodeIconPath(UtilIconPaths.POINTS) },
   { i18nKey: 'nav.deckArsenal', href: '/decks', icon: encodeIconPath(UtilIconPaths.DECK) },
-  { i18nKey: 'nav.deckBuilder', href: '/deck-builder', icon: UtilIconPaths.DECK_OUTLINE },
+  { i18nKey: 'nav.builder', href: '/builder', icon: UtilIconPaths.DECK_OUTLINE },
   { i18nKey: 'nav.maps', href: '/maps', icon: encodeIconPath(UtilIconPaths.LOCATION_MAP) },
   { i18nKey: 'nav.statistics', href: '/stats', icon: encodeIconPath(UtilIconPaths.KILL_DEATH_RATIO) },
   { i18nKey: 'nav.guides', href: '/guides', icon: encodeIconPath(UtilIconPaths.LEAST_FAVORITE_SPEC) },
@@ -277,7 +277,7 @@ export default component$(() => {
       {/* Main Content — offset for collapsed nav width */}
       <div class="pl-0 md:pl-20 min-h-screen flex flex-col">
         <main class="flex-1 pt-20 md:pt-16 pb-8 flex justify-center">
-          <div class="w-full max-w-[2000px] px-4 md:px-8 xl:px-10 2xl:px-12" style={{ viewTransitionName: 'page-content' }}>
+          <div data-layout-container="" class="w-full max-w-[2000px] px-4 md:px-8 xl:px-10 2xl:px-12" style={{ viewTransitionName: 'page-content' }}>
             <Slot />
           </div>
         </main>

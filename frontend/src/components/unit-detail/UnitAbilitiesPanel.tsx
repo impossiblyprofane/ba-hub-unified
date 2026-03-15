@@ -2,7 +2,8 @@ import { component$ } from '@builder.io/qwik';
 import { GameIcon } from '~/components/GameIcon';
 import { RichTooltip, TipRow } from '~/components/ui/RichTooltip';
 import { UtilIconPaths } from '~/lib/iconPaths';
-import type { UnitDetailAbility } from '~/routes/arsenal/[unitid]';
+import { useI18n, t } from '~/lib/i18n';
+import type { UnitDetailAbility } from '~/lib/graphql-types';
 
 type Props = { abilities: UnitDetailAbility[]; compact?: boolean; fill?: boolean };
 
@@ -11,16 +12,17 @@ type Props = { abilities: UnitDetailAbility[]; compact?: boolean; fill?: boolean
  * Rich tooltips give full detailed breakdowns on hover.
  */
 export const UnitAbilitiesPanel = component$<Props>(({ abilities, compact, fill }) => {
+  const i18n = useI18n();
   // Filter out empty/placeholder abilities (no type flags set)
   const displayable = abilities.filter(a => isDisplayableAbility(a));
   if (displayable.length === 0) return null;
 
   return (
     <div
-      class={`p-0 bg-gradient-to-b from-[var(--bg)] to-[var(--bg)]/70 ${fill ? 'h-full flex flex-col' : ''}`}
+      class={`p-0 bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.7)] border border-[rgba(51,51,51,0.15)] ${fill ? 'h-full flex flex-col' : ''}`}
     >
-      <p class={`font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] ${compact ? 'text-[9px] px-2 py-2' : 'text-[10px] px-3 py-2'} border-b border-[var(--border)]/30`}>
-        Abilities
+      <p class={`font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] ${compact ? 'text-[9px] px-2 py-2' : 'text-[10px] px-3 py-2'} border-b border-[rgba(51,51,51,0.3)]`}>
+        {t(i18n, 'unitDetail.panel.abilities')}
       </p>
       <div class={`flex flex-col ${compact ? 'gap-1.5' : 'gap-2'} ${fill ? 'flex-1 overflow-y-auto' : ''}`}>
         {displayable.map(ability => (
@@ -36,7 +38,7 @@ const AbilityRow = component$<{ ability: UnitDetailAbility; compact?: boolean }>
 
   return (
     <RichTooltip>
-      <div class={`flex items-start ${compact ? 'gap-1.5 p-1' : 'gap-2 p-1.5'} bg-[var(--bg)]/40 cursor-help`}>
+      <div class={`flex items-start ${compact ? 'gap-1.5 p-1' : 'gap-2 p-1.5'} bg-[rgba(26,26,26,0.4)] cursor-help`}>
         <GameIcon src={info.icon} size={compact ? 16 : 20} variant="accent" alt={info.label} class="mt-0.5 shrink-0" />
         <div class="flex-1 min-w-0">
           <p class={`${compact ? 'text-[11px]' : 'text-xs'} font-semibold text-[var(--text)]`}>{info.label}</p>

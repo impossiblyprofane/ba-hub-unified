@@ -4,7 +4,7 @@ const zh: TranslationDict = {
   'nav.home': '首页',
   'nav.arsenal': '武器库',
   'nav.deckArsenal': '卡组库',
-  'nav.deckBuilder': '卡组编辑',
+  'nav.builder': '卡组编辑',
   'nav.maps': '地图',
   'nav.statistics': '统计',
   'nav.guides': '攻略',
@@ -43,6 +43,13 @@ const zh: TranslationDict = {
   'footer.bugReport': '报告错误',
   'footer.disclaimer': '与 Slitherine Software 或 Steel Balalaika 无关，未获其认可。',
   'footer.rights': 'Broken Arrow 是其各自所有者的商标。',
+
+  // ── Seeker Types ──
+  'unitViewer.weapons.types.seeker.none': '无',
+  'unitViewer.weapons.types.seeker.active': '主动',
+  'unitViewer.weapons.types.seeker.passive': '被动',
+  'unitViewer.weapons.types.seeker.sead': '反辐射 (SEAD)',
+  'unitViewer.weapons.types.seeker.laser': '激光半主动',
 };
 
 export default zh;

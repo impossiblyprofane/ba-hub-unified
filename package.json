@@ -16,6 +16,7 @@
     "build:frontend": "npm run build -w frontend",
     "build:shared": "npm run build -w shared",
     "type-check": "npm run type-check -w backend && npm run type-check -w frontend && npm run type-check -w shared",
+    "test": "npm run test -w backend && npm run test -w frontend",
     "clean": "rimraf **/node_modules **/dist **/.qwik",
     "docker:build": "cd docker && docker-compose build",
     "docker:up": "cd docker && docker-compose up",

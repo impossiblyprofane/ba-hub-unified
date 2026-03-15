@@ -1,7 +1,8 @@
 import { component$ } from '@builder.io/qwik';
 import { GameIcon } from '~/components/GameIcon';
 import { UtilIconPaths } from '~/lib/iconPaths';
-import type { UnitDetailMobility, UnitDetailFlyPreset } from '~/routes/arsenal/[unitid]';
+import { useI18n, t } from '~/lib/i18n';
+import type { UnitDetailMobility, UnitDetailFlyPreset } from '~/lib/graphql-types';
 
 type Props = {
   mobility: UnitDetailMobility;
@@ -12,6 +13,7 @@ type Props = {
 };
 
 export const UnitMobilityPanel = component$<Props>(({ mobility, flyPreset, unitType, compact, fill }) => {
+  const i18n = useI18n();
   const isInfantry = unitType === 2;
   const isHelicopter = unitType === 8;
   const isAircraft = unitType === 16;
@@ -71,16 +73,16 @@ export const UnitMobilityPanel = component$<Props>(({ mobility, flyPreset, unitT
 
   return (
     <div
-      class={`p-0 bg-gradient-to-b from-[var(--bg)] to-[var(--bg)]/70 ${fill ? 'h-full flex flex-col' : ''}`}
+      class={`p-0 bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.7)] border border-[rgba(51,51,51,0.15)] ${fill ? 'h-full flex flex-col' : ''}`}
     >
-      <p class={`font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] ${compact ? 'text-[9px] px-2 py-2' : 'text-[10px] px-3 py-2'} border-b border-[var(--border)]/30`}>
-        Mobility — km/h
+      <p class={`font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] ${compact ? 'text-[9px] px-2 py-2' : 'text-[10px] px-3 py-2'} border-b border-[rgba(51,51,51,0.3)]`}>
+        {t(i18n, 'unitDetail.panel.mobility')} — km/h
       </p>
 
       {compact ? (
         <div class={`flex flex-wrap gap-2 ${fill ? 'flex-1' : ''} content-start`}>
           {stats.map(s => (
-            <div key={s.label} class="flex items-center gap-2 px-2 py-1 bg-[var(--bg)]/40" title={s.label}>
+            <div key={s.label} class="flex items-center gap-2 px-2 py-1 bg-[rgba(26,26,26,0.4)]" title={s.label}>
               <GameIcon src={s.icon} size={16} variant="white" alt={s.label} />
               {!s.iconOnly && (
                 <span class="text-xs font-semibold text-[var(--text)]">
@@ -94,7 +96,7 @@ export const UnitMobilityPanel = component$<Props>(({ mobility, flyPreset, unitT
       ) : (
         <div class={`grid ${gridClass} gap-1.5`}>
           {stats.map(s => (
-            <div key={s.label} class="flex flex-col items-center gap-1.5 p-3 bg-[var(--bg)]/40" title={s.label}>
+            <div key={s.label} class="flex flex-col items-center gap-1.5 p-3 bg-[rgba(26,26,26,0.4)]" title={s.label}>
               <GameIcon src={s.icon} size={s.iconOnly ? 28 : 26} variant="white" alt={s.label} />
               {!s.iconOnly && (
                 <span class="text-base font-semibold text-[var(--text)]">

@@ -4,7 +4,7 @@ const de: TranslationDict = {
   'nav.home': 'Startseite',
   'nav.arsenal': 'Arsenal',
   'nav.deckArsenal': 'Deck-Arsenal',
-  'nav.deckBuilder': 'Deck-Editor',
+  'nav.builder': 'Deck-Editor',
   'nav.maps': 'Karten',
   'nav.statistics': 'Statistik',
   'nav.guides': 'Guides',
@@ -43,6 +43,13 @@ const de: TranslationDict = {
   'footer.bugReport': 'Fehlerbericht',
   'footer.disclaimer': 'Nicht verbunden mit oder unterstützt von Slitherine Software oder Steel Balalaika.',
   'footer.rights': 'Broken Arrow ist eine Marke der jeweiligen Eigentümer.',
+
+  // ── Seeker Types ──
+  'unitViewer.weapons.types.seeker.none': 'Keiner',
+  'unitViewer.weapons.types.seeker.active': 'Aktiv',
+  'unitViewer.weapons.types.seeker.passive': 'Passiv',
+  'unitViewer.weapons.types.seeker.sead': 'SEAD',
+  'unitViewer.weapons.types.seeker.laser': 'Laser',
 };
 
 export default de;

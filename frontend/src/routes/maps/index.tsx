@@ -1,34 +1,26 @@
 import { component$ } from '@builder.io/qwik';
 import type { DocumentHead } from '@builder.io/qwik-city';
+import { useI18n, t } from '~/lib/i18n';
 
 export default component$(() => {
-  return (
-    <div class="max-w-6xl">
-      <p class="text-[#3b8eed] text-xs font-mono tracking-[0.25em] uppercase mb-3">Battlefield Intel</p>
-      <h1 class="text-3xl font-bold mb-3 text-[#c8d1db]">Maps & Tactics</h1>
-      <p class="text-[#6b7a8d] text-sm mb-8">Interactive map viewer with tactical overlays and terrain analysis.</p>
+  const i18n = useI18n();
 
-      {/* Map Filter */}
-      <div class="mb-6 card">
-        <select class="bg-[#0c0f13] text-[#c8d1db] px-3 py-2 text-xs border border-[#1e2a36] focus:outline-none focus:border-[#3b8eed]">
-          <option>All Maps</option>
-          <option>Map Type 1</option>
-          <option>Map Type 2</option>
-        </select>
+  return (
+    <div class="w-full max-w-[2000px] mx-auto">
+      <div class="mb-6">
+        <p class="text-[var(--accent)] text-xs font-mono tracking-[0.3em] uppercase mb-3">{t(i18n, 'maps.tag')}</p>
+        <h1 class="text-3xl font-semibold text-[var(--text)] tracking-tight">{t(i18n, 'maps.title')}</h1>
+        <p class="text-sm text-[var(--text-dim)] mt-2 max-w-2xl">{t(i18n, 'maps.subtitle')}</p>
       </div>
 
-      {/* Maps Grid */}
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} class="card">
-            <div class="w-full h-48 bg-[#0c0f13] border border-[#1e2a36] mb-3 flex items-center justify-center">
-              <span class="text-[#6b7a8d] text-xs">Map Preview {i + 1}</span>
-            </div>
-            <h3 class="font-semibold text-sm mb-2 text-[#c8d1db]">Battlefield {i + 1}</h3>
-            <p class="text-[#6b7a8d] text-xs mb-4">Size: 256x256 | Terrain: Mixed</p>
-            <a href="#" class="text-[#3b8eed] text-xs hover:opacity-80">View Analysis →</a>
-          </div>
-        ))}
+      <div class="p-0 bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.7)] border border-[rgba(51,51,51,0.15)]">
+        <p class="font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] text-[10px] px-3 py-2 border-b border-[rgba(51,51,51,0.3)]">
+          {t(i18n, 'common.underConstruction')}
+        </p>
+        <div class="px-4 py-12 flex flex-col items-center justify-center gap-3 text-center">
+          <p class="text-[var(--accent)] text-xl font-mono tracking-widest uppercase">{t(i18n, 'common.comingSoon')}</p>
+          <p class="text-sm text-[var(--text-dim)] max-w-lg">{t(i18n, 'maps.comingSoon')}</p>
+        </div>
       </div>
     </div>
   );

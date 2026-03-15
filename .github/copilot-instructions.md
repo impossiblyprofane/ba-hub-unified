@@ -1,24 +1,24 @@
 # Copilot instructions for BA Hub Unified
 
 ## Big picture architecture
-- Monorepo with npm workspaces: frontend (Qwik SPA), backend (Fastify + Mercurius GraphQL), shared (TypeScript types). See root [package.json](package.json).
-- Backend serves GraphQL and WebSocket subscriptions via Mercurius. Entry: [backend/src/index.ts](backend/src/index.ts).
-- Backend data is static JSON tables loaded once at startup into typed arrays. Loader: [backend/src/data/loader.ts](backend/src/data/loader.ts). Data files live in [backend/src/data/static](backend/src/data/static).
-- Frontend is Qwik with Qwik City routing; metadata-only SSR is handled by a Fastify server that serves SPA HTML and crawler-specific metadata. See [frontend/server/index.ts](frontend/server/index.ts), [frontend/src/root.tsx](frontend/src/root.tsx).
-- Shared types are published as @ba-hub/shared and imported by backend for static data typing. See [shared/src/types](shared/src/types).
+- Monorepo with npm workspaces: frontend (Qwik SPA), backend (Fastify + Mercurius GraphQL), shared (TypeScript types). See root [package.json](../package.json).
+- Backend serves GraphQL and WebSocket subscriptions via Mercurius. Entry: [backend/src/index.ts](../backend/src/index.ts).
+- Backend data is static JSON tables loaded once at startup into typed arrays. Loader: [backend/src/data/loader.ts](../backend/src/data/loader.ts). Data files live in [backend/src/data/static](../backend/src/data/static).
+- Frontend is Qwik with Qwik City routing; metadata-only SSR is handled by a Fastify server that serves SPA HTML and crawler-specific metadata. See [frontend/server/index.ts](../frontend/server/index.ts), [frontend/src/root.tsx](../frontend/src/root.tsx).
+- Shared types are published as @ba-hub/shared and imported by backend for static data typing. See [shared/src/types](../shared/src/types).
 
 ## Critical workflows
-- Dev (root): `npm run dev` runs backend + frontend concurrently. See scripts in [package.json](package.json).
-- Backend dev: `npm run dev -w backend` (tsx watch). See [backend/package.json](backend/package.json).
-- Frontend dev: `npm run dev -w frontend` (Vite SSR mode). See [frontend/package.json](frontend/package.json).
-- Build: `npm run build` (shared → backend → frontend). See [package.json](package.json).
-- Docker: `npm run docker:build` / `npm run docker:up`. See [docker/README.md](docker/README.md).
+- Dev (root): `npm run dev` runs backend + frontend concurrently. See scripts in [package.json](../package.json).
+- Backend dev: `npm run dev -w backend` (tsx watch). See [backend/package.json](../backend/package.json).
+- Frontend dev: `npm run dev -w frontend` (Vite SSR mode). See [frontend/package.json](../frontend/package.json).
+- Build: `npm run build` (shared → backend → frontend). See [package.json](../package.json).
+- Docker: `npm run docker:build` / `npm run docker:up`. See [docker/README.md](../docker/README.md).
 
 ## Project-specific patterns
-- Static data loader tolerates missing JSON files by returning empty arrays and logging warnings (ENOENT). Keep this behavior when adding new tables. See `loadJsonArray()` in [backend/src/data/loader.ts](backend/src/data/loader.ts).
-- GraphQL schema/resolvers are defined in separate files and wired into Mercurius. See [backend/src/graphql/schema.ts](backend/src/graphql/schema.ts) and [backend/src/graphql/resolvers.ts](backend/src/graphql/resolvers.ts).
-- Qwik routes live under [frontend/src/routes](frontend/src/routes) using `component$` and `DocumentHead` (example: [frontend/src/routes/index.tsx](frontend/src/routes/index.tsx)).
-- Metadata-only SSR is intentionally minimal for crawlers and does not render full SPA content. Changes to SEO metadata should coordinate [frontend/server/index.ts](frontend/server/index.ts) and Qwik `DocumentHead`.
+- Static data loader tolerates missing JSON files by returning empty arrays and logging warnings (ENOENT). Keep this behavior when adding new tables. See `loadJsonArray()` in [backend/src/data/loader.ts](../backend/src/data/loader.ts).
+- GraphQL schema/resolvers are defined in separate files and wired into Mercurius. See [backend/src/graphql/schema.ts](../backend/src/graphql/schema.ts) and [backend/src/graphql/resolvers.ts](../backend/src/graphql/resolvers.ts).
+- Qwik routes live under [frontend/src/routes](../frontend/src/routes) using `component$` and `DocumentHead` (example: [frontend/src/routes/index.tsx](../frontend/src/routes/index.tsx)).
+- Metadata-only SSR is intentionally minimal for crawlers and does not render full SPA content. Changes to SEO metadata should coordinate [frontend/server/index.ts](../frontend/server/index.ts) and Qwik `DocumentHead`.
 - UI layout conventions:
   - Unit viewer width is intentionally constrained (target `max-w-[1600px]`) even when the global container is wider.
   - Global page container max width is `2000px`; layouts should scale within it.
@@ -27,13 +27,52 @@
   - Modifications panel is exempt from the header-strip standardization.
   - Squad Composition groups duplicate loadouts into a single tile with a quantity count.
   - Unit portrait should use `background-size: contain` to fit the full icon.
-  - Arsenal grid should scale columns with available width (auto-fit/minmax).
+  - Arsenal grid should scale columns with available width (auto-fill/minmax).
   - Mobility "DROP" is a core stat icon (icon-only), not a separate pill.
+- Panel & surface styling — transparent-first pattern (canonical, used in unit viewer):
+  - **CRITICAL: Tailwind opacity modifiers (`/15`, `/30`, etc.) do NOT work with `var()` CSS variables** in arbitrary values because Tailwind cannot decompose hex variables into RGB channels. Always use `rgba()` directly instead: `border-[rgba(51,51,51,0.15)]` not `border-[var(--border)]/15`. Reference: `--border: #333` = `rgb(51,51,51)`, `--bg: #1a1a1a` = `rgb(26,26,26)`.
+  - **No solid backgrounds.** Panels should never use opaque `bg-[var(--bg-raised)]` or `bg-[var(--bg-raised)]/50`. Instead use `bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.7)]` so the tactical grid bleeds through.
+  - **Containers**: `p-0 bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.7)]`. Add `h-full flex flex-col` when the panel should stretch (`fill` mode).
+  - **Headers / title bars**: `<p>` or `<div>` with `font-mono tracking-[0.3em] uppercase text-[var(--text-dim)]`, sized `text-[10px] px-3 py-2` (normal) or `text-[9px] px-2 py-2` (compact). Always end with `border-b border-[rgba(51,51,51,0.3)]` — use 30% opacity borders, not full-strength `border-[var(--border)]`.
+  - **Content items**: use `bg-[rgba(26,26,26,0.4)]` for subtle item-level backgrounds. Never solid `bg-[var(--bg-raised)]`.
+  - **Borders everywhere** should default to `border-[rgba(51,51,51,0.15)]` (15% opacity) for passive containers like cards, panels, and callout boxes. Use `border-[rgba(51,51,51,0.3)]` for structural dividers (header bottom borders, section separators). Reserve full-strength `border-[var(--border)]` only for interactive elements like inputs, buttons, and the sidebar nav.
+  - **Section labels / page tags**: `text-[var(--accent)] text-xs font-mono tracking-[0.3em] uppercase` — keep consistent across all pages.
+  - **Community / callout bars**: same transparent gradient pattern, not solid raised backgrounds.
+  - The `.corner-brackets` and `.hero-glow` CSS classes from global.css remain available for the home page hero but should not be used on general panels.
 
 ## Integration points
-- Frontend expects backend GraphQL at http://localhost:3001/graphql in dev (see [docker/README.md](docker/README.md) for ports).
-- Backend CORS allows the frontend origin (default http://localhost:3000). Config in [backend/src/index.ts](backend/src/index.ts).
-- Static data table types come from @ba-hub/shared; update shared types before adding new JSON files. See [shared/src/types](shared/src/types).
+- Frontend expects backend GraphQL at http://localhost:3001/graphql in dev (see [docker/README.md](../docker/README.md) for ports).
+- Backend CORS allows the frontend origin (default http://localhost:3000). Config in [backend/src/index.ts](../backend/src/index.ts).
+- Static data table types come from @ba-hub/shared; update shared types before adding new JSON files. See [shared/src/types](../shared/src/types).
 
 ## Legacy reference
 - The current rebuild is based on the legacy production site https://www.ba-hub.net; use it only as a UX/feature reference, not as a source of code or API contracts.
+
+## i18n — Internationalization rules
+All user-facing text in the frontend **must** go through the i18n locale system. Never hard-code English display strings in components, utility functions, or helper mappers. Follow this checklist for any new or changed text:
+
+### System overview
+- 9 locales: `en`, `ru`, `de`, `fr`, `zh`, `es`, `pt`, `ko`, `ja`. English is the canonical source.
+- Translation dictionaries are flat `Record<string, string>` with dot-notated keys. See [frontend/src/lib/i18n/locales/en.ts](../frontend/src/lib/i18n/locales/en.ts).
+- `t(store, key)` resolves a key → current locale dict → English fallback → raw key. See `t()` in [frontend/src/lib/i18n/context.tsx](../frontend/src/lib/i18n/context.tsx).
+- Game-data strings (unit names, map names, etc.) use a **separate** game-locale system via `getGameLocaleValue()` in [frontend/src/lib/i18n/gameLocales.ts](../frontend/src/lib/i18n/gameLocales.ts) — do not mix these with UI translation keys.
+
+### Adding new text — mandatory steps
+1. **Choose a key** using the hierarchical dot-notation convention: `section.subsection.category.item`. Group related keys under a shared prefix with a section comment.
+   - Labels: `unitViewer.weapons.types.trajectory.directShot`
+   - Descriptions: `unitViewer.weapons.types.trajectory.desc.directShot`
+   - Navigation: `nav.arsenal`
+   - Filter UI: `unitViewer.filters.category`
+2. **Add the English value** to `frontend/src/lib/i18n/locales/en.ts`. This is always the first and required step — English is the fallback for all other locales.
+3. **Return i18n keys from helper functions**, not English strings. Functions like `trajectoryTypeToString()` and `seekerTypeDescription()` must return dot-notated keys (e.g., `'unitViewer.weapons.types.trajectory.desc.directShot'`), never raw English like `'Direct Shot'`.
+4. **Resolve keys at the component level** by calling `t(i18n, key)` where `i18n = useI18n()`. Components are the only place where keys get resolved to display text.
+5. **Other locale files** (ru.ts, de.ts, etc.) receive translations later. Missing keys automatically fall back to English via the `t()` function — no placeholder needed.
+
+### What NOT to do
+- Do not put English strings directly in JSX/TSX for any user-visible text (button labels, tooltips, headers, stat labels, filter options, descriptions, placeholder text).
+- Do not resolve keys inside utility/lib functions — they should return keys only. The calling component resolves them.
+- Do not use string interpolation to build translation keys dynamically at runtime (e.g., `` `unitViewer.weapons.types.${someVar}` ``); use explicit switch/map returns so keys are statically discoverable.
+- Do not duplicate key paths — check `en.ts` for existing keys before adding new ones.
+
+### Known unmigrated helpers (to be fixed)
+- All helpers (`trajectoryTypeToString()`, `seekerTypeToString()`, `weaponTypeToString()`) now return i18n keys. When adding new mappers, follow the same pattern.

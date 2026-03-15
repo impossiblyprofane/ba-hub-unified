@@ -148,3 +148,38 @@ export const IconCompass = component$<IconProps>(({ size = 20, class: cls }) => 
     <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
   </svg>
 ));
+
+export const IconShare = component$<IconProps>(({ size = 20, class: cls }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class={cls}>
+    <circle cx="18" cy="5" r="3" />
+    <circle cx="6" cy="12" r="3" />
+    <circle cx="18" cy="19" r="3" />
+    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+  </svg>
+));
+
+export const IconCompare = component$<IconProps>(({ size = 20, class: cls }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class={cls}>
+    <rect x="2" y="3" width="8" height="18" rx="1" />
+    <rect x="14" y="3" width="8" height="18" rx="1" />
+    <line x1="12" y1="8" x2="12" y2="16" />
+    <polyline points="9 11 12 8 15 11" />
+    <polyline points="9 13 12 16 15 13" />
+  </svg>
+));
+
+export const IconClipboard = component$<IconProps>(({ size = 20, class: cls }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class={cls}>
+    <rect x="9" y="2" width="6" height="4" rx="1" />
+    <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2" />
+    <path d="M8 14h8" />
+    <path d="M8 10h4" />
+  </svg>
+));
+
+export const IconCheck = component$<IconProps>(({ size = 20, class: cls }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={cls}>
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+));

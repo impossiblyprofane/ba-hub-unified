@@ -32,9 +32,11 @@ export interface Ammunition {
   PenetrationAtGroundRange: number;
   NoDamageFalloff: boolean;
   TopArmorAttack: boolean;
+  IsTopArmorArmorAttack: boolean;
   // AOE
   HealthAOERadius: number;
   StressAOERadius: number;
+  OverpressureRadius: number;
   RadioFuseDistance: number;
   // Ballistics
   LaunchMarginAngle: number;

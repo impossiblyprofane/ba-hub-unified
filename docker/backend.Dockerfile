@@ -1,30 +1,43 @@
-# Backend Dockerfile
+# Backend Dockerfile — monorepo-aware build
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-RUN npm ci
+# Copy root workspace manifests first (cache-friendly layer)
+COPY package.json package-lock.json ./
+COPY shared/package.json ./shared/
+COPY backend/package.json ./backend/
 
-# Copy source
-COPY . .
+# Install all workspace deps needed for the build
+RUN npm ci --workspace=shared --workspace=backend
 
-# Build
-RUN npm run build
+# Copy source for shared + backend
+COPY shared/ ./shared/
+COPY backend/ ./backend/
 
-# Production image
+# Build shared types first, then backend
+RUN npm run build -w shared && npm run build -w backend
+
+# ── Production image ──
 FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy built files
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/package*.json ./
+# Copy root workspace manifests
+COPY package.json package-lock.json ./
+COPY shared/package.json ./shared/
+COPY backend/package.json ./backend/
 
-# Install production dependencies only
-RUN npm ci --production
+# Install production deps only
+RUN npm ci --workspace=shared --workspace=backend --omit=dev
+
+# Copy built artefacts
+COPY --from=builder /app/shared/dist ./shared/dist
+COPY --from=builder /app/backend/dist ./backend/dist
+
+# Copy static data files
+COPY backend/src/data/static ./backend/dist/data/static
 
 EXPOSE 3001
 
-CMD ["npm", "start"]
+CMD ["node", "backend/dist/index.js"]

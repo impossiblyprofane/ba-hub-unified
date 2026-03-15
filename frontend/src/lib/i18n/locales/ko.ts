@@ -4,7 +4,7 @@ const ko: TranslationDict = {
   'nav.home': '홈',
   'nav.arsenal': '무기고',
   'nav.deckArsenal': '덱 목록',
-  'nav.deckBuilder': '덱 편집',
+  'nav.builder': '덱 편집',
   'nav.maps': '맵',
   'nav.statistics': '통계',
   'nav.guides': '가이드',
@@ -43,6 +43,13 @@ const ko: TranslationDict = {
   'footer.bugReport': '버그 신고',
   'footer.disclaimer': 'Slitherine Software 또는 Steel Balalaika와 제휴하거나 보증받지 않습니다.',
   'footer.rights': 'Broken Arrow는 해당 소유자의 상표입니다.',
+
+  // ── Seeker Types ──
+  'unitViewer.weapons.types.seeker.none': '없음',
+  'unitViewer.weapons.types.seeker.active': '능동',
+  'unitViewer.weapons.types.seeker.passive': '수동',
+  'unitViewer.weapons.types.seeker.sead': 'SEAD',
+  'unitViewer.weapons.types.seeker.laser': '레이저',
 };
 
 export default ko;

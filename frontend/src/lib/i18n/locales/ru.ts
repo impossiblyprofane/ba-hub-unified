@@ -4,7 +4,7 @@ const ru: TranslationDict = {
   'nav.home': 'Главная',
   'nav.arsenal': 'Арсенал',
   'nav.deckArsenal': 'Колоды',
-  'nav.deckBuilder': 'Редактор',
+  'nav.builder': 'Редактор',
   'nav.maps': 'Карты',
   'nav.statistics': 'Статистика',
   'nav.guides': 'Гайды',
@@ -43,6 +43,13 @@ const ru: TranslationDict = {
   'footer.bugReport': 'Баг-репорт',
   'footer.disclaimer': 'Не связан с Slitherine Software или Steel Balalaika и не одобрен ими.',
   'footer.rights': 'Broken Arrow является товарным знаком соответствующих правообладателей.',
+
+  // ── Seeker Types ──
+  'unitViewer.weapons.types.seeker.none': 'Нет',
+  'unitViewer.weapons.types.seeker.active': 'Активный',
+  'unitViewer.weapons.types.seeker.passive': 'Пассивный',
+  'unitViewer.weapons.types.seeker.sead': 'ПРО (SEAD)',
+  'unitViewer.weapons.types.seeker.laser': 'Лазерный',
 };
 
 export default ru;

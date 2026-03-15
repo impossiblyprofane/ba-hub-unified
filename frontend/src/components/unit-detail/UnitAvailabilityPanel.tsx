@@ -2,8 +2,8 @@ import { component$ } from '@builder.io/qwik';
 import { Link } from '@builder.io/qwik-city';
 import { GameIcon } from '~/components/GameIcon';
 import { toUnitIconPath, toSpecializationIconPath } from '~/lib/iconPaths';
-import { useI18n, getGameLocaleValueOrKey, GAME_LOCALES } from '~/lib/i18n';
-import type { UnitDetailAvailability } from '~/routes/arsenal/[unitid]';
+import { useI18n, t, getGameLocaleValueOrKey, GAME_LOCALES } from '~/lib/i18n';
+import type { UnitDetailAvailability } from '~/lib/graphql-types';
 
 type Props = { availability: UnitDetailAvailability[]; compact?: boolean; fill?: boolean };
 
@@ -12,10 +12,10 @@ export const UnitAvailabilityPanel = component$<Props>(({ availability, compact,
 
   return (
     <div
-      class={`p-0 bg-gradient-to-b from-[var(--bg)] to-[var(--bg)]/70 ${fill ? 'h-full flex flex-col' : ''}`}
+      class={`p-0 bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.7)] border border-[rgba(51,51,51,0.15)] ${fill ? 'h-full flex flex-col' : ''}`}
     >
-      <p class={`font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] ${compact ? 'text-[9px] px-2 py-2' : 'text-[10px] px-3 py-2'} border-b border-[var(--border)]/30`}>
-        Availability
+      <p class={`font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] ${compact ? 'text-[9px] px-2 py-2' : 'text-[10px] px-3 py-2'} border-b border-[rgba(51,51,51,0.3)]`}>
+        {t(i18n, 'unitDetail.panel.availability')}
       </p>
       <div class={`flex flex-col ${compact ? 'gap-2' : 'gap-3'} ${fill ? 'flex-1 overflow-y-auto' : ''}`}>
         {availability.map(avail => {
@@ -25,7 +25,7 @@ export const UnitAvailabilityPanel = component$<Props>(({ availability, compact,
             GAME_LOCALES.specs, spec.UIName || spec.Name, i18n.locale,
           ) || spec.UIName || spec.Name;
           return (
-            <div key={spec.Id} class={`bg-[var(--bg)]/40 ${compact ? 'p-1' : 'p-1.5'}`}>
+            <div key={spec.Id} class={`bg-[rgba(26,26,26,0.4)] border border-[rgba(51,51,51,0.1)] ${compact ? 'p-1' : 'p-1.5'}`}>
               {/* Spec header + count */}
               <div class={`flex items-center gap-2 ${compact ? 'mb-1' : 'mb-1.5'}`}>
                 {specIcon && (
@@ -43,7 +43,7 @@ export const UnitAvailabilityPanel = component$<Props>(({ availability, compact,
               {avail.transports.length > 0 && (
                 <div>
                   <p class={`${compact ? 'text-[8px]' : 'text-[9px]'} font-mono uppercase tracking-widest text-[var(--text-dim)] mb-1`}>
-                    Transports
+                    {t(i18n, 'unitDetail.panel.transports')}
                   </p>
                   <div class="flex flex-wrap gap-1">
                     {avail.transports.map(transport => (

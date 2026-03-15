@@ -63,7 +63,7 @@ const buildWeaponAmmoSlots = (unitId: number, weaponId: number, indexes: StaticI
         quantity: entry.Quantity,
       };
     })
-    .filter((entry): entry is { ammunition: unknown; order: number; quantity: number } => Boolean(entry));
+    .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
 };
 
 const buildUnitWeapons = (unitId: number, indexes: StaticIndexes): UnitWeaponSlot[] => {
@@ -226,7 +226,7 @@ const buildUnitWeaponsWithOverrides = (
   const allUnitTurrets = indexes.turretUnitsByUnitId.get(resolvedUnitId) ?? [];
   for (const tu of allUnitTurrets) {
     const turret = indexes.turretsById.get(tu.TurretId);
-    if (turret && (turret as any).IsDefault) {
+    if (turret && turret.IsDefault) {
       channelMap.set(tu.Order ?? 0, tu.TurretId);
     }
   }
@@ -383,8 +383,8 @@ const buildUnitDetailResult = (
     const links = indexes.unitPropulsionsByUnitId.get(resolvedUnit.Id) ?? [];
     if (links.length) mobility = indexes.mobilityById.get(links[0].MobilityId) ?? null;
   }
-  if (mobility && isPositiveId((mobility as any).FlyPresetId)) {
-    flyPreset = indexes.flyPresetsById.get((mobility as any).FlyPresetId) ?? null;
+  if (mobility && isPositiveId(mobility.FlyPresetId)) {
+    flyPreset = indexes.flyPresetsById.get(mobility.FlyPresetId) ?? null;
   }
 
   // 5. Sensors
@@ -741,9 +741,7 @@ export const resolvers = {
     unit: (transport: { UnitId: number }, _: unknown, ctx: any) =>
       (ctx as GraphQLContext).indexes.unitsById.get(transport.UnitId) ?? null,
     specializationAvailability: (transport: { SpecializationAvailabilityId: number }, _: unknown, ctx: any) =>
-      (ctx as GraphQLContext).data.specializationAvailabilities.find(
-        availability => availability.Id === transport.SpecializationAvailabilityId,
-      ) ?? null,
+      (ctx as GraphQLContext).indexes.specializationAvailabilitiesById.get(transport.SpecializationAvailabilityId) ?? null,
   },
   SquadMember: {
     primaryWeapon: (member: { PrimaryWeaponId?: number }, _: unknown, ctx: any) =>

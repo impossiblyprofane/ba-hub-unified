@@ -1,6 +1,7 @@
 import { component$, useSignal } from '@builder.io/qwik';
-import type { UnitDetailSquadMember } from '~/routes/arsenal/[unitid]';
+import type { UnitDetailSquadMember } from '~/lib/graphql-types';
 import { toWeaponIconPath } from '~/lib/iconPaths';
+import { useI18n, t } from '~/lib/i18n';
 
 type Props = {
   members: UnitDetailSquadMember[];
@@ -31,15 +32,16 @@ function groupMembers(members: UnitDetailSquadMember[]): SquadGroup[] {
 }
 
 export const SquadCompositionPanel = component$<Props>(({ members, compact }) => {
+  const i18n = useI18n();
   const showSquad = useSignal(false);
   const groups = groupMembers(members);
 
   return (
-    <div class="p-0 bg-gradient-to-b from-[var(--bg)] to-[var(--bg)]/70">
+    <div class="p-0 bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.7)] border border-[rgba(51,51,51,0.15)]">
       {/* Header with toggle */}
-      <div class="flex items-center justify-between px-2 py-1.5 border-b border-[var(--border)]/30">
+      <div class="flex items-center justify-between px-2 py-1.5 border-b border-[rgba(51,51,51,0.3)]">
         <p class={`font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] m-0 ${compact ? 'text-[9px]' : 'text-[10px]'}`}>
-          Squad Composition
+          {t(i18n, 'unitDetail.panel.squad')}
         </p>
         <button
           type="button"
@@ -74,7 +76,7 @@ export const SquadCompositionPanel = component$<Props>(({ members, compact }) =>
             return (
               <div
                 key={group.key}
-                class="relative flex flex-col items-center gap-1 p-0 bg-[var(--bg)]/40"
+                class="relative flex flex-col items-center gap-1 p-0 bg-[rgba(26,26,26,0.4)]"
                 title={tooltip}
               >
                 <span class="absolute top-1 left-1 right-1 text-[10px] font-mono text-[var(--accent)] text-center">x{group.count}</span>
@@ -108,7 +110,7 @@ export const SquadCompositionPanel = component$<Props>(({ members, compact }) =>
             return (
               <div
                 key={`${member.Id}-${i}`}
-                class="relative flex flex-col items-center bg-[var(--bg)]/40"
+                class="relative flex flex-col items-center bg-[rgba(26,26,26,0.4)]"
                 title={tooltip}
               >
                 <span class="absolute top-0 left-0.5 text-[8px] font-mono text-[var(--text-dim)] z-10">{i + 1}</span>

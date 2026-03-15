@@ -1,54 +1,26 @@
 import { component$ } from '@builder.io/qwik';
 import type { DocumentHead } from '@builder.io/qwik-city';
+import { useI18n, t } from '~/lib/i18n';
 
 export default component$(() => {
-  return (
-    <div class="max-w-6xl">
-      <p class="text-[#3b8eed] text-xs font-mono tracking-[0.25em] uppercase mb-3">Player Rankings</p>
-      <h1 class="text-3xl font-bold mb-3 text-[#c8d1db]">Statistics</h1>
-      <p class="text-[#6b7a8d] text-sm mb-8">View player leaderboards and performance analytics.</p>
+  const i18n = useI18n();
 
-      {/* Stats Overview */}
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-8">
-        <div class="card">
-          <p class="text-[#6b7a8d] text-[10px] uppercase tracking-wider mb-1">Active Players</p>
-          <p class="text-2xl font-bold text-[#c8d1db]">2,547</p>
-        </div>
-        <div class="card">
-          <p class="text-[#6b7a8d] text-[10px] uppercase tracking-wider mb-1">Matches Today</p>
-          <p class="text-2xl font-bold text-[#c8d1db]">486</p>
-        </div>
-        <div class="card">
-          <p class="text-[#6b7a8d] text-[10px] uppercase tracking-wider mb-1">Avg Rating</p>
-          <p class="text-2xl font-bold text-[#c8d1db]">1,240</p>
-        </div>
+  return (
+    <div class="w-full max-w-[2000px] mx-auto">
+      <div class="mb-6">
+        <p class="text-[var(--accent)] text-xs font-mono tracking-[0.3em] uppercase mb-3">{t(i18n, 'stats.tag')}</p>
+        <h1 class="text-3xl font-semibold text-[var(--text)] tracking-tight">{t(i18n, 'stats.title')}</h1>
+        <p class="text-sm text-[var(--text-dim)] mt-2 max-w-2xl">{t(i18n, 'stats.subtitle')}</p>
       </div>
 
-      {/* Leaderboard */}
-      <div class="card">
-        <h2 class="text-sm font-bold mb-4 text-[#c8d1db]">Top Players</h2>
-        <table class="w-full text-xs">
-          <thead class="border-b border-[#1e2a36]">
-            <tr class="text-[#6b7a8d] uppercase tracking-wider text-[10px]">
-              <th class="text-left py-2.5 px-3">Rank</th>
-              <th class="text-left py-2.5 px-3">Player</th>
-              <th class="text-left py-2.5 px-3">Rating</th>
-              <th class="text-left py-2.5 px-3">Wins</th>
-              <th class="text-left py-2.5 px-3">Losses</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Array.from({ length: 10 }).map((_, i) => (
-              <tr key={i} class="border-b border-[#1e2a36] hover:bg-[#1a222c] transition-colors">
-                <td class="py-2.5 px-3 text-[#6b7a8d]">{i + 1}</td>
-                <td class="py-2.5 px-3 font-medium text-[#c8d1db]">Player Name {i + 1}</td>
-                <td class="py-2.5 px-3 text-[#3b8eed]">{2000 - i * 50}</td>
-                <td class="py-2.5 px-3 text-[#3fb950]">{150 - i * 5}</td>
-                <td class="py-2.5 px-3 text-[#6b7a8d]">{20 + i * 2}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div class="p-0 bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.7)] border border-[rgba(51,51,51,0.15)]">
+        <p class="font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] text-[10px] px-3 py-2 border-b border-[rgba(51,51,51,0.3)]">
+          {t(i18n, 'common.underConstruction')}
+        </p>
+        <div class="px-4 py-12 flex flex-col items-center justify-center gap-3 text-center">
+          <p class="text-[var(--accent)] text-xl font-mono tracking-widest uppercase">{t(i18n, 'common.comingSoon')}</p>
+          <p class="text-sm text-[var(--text-dim)] max-w-lg">{t(i18n, 'stats.comingSoon')}</p>
+        </div>
       </div>
     </div>
   );
