@@ -1,4 +1,5 @@
 import { component$ } from '@builder.io/qwik';
+import { SimpleTooltip } from '~/components/ui/SimpleTooltip';
 import type { UnitDetailArmor } from '~/lib/graphql-types';
 
 type Props = { armor: UnitDetailArmor };
@@ -19,8 +20,12 @@ export const UnitArmorDiagram = component$<Props>(({ armor }) => {
     <div class="absolute inset-0 pointer-events-none">
       {/* KE / HEAT legend — top-left corner */}
       <div class="absolute top-2 left-2 flex flex-col gap-0.5 pointer-events-auto">
-        <span class="text-[10px] font-mono font-bold text-[#7eb8e0] bg-black/80 px-1.5 py-0.5 leading-none cursor-default" title="Kinetic Armor">KE</span>
-        <span class="text-[10px] font-mono font-bold text-[#e8a050] bg-black/80 px-1.5 py-0.5 leading-none cursor-default" title="HEAT Armor">HT</span>
+        <SimpleTooltip text="Kinetic Armor">
+          <span class="text-[10px] font-mono font-bold text-[#7eb8e0] bg-black/80 px-1.5 py-0.5 leading-none cursor-default">KE</span>
+        </SimpleTooltip>
+        <SimpleTooltip text="HEAT Armor">
+          <span class="text-[10px] font-mono font-bold text-[#e8a050] bg-black/80 px-1.5 py-0.5 leading-none cursor-default">HT</span>
+        </SimpleTooltip>
       </div>
 
       {/* TOP — top edge, centered */}
@@ -52,8 +57,10 @@ const ArmorValue = component$<{ kind: 'KE' | 'HT'; value: number }>(({ kind, val
   const color = kind === 'KE' ? 'text-[#7eb8e0]' : 'text-[#e8a050]';
   const tooltip = kind === 'KE' ? 'Kinetic Armor' : 'HEAT Armor';
   return (
-    <span class={`text-xs font-mono font-bold ${color} bg-black/80 px-1.5 py-0.5 pointer-events-auto cursor-default`} title={tooltip}>
-      {value}
-    </span>
+    <SimpleTooltip text={tooltip}>
+      <span class={`text-xs font-mono font-bold ${color} bg-black/80 px-1.5 py-0.5 pointer-events-auto cursor-default`}>
+        {value}
+      </span>
+    </SimpleTooltip>
   );
 });

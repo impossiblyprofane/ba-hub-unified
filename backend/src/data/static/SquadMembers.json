@@ -1241,9 +1241,9 @@
     },
     {
         "Id": 254,
-        "DeathPriority": 2,
+        "DeathPriority": 3,
         "ModelFileName": "RU_Ingenery_sturmoviki_officer",
-        "PrimaryWeaponId": 123,
+        "PrimaryWeaponId": 29,
         "SpecialWeaponId": 0,
         "UnitId": 117
     },
@@ -1251,8 +1251,8 @@
         "Id": 255,
         "DeathPriority": 2,
         "ModelFileName": "RU_Ingenery_sturmoviki_rifle1",
-        "PrimaryWeaponId": 123,
-        "SpecialWeaponId": 192,
+        "PrimaryWeaponId": 29,
+        "SpecialWeaponId": 31,
         "UnitId": 117
     },
     {
@@ -1267,8 +1267,8 @@
         "Id": 257,
         "DeathPriority": 3,
         "ModelFileName": "RU_Ingenery_sturmoviki_rifle1",
-        "PrimaryWeaponId": 123,
-        "SpecialWeaponId": 192,
+        "PrimaryWeaponId": 29,
+        "SpecialWeaponId": 31,
         "UnitId": 117
     },
     {
@@ -1283,15 +1283,7 @@
         "Id": 259,
         "DeathPriority": 4,
         "ModelFileName": "RU_Ingenery_sturmoviki_rifle3",
-        "PrimaryWeaponId": 123,
-        "SpecialWeaponId": 0,
-        "UnitId": 117
-    },
-    {
-        "Id": 260,
-        "DeathPriority": 3,
-        "ModelFileName": "RU_Ingenery_sturmoviki_rifle1",
-        "PrimaryWeaponId": 161,
+        "PrimaryWeaponId": 29,
         "SpecialWeaponId": 0,
         "UnitId": 117
     },
@@ -1483,21 +1475,21 @@
         "Id": 291,
         "DeathPriority": 2,
         "ModelFileName": "RU_Razvedka_rifle",
+        "PrimaryWeaponId": 158,
+        "SpecialWeaponId": 0,
+        "UnitId": 123
+    },
+    {
+        "Id": 292,
+        "DeathPriority": 2,
+        "ModelFileName": "RU_Razvedka_rifle",
         "PrimaryWeaponId": 167,
         "SpecialWeaponId": 168,
         "UnitId": 123
     },
     {
-        "Id": 292,
-        "DeathPriority": 3,
-        "ModelFileName": "RU_Razvedka_rifle",
-        "PrimaryWeaponId": 133,
-        "SpecialWeaponId": 0,
-        "UnitId": 123
-    },
-    {
         "Id": 293,
-        "DeathPriority": 2,
+        "DeathPriority": 3,
         "ModelFileName": "RU_Razvedka_rifle",
         "PrimaryWeaponId": 133,
         "SpecialWeaponId": 168,
@@ -2043,7 +2035,7 @@
         "Id": 412,
         "DeathPriority": 2,
         "ModelFileName": "US_Army_M2",
-        "PrimaryWeaponId": 206,
+        "PrimaryWeaponId": 207,
         "SpecialWeaponId": 0,
         "UnitId": 148
     },
@@ -3913,7 +3905,7 @@
     },
     {
         "Id": 713,
-        "DeathPriority": 3,
+        "DeathPriority": 1,
         "ModelFileName": "RU_Motostrelki_heavy",
         "PrimaryWeaponId": 145,
         "SpecialWeaponId": 0,
@@ -3953,24 +3945,24 @@
     },
     {
         "Id": 718,
-        "DeathPriority": 1,
+        "DeathPriority": 3,
         "ModelFileName": "RU_Motostrelki_heavy",
-        "PrimaryWeaponId": 145,
+        "PrimaryWeaponId": 174,
         "SpecialWeaponId": 0,
         "UnitId": 400
     },
     {
         "Id": 719,
         "DeathPriority": 2,
-        "ModelFileName": "RU_Ingenery_sturmoviki_officer",
-        "PrimaryWeaponId": 29,
-        "SpecialWeaponId": 31,
+        "ModelFileName": "RU_Motostrelki_grenade",
+        "PrimaryWeaponId": 123,
+        "SpecialWeaponId": 192,
         "UnitId": 401
     },
     {
         "Id": 720,
         "DeathPriority": 2,
-        "ModelFileName": "RU_Motostrelki_MG",
+        "ModelFileName": "RU_GvMotostrelki_MG",
         "PrimaryWeaponId": 30,
         "SpecialWeaponId": 0,
         "UnitId": 401
@@ -3978,24 +3970,24 @@
     {
         "Id": 721,
         "DeathPriority": 2,
-        "ModelFileName": "RU_Ingenery_sturmoviki_rifle1",
-        "PrimaryWeaponId": 29,
+        "ModelFileName": "RU_Motostrelki_Weapon",
+        "PrimaryWeaponId": 123,
         "SpecialWeaponId": 632,
         "UnitId": 401
     },
     {
         "Id": 722,
         "DeathPriority": 3,
-        "ModelFileName": "RU_Ingenery_sturmoviki_rifle2",
-        "PrimaryWeaponId": 29,
-        "SpecialWeaponId": 31,
+        "ModelFileName": "RU_GvMotostrelki_grenade",
+        "PrimaryWeaponId": 123,
+        "SpecialWeaponId": 192,
         "UnitId": 401
     },
     {
         "Id": 723,
-        "DeathPriority": 2,
+        "DeathPriority": 4,
         "ModelFileName": "RU_Motostrelki_officer",
-        "PrimaryWeaponId": 29,
+        "PrimaryWeaponId": 123,
         "SpecialWeaponId": 0,
         "UnitId": 401
     },
@@ -4003,15 +3995,15 @@
         "Id": 724,
         "DeathPriority": 1,
         "ModelFileName": "RU_Motostrelki_Weapon",
-        "PrimaryWeaponId": 29,
+        "PrimaryWeaponId": 123,
         "SpecialWeaponId": 632,
         "UnitId": 401
     },
     {
         "Id": 725,
         "DeathPriority": 3,
-        "ModelFileName": "RU_Motostrelki_grenade",
-        "PrimaryWeaponId": 29,
+        "ModelFileName": "RU_GvMotostrelki_rifle",
+        "PrimaryWeaponId": 123,
         "SpecialWeaponId": 0,
         "UnitId": 401
     },
@@ -4171,23 +4163,23 @@
         "Id": 747,
         "DeathPriority": 2,
         "ModelFileName": "RU_Ingenery_sturmoviki_officer",
-        "PrimaryWeaponId": 123,
+        "PrimaryWeaponId": 29,
         "SpecialWeaponId": 0,
         "UnitId": 405
     },
     {
         "Id": 748,
-        "DeathPriority": 4,
-        "ModelFileName": "RU_Ingenery_sturmoviki_rifle3",
-        "PrimaryWeaponId": 123,
-        "SpecialWeaponId": 192,
+        "DeathPriority": 3,
+        "ModelFileName": "RU_Ingenery_sturmoviki_rifle1",
+        "PrimaryWeaponId": 29,
+        "SpecialWeaponId": 31,
         "UnitId": 405
     },
     {
         "Id": 749,
-        "DeathPriority": 3,
-        "ModelFileName": "RU_Ingenery_sturmoviki_rifle3",
-        "PrimaryWeaponId": 123,
+        "DeathPriority": 4,
+        "ModelFileName": "RU_Ingenery_sturmoviki_rifle2",
+        "PrimaryWeaponId": 29,
         "SpecialWeaponId": 0,
         "UnitId": 405
     },
@@ -4195,15 +4187,15 @@
         "Id": 750,
         "DeathPriority": 2,
         "ModelFileName": "RU_Ingenery_sturmoviki_rifle3",
-        "PrimaryWeaponId": 123,
-        "SpecialWeaponId": 192,
+        "PrimaryWeaponId": 29,
+        "SpecialWeaponId": 31,
         "UnitId": 405
     },
     {
         "Id": 751,
-        "DeathPriority": 5,
+        "DeathPriority": 4,
         "ModelFileName": "RU_Ingenery_sturmoviki_officer",
-        "PrimaryWeaponId": 123,
+        "PrimaryWeaponId": 29,
         "SpecialWeaponId": 0,
         "UnitId": 405
     },
@@ -4211,23 +4203,15 @@
         "Id": 752,
         "DeathPriority": 1,
         "ModelFileName": "RU_Ingenery_sturmoviki_Weapon",
-        "PrimaryWeaponId": 123,
+        "PrimaryWeaponId": 29,
         "SpecialWeaponId": 162,
-        "UnitId": 405
-    },
-    {
-        "Id": 753,
-        "DeathPriority": 4,
-        "ModelFileName": "RU_Ingenery_sturmoviki_rifle3",
-        "PrimaryWeaponId": 123,
-        "SpecialWeaponId": 0,
         "UnitId": 405
     },
     {
         "Id": 754,
         "DeathPriority": 3,
         "ModelFileName": "RU_Ingenery_sturmoviki_Weapon",
-        "PrimaryWeaponId": 123,
+        "PrimaryWeaponId": 29,
         "SpecialWeaponId": 162,
         "UnitId": 405
     },
@@ -4739,7 +4723,7 @@
         "Id": 821,
         "DeathPriority": 4,
         "ModelFileName": "Delta_Rifle",
-        "PrimaryWeaponId": 672,
+        "PrimaryWeaponId": 671,
         "SpecialWeaponId": 0,
         "UnitId": 411
     },
@@ -4747,7 +4731,7 @@
         "Id": 822,
         "DeathPriority": 4,
         "ModelFileName": "Delta_MG",
-        "PrimaryWeaponId": 671,
+        "PrimaryWeaponId": 672,
         "SpecialWeaponId": 0,
         "UnitId": 411
     },
@@ -6158,5 +6142,1253 @@
         "PrimaryWeaponId": 50,
         "SpecialWeaponId": 0,
         "UnitId": 66
+    },
+    {
+        "Id": 1018,
+        "DeathPriority": 0,
+        "ModelFileName": "ZOM_Walker1",
+        "PrimaryWeaponId": 726,
+        "SpecialWeaponId": 0,
+        "UnitId": 490
+    },
+    {
+        "Id": 1019,
+        "DeathPriority": 0,
+        "ModelFileName": "ZOM_Walker2",
+        "PrimaryWeaponId": 726,
+        "SpecialWeaponId": 0,
+        "UnitId": 490
+    },
+    {
+        "Id": 1020,
+        "DeathPriority": 0,
+        "ModelFileName": "ZOM_Walker1",
+        "PrimaryWeaponId": 726,
+        "SpecialWeaponId": 0,
+        "UnitId": 490
+    },
+    {
+        "Id": 1021,
+        "DeathPriority": 0,
+        "ModelFileName": "ZOM_Walker3",
+        "PrimaryWeaponId": 726,
+        "SpecialWeaponId": 0,
+        "UnitId": 490
+    },
+    {
+        "Id": 1022,
+        "DeathPriority": 0,
+        "ModelFileName": "ZOM_Walker1",
+        "PrimaryWeaponId": 726,
+        "SpecialWeaponId": 0,
+        "UnitId": 490
+    },
+    {
+        "Id": 1023,
+        "DeathPriority": 0,
+        "ModelFileName": "ZOM_Walker4",
+        "PrimaryWeaponId": 726,
+        "SpecialWeaponId": 0,
+        "UnitId": 490
+    },
+    {
+        "Id": 1024,
+        "DeathPriority": 0,
+        "ModelFileName": "ZOM_Walker2",
+        "PrimaryWeaponId": 726,
+        "SpecialWeaponId": 0,
+        "UnitId": 490
+    },
+    {
+        "Id": 1025,
+        "DeathPriority": 0,
+        "ModelFileName": "ZOM_Walker1",
+        "PrimaryWeaponId": 726,
+        "SpecialWeaponId": 0,
+        "UnitId": 490
+    },
+    {
+        "Id": 1026,
+        "DeathPriority": 0,
+        "ModelFileName": "ZOM_Walker1",
+        "PrimaryWeaponId": 726,
+        "SpecialWeaponId": 0,
+        "UnitId": 490
+    },
+    {
+        "Id": 1027,
+        "DeathPriority": 0,
+        "ModelFileName": "ZOM_Walker4",
+        "PrimaryWeaponId": 726,
+        "SpecialWeaponId": 0,
+        "UnitId": 490
+    },
+    {
+        "Id": 1028,
+        "DeathPriority": 0,
+        "ModelFileName": "ZOM_Walker2",
+        "PrimaryWeaponId": 726,
+        "SpecialWeaponId": 0,
+        "UnitId": 490
+    },
+    {
+        "Id": 1029,
+        "DeathPriority": 0,
+        "ModelFileName": "ZOM_Walker4",
+        "PrimaryWeaponId": 726,
+        "SpecialWeaponId": 0,
+        "UnitId": 490
+    },
+    {
+        "Id": 1030,
+        "DeathPriority": 0,
+        "ModelFileName": "ZOM_Walker3",
+        "PrimaryWeaponId": 726,
+        "SpecialWeaponId": 0,
+        "UnitId": 490
+    },
+    {
+        "Id": 1031,
+        "DeathPriority": 0,
+        "ModelFileName": "ZOM_Walker3",
+        "PrimaryWeaponId": 726,
+        "SpecialWeaponId": 0,
+        "UnitId": 490
+    },
+    {
+        "Id": 1032,
+        "DeathPriority": 0,
+        "ModelFileName": "ZOM_Runner1",
+        "PrimaryWeaponId": 726,
+        "SpecialWeaponId": 0,
+        "UnitId": 491
+    },
+    {
+        "Id": 1033,
+        "DeathPriority": 0,
+        "ModelFileName": "ZOM_Runner1",
+        "PrimaryWeaponId": 726,
+        "SpecialWeaponId": 0,
+        "UnitId": 491
+    },
+    {
+        "Id": 1034,
+        "DeathPriority": 0,
+        "ModelFileName": "ZOM_Runner1",
+        "PrimaryWeaponId": 726,
+        "SpecialWeaponId": 0,
+        "UnitId": 491
+    },
+    {
+        "Id": 1035,
+        "DeathPriority": 0,
+        "ModelFileName": "ZOM_Runner3",
+        "PrimaryWeaponId": 726,
+        "SpecialWeaponId": 0,
+        "UnitId": 491
+    },
+    {
+        "Id": 1036,
+        "DeathPriority": 0,
+        "ModelFileName": "ZOM_Runner3",
+        "PrimaryWeaponId": 726,
+        "SpecialWeaponId": 0,
+        "UnitId": 491
+    },
+    {
+        "Id": 1037,
+        "DeathPriority": 0,
+        "ModelFileName": "ZOM_Runner2",
+        "PrimaryWeaponId": 726,
+        "SpecialWeaponId": 0,
+        "UnitId": 491
+    },
+    {
+        "Id": 1038,
+        "DeathPriority": 0,
+        "ModelFileName": "ZOM_Runner2",
+        "PrimaryWeaponId": 726,
+        "SpecialWeaponId": 0,
+        "UnitId": 491
+    },
+    {
+        "Id": 1039,
+        "DeathPriority": 0,
+        "ModelFileName": "ZOM_Spitter1",
+        "PrimaryWeaponId": 727,
+        "SpecialWeaponId": 729,
+        "UnitId": 492
+    },
+    {
+        "Id": 1040,
+        "DeathPriority": 0,
+        "ModelFileName": "ZOM_Spitter2",
+        "PrimaryWeaponId": 727,
+        "SpecialWeaponId": 729,
+        "UnitId": 492
+    },
+    {
+        "Id": 1041,
+        "DeathPriority": 0,
+        "ModelFileName": "ZOM_Smoker1",
+        "PrimaryWeaponId": 730,
+        "SpecialWeaponId": 731,
+        "UnitId": 493
+    },
+    {
+        "Id": 1042,
+        "DeathPriority": 0,
+        "ModelFileName": "ZOM_Fatty2",
+        "PrimaryWeaponId": 730,
+        "SpecialWeaponId": 0,
+        "UnitId": 494
+    },
+    {
+        "Id": 1043,
+        "DeathPriority": 0,
+        "ModelFileName": "ZOM_Thrower1",
+        "PrimaryWeaponId": 728,
+        "SpecialWeaponId": 0,
+        "UnitId": 495
+    },
+    {
+        "Id": 1044,
+        "DeathPriority": 0,
+        "ModelFileName": "CIV_Police_1",
+        "PrimaryWeaponId": 508,
+        "SpecialWeaponId": 0,
+        "UnitId": 496
+    },
+    {
+        "Id": 1045,
+        "DeathPriority": 0,
+        "ModelFileName": "CIV_Police_1",
+        "PrimaryWeaponId": 508,
+        "SpecialWeaponId": 0,
+        "UnitId": 496
+    },
+    {
+        "Id": 1046,
+        "DeathPriority": 0,
+        "ModelFileName": "CIV_Police_2",
+        "PrimaryWeaponId": 508,
+        "SpecialWeaponId": 0,
+        "UnitId": 496
+    },
+    {
+        "Id": 1047,
+        "DeathPriority": 0,
+        "ModelFileName": "CIV_Police_2",
+        "PrimaryWeaponId": 508,
+        "SpecialWeaponId": 0,
+        "UnitId": 496
+    },
+    {
+        "Id": 1048,
+        "DeathPriority": 0,
+        "ModelFileName": "CIV_Civilian_1",
+        "PrimaryWeaponId": 74,
+        "SpecialWeaponId": 0,
+        "UnitId": 497
+    },
+    {
+        "Id": 1049,
+        "DeathPriority": 0,
+        "ModelFileName": "CIV_Civilian_2",
+        "PrimaryWeaponId": 74,
+        "SpecialWeaponId": 0,
+        "UnitId": 497
+    },
+    {
+        "Id": 1050,
+        "DeathPriority": 0,
+        "ModelFileName": "CIV_Civilian_3",
+        "PrimaryWeaponId": 74,
+        "SpecialWeaponId": 0,
+        "UnitId": 497
+    },
+    {
+        "Id": 1051,
+        "DeathPriority": 0,
+        "ModelFileName": "CIV_Civilian_4",
+        "PrimaryWeaponId": 74,
+        "SpecialWeaponId": 0,
+        "UnitId": 497
+    },
+    {
+        "Id": 1052,
+        "DeathPriority": 0,
+        "ModelFileName": "ZOM_Smoker1",
+        "PrimaryWeaponId": 730,
+        "SpecialWeaponId": 731,
+        "UnitId": 493
+    },
+    {
+        "Id": 1053,
+        "DeathPriority": 3,
+        "ModelFileName": "RU_Motostrelki_MG",
+        "PrimaryWeaponId": 30,
+        "SpecialWeaponId": 0,
+        "UnitId": 401
+    },
+    {
+        "Id": 1054,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_GelezinisVilkas_rifle1",
+        "PrimaryWeaponId": 735,
+        "SpecialWeaponId": 737,
+        "UnitId": 506
+    },
+    {
+        "Id": 1055,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_GelezinisVilkas_rifle2",
+        "PrimaryWeaponId": 643,
+        "SpecialWeaponId": 0,
+        "UnitId": 506
+    },
+    {
+        "Id": 1056,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_GelezinisVilkas_rifle3",
+        "PrimaryWeaponId": 786,
+        "SpecialWeaponId": 0,
+        "UnitId": 506
+    },
+    {
+        "Id": 1057,
+        "DeathPriority": 1,
+        "ModelFileName": "DLC2_GelezinisVilkas_RPG",
+        "PrimaryWeaponId": 735,
+        "SpecialWeaponId": 36,
+        "UnitId": 506
+    },
+    {
+        "Id": 1058,
+        "DeathPriority": 3,
+        "ModelFileName": "DLC2_GelezinisVilkas_rifle1",
+        "PrimaryWeaponId": 735,
+        "SpecialWeaponId": 737,
+        "UnitId": 506
+    },
+    {
+        "Id": 1059,
+        "DeathPriority": 3,
+        "ModelFileName": "DLC2_GelezinisVilkas_rifle2",
+        "PrimaryWeaponId": 735,
+        "SpecialWeaponId": 0,
+        "UnitId": 506
+    },
+    {
+        "Id": 1060,
+        "DeathPriority": 3,
+        "ModelFileName": "DLC2_GelezinisVilkas_rifle3",
+        "PrimaryWeaponId": 735,
+        "SpecialWeaponId": 0,
+        "UnitId": 506
+    },
+    {
+        "Id": 1061,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_GelezinisVilkas_rifle4",
+        "PrimaryWeaponId": 735,
+        "SpecialWeaponId": 0,
+        "UnitId": 506
+    },
+    {
+        "Id": 1062,
+        "DeathPriority": 0,
+        "ModelFileName": "DLC2_KASP_rifle1",
+        "PrimaryWeaponId": 735,
+        "SpecialWeaponId": 743,
+        "UnitId": 507
+    },
+    {
+        "Id": 1063,
+        "DeathPriority": 0,
+        "ModelFileName": "DLC2_KASP_rifle2",
+        "PrimaryWeaponId": 735,
+        "SpecialWeaponId": 743,
+        "UnitId": 507
+    },
+    {
+        "Id": 1064,
+        "DeathPriority": 0,
+        "ModelFileName": "DLC2_KASP_rifle3",
+        "PrimaryWeaponId": 735,
+        "SpecialWeaponId": 743,
+        "UnitId": 507
+    },
+    {
+        "Id": 1065,
+        "DeathPriority": 0,
+        "ModelFileName": "DLC2_KASP_rifle3",
+        "PrimaryWeaponId": 735,
+        "SpecialWeaponId": 743,
+        "UnitId": 507
+    },
+    {
+        "Id": 1066,
+        "DeathPriority": 0,
+        "ModelFileName": "DLC2_KASP_rifle4",
+        "PrimaryWeaponId": 735,
+        "SpecialWeaponId": 743,
+        "UnitId": 507
+    },
+    {
+        "Id": 1067,
+        "DeathPriority": 3,
+        "ModelFileName": "DLC2_JalavaeJagu_Officer",
+        "PrimaryWeaponId": 693,
+        "SpecialWeaponId": 741,
+        "UnitId": 513
+    },
+    {
+        "Id": 1068,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_JalavaeJagu_MG",
+        "PrimaryWeaponId": 642,
+        "SpecialWeaponId": 0,
+        "UnitId": 513
+    },
+    {
+        "Id": 1069,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_JalavaeJagu_rifle2",
+        "PrimaryWeaponId": 785,
+        "SpecialWeaponId": 0,
+        "UnitId": 513
+    },
+    {
+        "Id": 1070,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_JalavaeJagu_rifle3",
+        "PrimaryWeaponId": 693,
+        "SpecialWeaponId": 741,
+        "UnitId": 513
+    },
+    {
+        "Id": 1071,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_JalavaeJagu_rifle1",
+        "PrimaryWeaponId": 693,
+        "SpecialWeaponId": 644,
+        "UnitId": 513
+    },
+    {
+        "Id": 1072,
+        "DeathPriority": 3,
+        "ModelFileName": "DLC2_JalavaeJagu_rifle1",
+        "PrimaryWeaponId": 693,
+        "SpecialWeaponId": 644,
+        "UnitId": 513
+    },
+    {
+        "Id": 1073,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_JalavaeJagu_rifle2",
+        "PrimaryWeaponId": 693,
+        "SpecialWeaponId": 644,
+        "UnitId": 513
+    },
+    {
+        "Id": 1074,
+        "DeathPriority": 1,
+        "ModelFileName": "DLC2_JalavaeJagu_rifle3",
+        "PrimaryWeaponId": 693,
+        "SpecialWeaponId": 644,
+        "UnitId": 513
+    },
+    {
+        "Id": 1075,
+        "DeathPriority": 4,
+        "ModelFileName": "DLC2_MechanizetieKajiniieki_rifle1",
+        "PrimaryWeaponId": 736,
+        "SpecialWeaponId": 738,
+        "UnitId": 514
+    },
+    {
+        "Id": 1076,
+        "DeathPriority": 3,
+        "ModelFileName": "DLC2_MechanizetieKajiniieki_Officer",
+        "PrimaryWeaponId": 736,
+        "SpecialWeaponId": 738,
+        "UnitId": 514
+    },
+    {
+        "Id": 1077,
+        "DeathPriority": 3,
+        "ModelFileName": "DLC2_MechanizetieKajiniieki_rifle2",
+        "PrimaryWeaponId": 739,
+        "SpecialWeaponId": 59,
+        "UnitId": 514
+    },
+    {
+        "Id": 1078,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_MechanizetieKajiniieki_rifle3",
+        "PrimaryWeaponId": 736,
+        "SpecialWeaponId": 59,
+        "UnitId": 514
+    },
+    {
+        "Id": 1079,
+        "DeathPriority": 4,
+        "ModelFileName": "DLC2_MechanizetieKajiniieki_rifle1",
+        "PrimaryWeaponId": 736,
+        "SpecialWeaponId": 59,
+        "UnitId": 514
+    },
+    {
+        "Id": 1080,
+        "DeathPriority": 1,
+        "ModelFileName": "DLC2_MechanizetieKajiniieki_rifle2",
+        "PrimaryWeaponId": 736,
+        "SpecialWeaponId": 59,
+        "UnitId": 514
+    },
+    {
+        "Id": 1081,
+        "DeathPriority": 3,
+        "ModelFileName": "DLC2_MechanizetieKajiniieki_MG",
+        "PrimaryWeaponId": 736,
+        "SpecialWeaponId": 59,
+        "UnitId": 514
+    },
+    {
+        "Id": 1082,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_MechanizetieKajiniieki_MG",
+        "PrimaryWeaponId": 739,
+        "SpecialWeaponId": 59,
+        "UnitId": 514
+    },
+    {
+        "Id": 1083,
+        "DeathPriority": 3,
+        "ModelFileName": "DLC2_EestiKaitseliit_rifle1",
+        "PrimaryWeaponId": 740,
+        "SpecialWeaponId": 0,
+        "UnitId": 515
+    },
+    {
+        "Id": 1084,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_EestiKaitseliit_rifle4",
+        "PrimaryWeaponId": 740,
+        "SpecialWeaponId": 0,
+        "UnitId": 515
+    },
+    {
+        "Id": 1085,
+        "DeathPriority": 3,
+        "ModelFileName": "DLC2_EestiKaitseliit_rifle2",
+        "PrimaryWeaponId": 740,
+        "SpecialWeaponId": 0,
+        "UnitId": 515
+    },
+    {
+        "Id": 1086,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_EestiKaitseliit_rifle3",
+        "PrimaryWeaponId": 694,
+        "SpecialWeaponId": 0,
+        "UnitId": 515
+    },
+    {
+        "Id": 1087,
+        "DeathPriority": 1,
+        "ModelFileName": "DLC2_EestiKaitseliit_RPG",
+        "PrimaryWeaponId": 740,
+        "SpecialWeaponId": 742,
+        "UnitId": 515
+    },
+    {
+        "Id": 1088,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_Zemessarde_rifle1",
+        "PrimaryWeaponId": 641,
+        "SpecialWeaponId": 744,
+        "UnitId": 516
+    },
+    {
+        "Id": 1089,
+        "DeathPriority": 3,
+        "ModelFileName": "DLC2_Zemessarde_rifle2",
+        "PrimaryWeaponId": 641,
+        "SpecialWeaponId": 0,
+        "UnitId": 516
+    },
+    {
+        "Id": 1090,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_Zemessarde_rifle3",
+        "PrimaryWeaponId": 642,
+        "SpecialWeaponId": 0,
+        "UnitId": 516
+    },
+    {
+        "Id": 1091,
+        "DeathPriority": 1,
+        "ModelFileName": "DLC2_Zemessarde_RPG",
+        "PrimaryWeaponId": 641,
+        "SpecialWeaponId": 745,
+        "UnitId": 516
+    },
+    {
+        "Id": 1092,
+        "DeathPriority": 3,
+        "ModelFileName": "DLC2_Zemessarde_rifle2",
+        "PrimaryWeaponId": 641,
+        "SpecialWeaponId": 0,
+        "UnitId": 516
+    },
+    {
+        "Id": 1093,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_ESTSOF_rifle1",
+        "PrimaryWeaponId": 751,
+        "SpecialWeaponId": 752,
+        "UnitId": 517
+    },
+    {
+        "Id": 1094,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_ESTSOF_rifle1",
+        "PrimaryWeaponId": 753,
+        "SpecialWeaponId": 0,
+        "UnitId": 517
+    },
+    {
+        "Id": 1095,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_ESTSOF_rifle2",
+        "PrimaryWeaponId": 751,
+        "SpecialWeaponId": 757,
+        "UnitId": 517
+    },
+    {
+        "Id": 1096,
+        "DeathPriority": 3,
+        "ModelFileName": "DLC2_ESTSOF_rifle2",
+        "PrimaryWeaponId": 753,
+        "SpecialWeaponId": 0,
+        "UnitId": 517
+    },
+    {
+        "Id": 1097,
+        "DeathPriority": 4,
+        "ModelFileName": "DLC2_ESTSOF_rifle3",
+        "PrimaryWeaponId": 751,
+        "SpecialWeaponId": 757,
+        "UnitId": 517
+    },
+    {
+        "Id": 1098,
+        "DeathPriority": 3,
+        "ModelFileName": "DLC2_ESTSOF_rifle3",
+        "PrimaryWeaponId": 751,
+        "SpecialWeaponId": 752,
+        "UnitId": 517
+    },
+    {
+        "Id": 1099,
+        "DeathPriority": 4,
+        "ModelFileName": "DLC2_ESTSOF_rifle4",
+        "PrimaryWeaponId": 751,
+        "SpecialWeaponId": 757,
+        "UnitId": 517
+    },
+    {
+        "Id": 1100,
+        "DeathPriority": 1,
+        "ModelFileName": "DLC2_ESTSOF_rifle4",
+        "PrimaryWeaponId": 751,
+        "SpecialWeaponId": 757,
+        "UnitId": 517
+    },
+    {
+        "Id": 1105,
+        "DeathPriority": 4,
+        "ModelFileName": "DLC2_Zaliukai_rifle1",
+        "PrimaryWeaponId": 754,
+        "SpecialWeaponId": 0,
+        "UnitId": 518
+    },
+    {
+        "Id": 1106,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_Zaliukai_rifle3",
+        "PrimaryWeaponId": 755,
+        "SpecialWeaponId": 756,
+        "UnitId": 518
+    },
+    {
+        "Id": 1107,
+        "DeathPriority": 3,
+        "ModelFileName": "DLC2_Zaliukai_rifle2",
+        "PrimaryWeaponId": 754,
+        "SpecialWeaponId": 212,
+        "UnitId": 518
+    },
+    {
+        "Id": 1108,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_Zaliukai_rifle3",
+        "PrimaryWeaponId": 755,
+        "SpecialWeaponId": 212,
+        "UnitId": 518
+    },
+    {
+        "Id": 1110,
+        "DeathPriority": 1,
+        "ModelFileName": "DLC2_Zaliukai_rifle1",
+        "PrimaryWeaponId": 754,
+        "SpecialWeaponId": 590,
+        "UnitId": 518
+    },
+    {
+        "Id": 1111,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_Zaliukai_rifle2",
+        "PrimaryWeaponId": 754,
+        "SpecialWeaponId": 756,
+        "UnitId": 518
+    },
+    {
+        "Id": 1112,
+        "DeathPriority": 3,
+        "ModelFileName": "DLC2_Zaliukai_rifle4",
+        "PrimaryWeaponId": 754,
+        "SpecialWeaponId": 212,
+        "UnitId": 518
+    },
+    {
+        "Id": 1113,
+        "DeathPriority": 3,
+        "ModelFileName": "DLC2_Zaliukai_rifle4",
+        "PrimaryWeaponId": 754,
+        "SpecialWeaponId": 212,
+        "UnitId": 518
+    },
+    {
+        "Id": 1117,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_GelezinisVilkas_rifle1",
+        "PrimaryWeaponId": 735,
+        "SpecialWeaponId": 0,
+        "UnitId": 520
+    },
+    {
+        "Id": 1118,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_GelezinisVilkas_rifle2",
+        "PrimaryWeaponId": 735,
+        "SpecialWeaponId": 0,
+        "UnitId": 520
+    },
+    {
+        "Id": 1119,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_GelezinisVilkas_rifle3",
+        "PrimaryWeaponId": 735,
+        "SpecialWeaponId": 0,
+        "UnitId": 520
+    },
+    {
+        "Id": 1120,
+        "DeathPriority": 1,
+        "ModelFileName": "DLC2_GelezinisVilkas_RPG",
+        "PrimaryWeaponId": 735,
+        "SpecialWeaponId": 62,
+        "UnitId": 520
+    },
+    {
+        "Id": 1121,
+        "DeathPriority": 4,
+        "ModelFileName": "DLC2_JalavaeJagu_rifle1",
+        "PrimaryWeaponId": 693,
+        "SpecialWeaponId": 0,
+        "UnitId": 519
+    },
+    {
+        "Id": 1122,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_JalavaeJagu_rifle3",
+        "PrimaryWeaponId": 693,
+        "SpecialWeaponId": 0,
+        "UnitId": 519
+    },
+    {
+        "Id": 1123,
+        "DeathPriority": 1,
+        "ModelFileName": "DLC2_JalavaeJagu_Heavy",
+        "PrimaryWeaponId": 746,
+        "SpecialWeaponId": 0,
+        "UnitId": 519
+    },
+    {
+        "Id": 1124,
+        "DeathPriority": 3,
+        "ModelFileName": "DLC2_JalavaeJagu_Heavy",
+        "PrimaryWeaponId": 759,
+        "SpecialWeaponId": 0,
+        "UnitId": 519
+    },
+    {
+        "Id": 1125,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_MechanizetieKajiniieki_rifle1",
+        "PrimaryWeaponId": 736,
+        "SpecialWeaponId": 0,
+        "UnitId": 521
+    },
+    {
+        "Id": 1126,
+        "DeathPriority": 1,
+        "ModelFileName": "DLC2_MechanizetieKajiniieki_Heavy",
+        "PrimaryWeaponId": 697,
+        "SpecialWeaponId": 0,
+        "UnitId": 521
+    },
+    {
+        "Id": 1127,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_MechanizetieKajiniieki_rifle2",
+        "PrimaryWeaponId": 736,
+        "SpecialWeaponId": 0,
+        "UnitId": 521
+    },
+    {
+        "Id": 1128,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_MechanizetieKajiniieki_rifle3",
+        "PrimaryWeaponId": 736,
+        "SpecialWeaponId": 0,
+        "UnitId": 521
+    },
+    {
+        "Id": 1129,
+        "DeathPriority": 1,
+        "ModelFileName": "DLC2_JalavaeJagu_RPG",
+        "PrimaryWeaponId": 693,
+        "SpecialWeaponId": 747,
+        "UnitId": 522
+    },
+    {
+        "Id": 1130,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_JalavaeJagu_rifle1",
+        "PrimaryWeaponId": 693,
+        "SpecialWeaponId": 0,
+        "UnitId": 522
+    },
+    {
+        "Id": 1131,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_JalavaeJagu_rifle2",
+        "PrimaryWeaponId": 693,
+        "SpecialWeaponId": 0,
+        "UnitId": 522
+    },
+    {
+        "Id": 1132,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_JalavaeJagu_rifle3",
+        "PrimaryWeaponId": 693,
+        "SpecialWeaponId": 0,
+        "UnitId": 522
+    },
+    {
+        "Id": 1133,
+        "DeathPriority": 1,
+        "ModelFileName": "DLC2_GelezinisVilkas_RPG",
+        "PrimaryWeaponId": 735,
+        "SpecialWeaponId": 748,
+        "UnitId": 523
+    },
+    {
+        "Id": 1134,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_GelezinisVilkas_RPG",
+        "PrimaryWeaponId": 735,
+        "SpecialWeaponId": 748,
+        "UnitId": 523
+    },
+    {
+        "Id": 1135,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_GelezinisVilkas_rifle2",
+        "PrimaryWeaponId": 735,
+        "SpecialWeaponId": 0,
+        "UnitId": 523
+    },
+    {
+        "Id": 1136,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_GelezinisVilkas_rifle3",
+        "PrimaryWeaponId": 735,
+        "SpecialWeaponId": 0,
+        "UnitId": 523
+    },
+    {
+        "Id": 1137,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_MechanizetieKajiniieki_rifle1",
+        "PrimaryWeaponId": 736,
+        "SpecialWeaponId": 0,
+        "UnitId": 524
+    },
+    {
+        "Id": 1138,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_MechanizetieKajiniieki_rifle2",
+        "PrimaryWeaponId": 736,
+        "SpecialWeaponId": 0,
+        "UnitId": 524
+    },
+    {
+        "Id": 1139,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_MechanizetieKajiniieki_rifle3",
+        "PrimaryWeaponId": 736,
+        "SpecialWeaponId": 0,
+        "UnitId": 524
+    },
+    {
+        "Id": 1140,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_MechanizetieKajiniieki_Heavy",
+        "PrimaryWeaponId": 749,
+        "SpecialWeaponId": 0,
+        "UnitId": 524
+    },
+    {
+        "Id": 1141,
+        "DeathPriority": 3,
+        "ModelFileName": "DLC2_EestiScouts_rifle1",
+        "PrimaryWeaponId": 693,
+        "SpecialWeaponId": 0,
+        "UnitId": 525
+    },
+    {
+        "Id": 1142,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_EestiScouts_rifle2",
+        "PrimaryWeaponId": 695,
+        "SpecialWeaponId": 0,
+        "UnitId": 525
+    },
+    {
+        "Id": 1143,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_EestiScouts_rifle3",
+        "PrimaryWeaponId": 696,
+        "SpecialWeaponId": 0,
+        "UnitId": 525
+    },
+    {
+        "Id": 1144,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_EestiScouts_rifle4",
+        "PrimaryWeaponId": 693,
+        "SpecialWeaponId": 644,
+        "UnitId": 525
+    },
+    {
+        "Id": 1145,
+        "DeathPriority": 1,
+        "ModelFileName": "DLC2_EestiScouts_rifle2",
+        "PrimaryWeaponId": 693,
+        "SpecialWeaponId": 644,
+        "UnitId": 525
+    },
+    {
+        "Id": 1147,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_KNT_rifle1",
+        "PrimaryWeaponId": 508,
+        "SpecialWeaponId": 0,
+        "UnitId": 528
+    },
+    {
+        "Id": 1148,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_KNT_rifle2",
+        "PrimaryWeaponId": 508,
+        "SpecialWeaponId": 0,
+        "UnitId": 528
+    },
+    {
+        "Id": 1149,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_KNT_rifle2",
+        "PrimaryWeaponId": 508,
+        "SpecialWeaponId": 0,
+        "UnitId": 528
+    },
+    {
+        "Id": 1150,
+        "DeathPriority": 1,
+        "ModelFileName": "DLC2_KNT_rifle1",
+        "PrimaryWeaponId": 508,
+        "SpecialWeaponId": 0,
+        "UnitId": 528
+    },
+    {
+        "Id": 1151,
+        "DeathPriority": 3,
+        "ModelFileName": "DLC2_SUV_rifle1",
+        "PrimaryWeaponId": 761,
+        "SpecialWeaponId": 0,
+        "UnitId": 527
+    },
+    {
+        "Id": 1152,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_SUV_rifle2",
+        "PrimaryWeaponId": 762,
+        "SpecialWeaponId": 756,
+        "UnitId": 527
+    },
+    {
+        "Id": 1153,
+        "DeathPriority": 3,
+        "ModelFileName": "DLC2_SUV_rifle2",
+        "PrimaryWeaponId": 761,
+        "SpecialWeaponId": 0,
+        "UnitId": 527
+    },
+    {
+        "Id": 1154,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_SUV_rifle3",
+        "PrimaryWeaponId": 762,
+        "SpecialWeaponId": 756,
+        "UnitId": 527
+    },
+    {
+        "Id": 1155,
+        "DeathPriority": 3,
+        "ModelFileName": "DLC2_SUV_rifle4",
+        "PrimaryWeaponId": 761,
+        "SpecialWeaponId": 0,
+        "UnitId": 527
+    },
+    {
+        "Id": 1157,
+        "DeathPriority": 3,
+        "ModelFileName": "DLC2_Jageries_rifle1",
+        "PrimaryWeaponId": 767,
+        "SpecialWeaponId": 0,
+        "UnitId": 526
+    },
+    {
+        "Id": 1158,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_Jageries_rifle2",
+        "PrimaryWeaponId": 760,
+        "SpecialWeaponId": 0,
+        "UnitId": 526
+    },
+    {
+        "Id": 1159,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_Jageries_rifle3",
+        "PrimaryWeaponId": 758,
+        "SpecialWeaponId": 0,
+        "UnitId": 526
+    },
+    {
+        "Id": 1160,
+        "DeathPriority": 1,
+        "ModelFileName": "DLC2_Jageries_RPG",
+        "PrimaryWeaponId": 767,
+        "SpecialWeaponId": 766,
+        "UnitId": 526
+    },
+    {
+        "Id": 1162,
+        "DeathPriority": 3,
+        "ModelFileName": "DLC2_Jageries_rifle1",
+        "PrimaryWeaponId": 767,
+        "SpecialWeaponId": 0,
+        "UnitId": 526
+    },
+    {
+        "Id": 1163,
+        "DeathPriority": 1,
+        "ModelFileName": "DLC2_SnaiperuKomanda_rifle1",
+        "PrimaryWeaponId": 736,
+        "SpecialWeaponId": 738,
+        "UnitId": 529
+    },
+    {
+        "Id": 1164,
+        "DeathPriority": 1,
+        "ModelFileName": "DLC2_SnaiperuKomanda_rifle2",
+        "PrimaryWeaponId": 763,
+        "SpecialWeaponId": 0,
+        "UnitId": 529
+    },
+    {
+        "Id": 1165,
+        "DeathPriority": 1,
+        "ModelFileName": "DLC2_SnaiperuKomanda_rifle2",
+        "PrimaryWeaponId": 764,
+        "SpecialWeaponId": 0,
+        "UnitId": 529
+    },
+    {
+        "Id": 1166,
+        "DeathPriority": 0,
+        "ModelFileName": "DLC2_Snaiprid_rifle1",
+        "PrimaryWeaponId": 696,
+        "SpecialWeaponId": 0,
+        "UnitId": 530
+    },
+    {
+        "Id": 1167,
+        "DeathPriority": 0,
+        "ModelFileName": "DLC2_Snaiprid_rifle2",
+        "PrimaryWeaponId": 765,
+        "SpecialWeaponId": 0,
+        "UnitId": 530
+    },
+    {
+        "Id": 1168,
+        "DeathPriority": 3,
+        "ModelFileName": "DLC2_JalavaeJagu_rifle1",
+        "PrimaryWeaponId": 693,
+        "SpecialWeaponId": 0,
+        "UnitId": 533
+    },
+    {
+        "Id": 1169,
+        "DeathPriority": 1,
+        "ModelFileName": "DLC2_JalavaeJagu_Heavy",
+        "PrimaryWeaponId": 206,
+        "SpecialWeaponId": 0,
+        "UnitId": 533
+    },
+    {
+        "Id": 1170,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_JalavaeJagu_rifle3",
+        "PrimaryWeaponId": 693,
+        "SpecialWeaponId": 0,
+        "UnitId": 533
+    },
+    {
+        "Id": 1171,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_JalavaeJagu_Heavy",
+        "PrimaryWeaponId": 207,
+        "SpecialWeaponId": 0,
+        "UnitId": 533
+    },
+    {
+        "Id": 1172,
+        "DeathPriority": 3,
+        "ModelFileName": "DLC2_GelezinisVilkas_rifle1",
+        "PrimaryWeaponId": 735,
+        "SpecialWeaponId": 0,
+        "UnitId": 534
+    },
+    {
+        "Id": 1173,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_GelezinisVilkas_Heavy",
+        "PrimaryWeaponId": 750,
+        "SpecialWeaponId": 0,
+        "UnitId": 534
+    },
+    {
+        "Id": 1174,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_GelezinisVilkas_rifle3",
+        "PrimaryWeaponId": 735,
+        "SpecialWeaponId": 0,
+        "UnitId": 534
+    },
+    {
+        "Id": 1175,
+        "DeathPriority": 1,
+        "ModelFileName": "DLC2_GelezinisVilkas_Heavy",
+        "PrimaryWeaponId": 750,
+        "SpecialWeaponId": 0,
+        "UnitId": 534
+    },
+    {
+        "Id": 1176,
+        "DeathPriority": 2,
+        "ModelFileName": "DLC2_EestiScouts_rifle1",
+        "PrimaryWeaponId": 693,
+        "SpecialWeaponId": 644,
+        "UnitId": 525
+    },
+    {
+        "Id": 1177,
+        "DeathPriority": 1,
+        "ModelFileName": "DLC2_SUV_rifle3",
+        "PrimaryWeaponId": 761,
+        "SpecialWeaponId": 590,
+        "UnitId": 527
+    },
+    {
+        "Id": 1178,
+        "DeathPriority": 3,
+        "ModelFileName": "DLC2_Jageries_rifle4",
+        "PrimaryWeaponId": 767,
+        "SpecialWeaponId": 0,
+        "UnitId": 526
+    },
+    {
+        "Id": 1179,
+        "DeathPriority": 3,
+        "ModelFileName": "DLC2_ESTSOF_rifle5",
+        "PrimaryWeaponId": 751,
+        "SpecialWeaponId": 757,
+        "UnitId": 517
+    },
+    {
+        "Id": 1181,
+        "DeathPriority": 3,
+        "ModelFileName": "DLC2_Zaliukai_rifle5",
+        "PrimaryWeaponId": 754,
+        "SpecialWeaponId": 212,
+        "UnitId": 518
+    },
+    {
+        "Id": 1183,
+        "DeathPriority": 0,
+        "ModelFileName": "DLC2_MechanizetieKajiniieki_rifle1",
+        "PrimaryWeaponId": 736,
+        "SpecialWeaponId": 0,
+        "UnitId": 544
+    },
+    {
+        "Id": 1184,
+        "DeathPriority": 0,
+        "ModelFileName": "DLC2_MechanizetieKajiniieki_Heavy",
+        "PrimaryWeaponId": 206,
+        "SpecialWeaponId": 0,
+        "UnitId": 544
+    },
+    {
+        "Id": 1185,
+        "DeathPriority": 0,
+        "ModelFileName": "DLC2_MechanizetieKajiniieki_rifle2",
+        "PrimaryWeaponId": 736,
+        "SpecialWeaponId": 0,
+        "UnitId": 544
+    },
+    {
+        "Id": 1186,
+        "DeathPriority": 0,
+        "ModelFileName": "DLC2_MechanizetieKajiniieki_Heavy",
+        "PrimaryWeaponId": 750,
+        "SpecialWeaponId": 0,
+        "UnitId": 544
     }
 ]

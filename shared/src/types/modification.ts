@@ -17,6 +17,10 @@ export interface Option {
   Order: number;
   UIName: string;
   OptionPicture: string;
+  ThumbnailOverride: string | null;
+  PortraitOverride: string | null;
+  AudioPresetOverride: string | null;
+  StealthOverride: number;
   ConcatenateWithUnitName: string;
   ReplaceUnitName: string;
   ReplaceUnitId: number;

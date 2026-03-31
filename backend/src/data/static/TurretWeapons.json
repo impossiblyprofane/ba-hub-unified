@@ -72,52 +72,12 @@
         "WeaponPriority": 0
     },
     {
-        "Id": 15,
-        "WeaponId": 12,
-        "TurretId": 13,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 16,
-        "WeaponId": 12,
-        "TurretId": 14,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 18,
-        "WeaponId": 15,
-        "TurretId": 16,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
         "Id": 25,
         "WeaponId": 17,
         "TurretId": 17,
         "Order": 3,
         "WeaponChannel": 0,
         "WeaponPriority": 2
-    },
-    {
-        "Id": 28,
-        "WeaponId": 19,
-        "TurretId": 10,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 29,
-        "WeaponId": 20,
-        "TurretId": 10,
-        "Order": 1,
-        "WeaponChannel": 0,
-        "WeaponPriority": 1
     },
     {
         "Id": 32,
@@ -784,22 +744,6 @@
         "WeaponPriority": 0
     },
     {
-        "Id": 201,
-        "WeaponId": 15,
-        "TurretId": 94,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 202,
-        "WeaponId": 15,
-        "TurretId": 95,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
         "Id": 203,
         "WeaponId": 78,
         "TurretId": 11,
@@ -824,25 +768,9 @@
         "WeaponPriority": 0
     },
     {
-        "Id": 211,
-        "WeaponId": 79,
-        "TurretId": 57,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
         "Id": 213,
         "WeaponId": 37,
         "TurretId": 82,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 215,
-        "WeaponId": 37,
-        "TurretId": 101,
         "Order": 0,
         "WeaponChannel": 0,
         "WeaponPriority": 0
@@ -952,33 +880,9 @@
         "WeaponPriority": 0
     },
     {
-        "Id": 233,
-        "WeaponId": 18,
-        "TurretId": 114,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
         "Id": 234,
         "WeaponId": 84,
         "TurretId": 116,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 235,
-        "WeaponId": 15,
-        "TurretId": 117,
-        "Order": 0,
-        "WeaponChannel": 1,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 236,
-        "WeaponId": 66,
-        "TurretId": 119,
         "Order": 0,
         "WeaponChannel": 0,
         "WeaponPriority": 0
@@ -1008,27 +912,11 @@
         "WeaponPriority": 0
     },
     {
-        "Id": 242,
-        "WeaponId": 15,
-        "TurretId": 124,
-        "Order": 0,
-        "WeaponChannel": 1,
-        "WeaponPriority": 0
-    },
-    {
         "Id": 243,
         "WeaponId": 12,
         "TurretId": 125,
         "Order": 0,
         "WeaponChannel": 2,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 244,
-        "WeaponId": 66,
-        "TurretId": 126,
-        "Order": 0,
-        "WeaponChannel": 1,
         "WeaponPriority": 0
     },
     {
@@ -1123,30 +1011,6 @@
         "Id": 267,
         "WeaponId": 94,
         "TurretId": 141,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 268,
-        "WeaponId": 95,
-        "TurretId": 142,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 269,
-        "WeaponId": 96,
-        "TurretId": 143,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 271,
-        "WeaponId": 97,
-        "TurretId": 144,
         "Order": 0,
         "WeaponChannel": 0,
         "WeaponPriority": 0
@@ -1288,27 +1152,11 @@
         "WeaponPriority": 0
     },
     {
-        "Id": 294,
-        "WeaponId": 38,
-        "TurretId": 159,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
         "Id": 295,
         "WeaponId": 107,
         "TurretId": 64,
         "Order": 0,
         "WeaponChannel": 2,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 296,
-        "WeaponId": 108,
-        "TurretId": 66,
-        "Order": 0,
-        "WeaponChannel": 6,
         "WeaponPriority": 0
     },
     {
@@ -1435,14 +1283,6 @@
         "Id": 315,
         "WeaponId": 120,
         "TurretId": 174,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 317,
-        "WeaponId": 121,
-        "TurretId": 176,
         "Order": 0,
         "WeaponChannel": 0,
         "WeaponPriority": 0
@@ -1632,14 +1472,6 @@
         "WeaponPriority": 0
     },
     {
-        "Id": 351,
-        "WeaponId": 27,
-        "TurretId": 115,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
         "Id": 352,
         "WeaponId": 218,
         "TurretId": 201,
@@ -1752,38 +1584,6 @@
         "WeaponPriority": 0
     },
     {
-        "Id": 371,
-        "WeaponId": 226,
-        "TurretId": 217,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 376,
-        "WeaponId": 227,
-        "TurretId": 220,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 377,
-        "WeaponId": 227,
-        "TurretId": 221,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 378,
-        "WeaponId": 229,
-        "TurretId": 222,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
         "Id": 379,
         "WeaponId": 231,
         "TurretId": 223,
@@ -1888,41 +1688,9 @@
         "WeaponPriority": 0
     },
     {
-        "Id": 395,
-        "WeaponId": 239,
-        "TurretId": 239,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 396,
-        "WeaponId": 97,
-        "TurretId": 238,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 397,
-        "WeaponId": 240,
-        "TurretId": 240,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
         "Id": 398,
         "WeaponId": 241,
         "TurretId": 241,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 399,
-        "WeaponId": 242,
-        "TurretId": 244,
         "Order": 0,
         "WeaponChannel": 0,
         "WeaponPriority": 0
@@ -1939,14 +1707,6 @@
         "Id": 403,
         "WeaponId": 87,
         "TurretId": 133,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 404,
-        "WeaponId": 245,
-        "TurretId": 245,
         "Order": 0,
         "WeaponChannel": 0,
         "WeaponPriority": 0
@@ -2104,86 +1864,6 @@
         "WeaponPriority": 0
     },
     {
-        "Id": 428,
-        "WeaponId": 18,
-        "TurretId": 255,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 429,
-        "WeaponId": 21,
-        "TurretId": 256,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 430,
-        "WeaponId": 40,
-        "TurretId": 257,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 431,
-        "WeaponId": 40,
-        "TurretId": 258,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 432,
-        "WeaponId": 40,
-        "TurretId": 259,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 433,
-        "WeaponId": 27,
-        "TurretId": 257,
-        "Order": 1,
-        "WeaponChannel": 0,
-        "WeaponPriority": 1
-    },
-    {
-        "Id": 434,
-        "WeaponId": 27,
-        "TurretId": 258,
-        "Order": 1,
-        "WeaponChannel": 0,
-        "WeaponPriority": 1
-    },
-    {
-        "Id": 435,
-        "WeaponId": 27,
-        "TurretId": 259,
-        "Order": 1,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 436,
-        "WeaponId": 76,
-        "TurretId": 258,
-        "Order": 2,
-        "WeaponChannel": 0,
-        "WeaponPriority": 2
-    },
-    {
-        "Id": 437,
-        "WeaponId": 253,
-        "TurretId": 259,
-        "Order": 2,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
         "Id": 438,
         "WeaponId": 227,
         "TurretId": 97,
@@ -2224,60 +1904,12 @@
         "WeaponPriority": 0
     },
     {
-        "Id": 444,
-        "WeaponId": 18,
-        "TurretId": 264,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 445,
-        "WeaponId": 21,
-        "TurretId": 265,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
         "Id": 446,
         "WeaponId": 4,
         "TurretId": 0,
         "Order": 0,
         "WeaponChannel": 0,
         "WeaponPriority": 0
-    },
-    {
-        "Id": 447,
-        "WeaponId": 4,
-        "TurretId": 266,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 449,
-        "WeaponId": 256,
-        "TurretId": 267,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 450,
-        "WeaponId": 27,
-        "TurretId": 266,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 1
-    },
-    {
-        "Id": 451,
-        "WeaponId": 27,
-        "TurretId": 267,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 1
     },
     {
         "Id": 452,
@@ -2560,121 +2192,9 @@
         "WeaponPriority": 2
     },
     {
-        "Id": 490,
-        "WeaponId": 88,
-        "TurretId": 299,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
         "Id": 492,
         "WeaponId": 113,
         "TurretId": 300,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 493,
-        "WeaponId": 240,
-        "TurretId": 301,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 494,
-        "WeaponId": 216,
-        "TurretId": 302,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 495,
-        "WeaponId": 268,
-        "TurretId": 303,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 496,
-        "WeaponId": 97,
-        "TurretId": 305,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 497,
-        "WeaponId": 269,
-        "TurretId": 304,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 499,
-        "WeaponId": 270,
-        "TurretId": 307,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 501,
-        "WeaponId": 7,
-        "TurretId": 307,
-        "Order": 1,
-        "WeaponChannel": 0,
-        "WeaponPriority": 1
-    },
-    {
-        "Id": 502,
-        "WeaponId": 268,
-        "TurretId": 306,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 503,
-        "WeaponId": 273,
-        "TurretId": 309,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 504,
-        "WeaponId": 272,
-        "TurretId": 308,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 505,
-        "WeaponId": 214,
-        "TurretId": 311,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 506,
-        "WeaponId": 214,
-        "TurretId": 312,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 507,
-        "WeaponId": 215,
-        "TurretId": 310,
         "Order": 0,
         "WeaponChannel": 0,
         "WeaponPriority": 0
@@ -3320,65 +2840,9 @@
         "WeaponPriority": 0
     },
     {
-        "Id": 604,
-        "WeaponId": 97,
-        "TurretId": 368,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 605,
-        "WeaponId": 2,
-        "TurretId": 369,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 606,
-        "WeaponId": 7,
-        "TurretId": 369,
-        "Order": 1,
-        "WeaponChannel": 0,
-        "WeaponPriority": 1
-    },
-    {
-        "Id": 607,
-        "WeaponId": 306,
-        "TurretId": 370,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 608,
-        "WeaponId": 7,
-        "TurretId": 370,
-        "Order": 1,
-        "WeaponChannel": 0,
-        "WeaponPriority": 2
-    },
-    {
-        "Id": 609,
-        "WeaponId": 216,
-        "TurretId": 370,
-        "Order": 2,
-        "WeaponChannel": 0,
-        "WeaponPriority": 1
-    },
-    {
         "Id": 610,
         "WeaponId": 306,
         "TurretId": 26,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 611,
-        "WeaponId": 281,
-        "TurretId": 371,
         "Order": 0,
         "WeaponChannel": 0,
         "WeaponPriority": 0
@@ -3432,30 +2896,6 @@
         "WeaponPriority": 1
     },
     {
-        "Id": 620,
-        "WeaponId": 313,
-        "TurretId": 379,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 621,
-        "WeaponId": 312,
-        "TurretId": 378,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 622,
-        "WeaponId": 314,
-        "TurretId": 380,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
         "Id": 623,
         "WeaponId": 315,
         "TurretId": 381,
@@ -3483,22 +2923,6 @@
         "Id": 626,
         "WeaponId": 318,
         "TurretId": 384,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 627,
-        "WeaponId": 320,
-        "TurretId": 386,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 628,
-        "WeaponId": 319,
-        "TurretId": 385,
         "Order": 0,
         "WeaponChannel": 0,
         "WeaponPriority": 0
@@ -4936,30 +4360,6 @@
         "WeaponPriority": 0
     },
     {
-        "Id": 824,
-        "WeaponId": 237,
-        "TurretId": 523,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 825,
-        "WeaponId": 370,
-        "TurretId": 525,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 826,
-        "WeaponId": 369,
-        "TurretId": 524,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
         "Id": 827,
         "WeaponId": 371,
         "TurretId": 526,
@@ -4968,25 +4368,9 @@
         "WeaponPriority": 0
     },
     {
-        "Id": 828,
-        "WeaponId": 372,
-        "TurretId": 527,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
         "Id": 829,
         "WeaponId": 373,
         "TurretId": 529,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 830,
-        "WeaponId": 374,
-        "TurretId": 530,
         "Order": 0,
         "WeaponChannel": 0,
         "WeaponPriority": 0
@@ -5824,22 +5208,6 @@
         "WeaponPriority": 0
     },
     {
-        "Id": 939,
-        "WeaponId": 462,
-        "TurretId": 633,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 940,
-        "WeaponId": 463,
-        "TurretId": 634,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
         "Id": 941,
         "WeaponId": 464,
         "TurretId": 632,
@@ -5851,14 +5219,6 @@
         "Id": 942,
         "WeaponId": 461,
         "TurretId": 631,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 943,
-        "WeaponId": 467,
-        "TurretId": 635,
         "Order": 0,
         "WeaponChannel": 0,
         "WeaponPriority": 0
@@ -5891,14 +5251,6 @@
         "Id": 947,
         "WeaponId": 469,
         "TurretId": 638,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 948,
-        "WeaponId": 470,
-        "TurretId": 640,
         "Order": 0,
         "WeaponChannel": 0,
         "WeaponPriority": 0
@@ -5947,14 +5299,6 @@
         "Id": 954,
         "WeaponId": 476,
         "TurretId": 648,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 955,
-        "WeaponId": 477,
-        "TurretId": 647,
         "Order": 0,
         "WeaponChannel": 0,
         "WeaponPriority": 0
@@ -6011,14 +5355,6 @@
         "Id": 962,
         "WeaponId": 482,
         "TurretId": 657,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 963,
-        "WeaponId": 474,
-        "TurretId": 659,
         "Order": 0,
         "WeaponChannel": 0,
         "WeaponPriority": 0
@@ -6240,14 +5576,6 @@
         "WeaponPriority": 0
     },
     {
-        "Id": 993,
-        "WeaponId": 500,
-        "TurretId": 687,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
         "Id": 994,
         "WeaponId": 86,
         "TurretId": 688,
@@ -6424,14 +5752,6 @@
         "WeaponPriority": 0
     },
     {
-        "Id": 1019,
-        "WeaponId": 269,
-        "TurretId": 707,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
         "Id": 1020,
         "WeaponId": 518,
         "TurretId": 364,
@@ -6451,14 +5771,6 @@
         "Id": 1022,
         "WeaponId": 256,
         "TurretId": 80,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 1023,
-        "WeaponId": 519,
-        "TurretId": 710,
         "Order": 0,
         "WeaponChannel": 0,
         "WeaponPriority": 0
@@ -6739,14 +6051,6 @@
         "Id": 1061,
         "WeaponId": 551,
         "TurretId": 0,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 1062,
-        "WeaponId": 551,
-        "TurretId": 734,
         "Order": 0,
         "WeaponChannel": 0,
         "WeaponPriority": 0
@@ -7128,14 +6432,6 @@
         "WeaponPriority": 0
     },
     {
-        "Id": 1112,
-        "WeaponId": 574,
-        "TurretId": 784,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
         "Id": 1113,
         "WeaponId": 575,
         "TurretId": 785,
@@ -7243,14 +6539,6 @@
         "Id": 1126,
         "WeaponId": 18,
         "TurretId": 790,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 1127,
-        "WeaponId": 580,
-        "TurretId": 791,
         "Order": 0,
         "WeaponChannel": 0,
         "WeaponPriority": 0
@@ -7416,65 +6704,9 @@
         "WeaponPriority": 1
     },
     {
-        "Id": 1151,
-        "WeaponId": 409,
-        "TurretId": 805,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 1152,
-        "WeaponId": 592,
-        "TurretId": 806,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 1153,
-        "WeaponId": 593,
-        "TurretId": 807,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
         "Id": 1154,
         "WeaponId": 594,
         "TurretId": 808,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 1155,
-        "WeaponId": 595,
-        "TurretId": 809,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 1156,
-        "WeaponId": 597,
-        "TurretId": 810,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 1157,
-        "WeaponId": 596,
-        "TurretId": 811,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 1159,
-        "WeaponId": 410,
-        "TurretId": 812,
         "Order": 0,
         "WeaponChannel": 0,
         "WeaponPriority": 0
@@ -7787,14 +7019,6 @@
         "Id": 1200,
         "WeaponId": 21,
         "TurretId": 520,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 1201,
-        "WeaponId": 610,
-        "TurretId": 836,
         "Order": 0,
         "WeaponChannel": 0,
         "WeaponPriority": 0
@@ -8267,14 +7491,6 @@
         "Id": 1265,
         "WeaponId": 636,
         "TurretId": 881,
-        "Order": 0,
-        "WeaponChannel": 0,
-        "WeaponPriority": 0
-    },
-    {
-        "Id": 1266,
-        "WeaponId": 637,
-        "TurretId": 882,
         "Order": 0,
         "WeaponChannel": 0,
         "WeaponPriority": 0
@@ -9531,6 +8747,638 @@
         "Id": 1443,
         "WeaponId": 395,
         "TurretId": 997,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1444,
+        "WeaponId": 732,
+        "TurretId": 998,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1445,
+        "WeaponId": 27,
+        "TurretId": 999,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1446,
+        "WeaponId": 18,
+        "TurretId": 1000,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1447,
+        "WeaponId": 21,
+        "TurretId": 1002,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1448,
+        "WeaponId": 719,
+        "TurretId": 1003,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1449,
+        "WeaponId": 708,
+        "TurretId": 1003,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1450,
+        "WeaponId": 719,
+        "TurretId": 1004,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1451,
+        "WeaponId": 708,
+        "TurretId": 1004,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1452,
+        "WeaponId": 18,
+        "TurretId": 1005,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1453,
+        "WeaponId": 18,
+        "TurretId": 1006,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1455,
+        "WeaponId": 733,
+        "TurretId": 1008,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1456,
+        "WeaponId": 484,
+        "TurretId": 1009,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1457,
+        "WeaponId": 18,
+        "TurretId": 1011,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1458,
+        "WeaponId": 734,
+        "TurretId": 1010,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1459,
+        "WeaponId": 715,
+        "TurretId": 1012,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1460,
+        "WeaponId": 713,
+        "TurretId": 1012,
+        "Order": 1,
+        "WeaponChannel": 0,
+        "WeaponPriority": 1
+    },
+    {
+        "Id": 1461,
+        "WeaponId": 713,
+        "TurretId": 1013,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1462,
+        "WeaponId": 18,
+        "TurretId": 1014,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1463,
+        "WeaponId": 18,
+        "TurretId": 1015,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1464,
+        "WeaponId": 734,
+        "TurretId": 1017,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1465,
+        "WeaponId": 734,
+        "TurretId": 1016,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1466,
+        "WeaponId": 716,
+        "TurretId": 1016,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 1
+    },
+    {
+        "Id": 1467,
+        "WeaponId": 716,
+        "TurretId": 1015,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 1
+    },
+    {
+        "Id": 1468,
+        "WeaponId": 18,
+        "TurretId": 1018,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1469,
+        "WeaponId": 734,
+        "TurretId": 1019,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1470,
+        "WeaponId": 509,
+        "TurretId": 1020,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1471,
+        "WeaponId": 768,
+        "TurretId": 1021,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1472,
+        "WeaponId": 769,
+        "TurretId": 1022,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1473,
+        "WeaponId": 718,
+        "TurretId": 0,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1474,
+        "WeaponId": 718,
+        "TurretId": 1023,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1475,
+        "WeaponId": 770,
+        "TurretId": 1024,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1477,
+        "WeaponId": 13,
+        "TurretId": 1026,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1478,
+        "WeaponId": 713,
+        "TurretId": 1026,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1479,
+        "WeaponId": 714,
+        "TurretId": 1026,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1480,
+        "WeaponId": 23,
+        "TurretId": 1027,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1481,
+        "WeaponId": 713,
+        "TurretId": 1027,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1482,
+        "WeaponId": 689,
+        "TurretId": 1028,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1483,
+        "WeaponId": 713,
+        "TurretId": 1028,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1484,
+        "WeaponId": 76,
+        "TurretId": 1028,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1485,
+        "WeaponId": 18,
+        "TurretId": 1029,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1486,
+        "WeaponId": 734,
+        "TurretId": 1030,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1487,
+        "WeaponId": 708,
+        "TurretId": 1032,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1488,
+        "WeaponId": 18,
+        "TurretId": 1033,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1489,
+        "WeaponId": 734,
+        "TurretId": 1034,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1490,
+        "WeaponId": 771,
+        "TurretId": 1035,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1491,
+        "WeaponId": 772,
+        "TurretId": 1007,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1492,
+        "WeaponId": 773,
+        "TurretId": 1036,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1493,
+        "WeaponId": 774,
+        "TurretId": 1037,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1494,
+        "WeaponId": 713,
+        "TurretId": 1038,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1495,
+        "WeaponId": 734,
+        "TurretId": 1039,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1496,
+        "WeaponId": 702,
+        "TurretId": 1040,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1497,
+        "WeaponId": 702,
+        "TurretId": 1041,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1498,
+        "WeaponId": 713,
+        "TurretId": 1040,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 1
+    },
+    {
+        "Id": 1499,
+        "WeaponId": 713,
+        "TurretId": 1041,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 1
+    },
+    {
+        "Id": 1500,
+        "WeaponId": 714,
+        "TurretId": 1041,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 2
+    },
+    {
+        "Id": 1501,
+        "WeaponId": 713,
+        "TurretId": 1042,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1503,
+        "WeaponId": 720,
+        "TurretId": 1043,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1504,
+        "WeaponId": 720,
+        "TurretId": 1044,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1505,
+        "WeaponId": 775,
+        "TurretId": 1045,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1506,
+        "WeaponId": 775,
+        "TurretId": 1046,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1507,
+        "WeaponId": 776,
+        "TurretId": 1047,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1508,
+        "WeaponId": 777,
+        "TurretId": 1048,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1510,
+        "WeaponId": 18,
+        "TurretId": 1050,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1511,
+        "WeaponId": 18,
+        "TurretId": 1051,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1512,
+        "WeaponId": 778,
+        "TurretId": 1049,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1513,
+        "WeaponId": 646,
+        "TurretId": 1052,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1514,
+        "WeaponId": 779,
+        "TurretId": 1053,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1515,
+        "WeaponId": 708,
+        "TurretId": 1054,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1516,
+        "WeaponId": 708,
+        "TurretId": 1055,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1517,
+        "WeaponId": 717,
+        "TurretId": 1056,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1518,
+        "WeaponId": 713,
+        "TurretId": 1057,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1519,
+        "WeaponId": 780,
+        "TurretId": 1058,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1520,
+        "WeaponId": 781,
+        "TurretId": 1059,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1521,
+        "WeaponId": 18,
+        "TurretId": 1060,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1522,
+        "WeaponId": 18,
+        "TurretId": 1061,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1523,
+        "WeaponId": 782,
+        "TurretId": 0,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1524,
+        "WeaponId": 782,
+        "TurretId": 1025,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1525,
+        "WeaponId": 784,
+        "TurretId": 1063,
+        "Order": 0,
+        "WeaponChannel": 0,
+        "WeaponPriority": 0
+    },
+    {
+        "Id": 1526,
+        "WeaponId": 783,
+        "TurretId": 1062,
         "Order": 0,
         "WeaponChannel": 0,
         "WeaponPriority": 0

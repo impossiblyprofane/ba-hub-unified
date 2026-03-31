@@ -200,7 +200,7 @@ export function buildShareSummary(data: UnitDetailData): UnitShareSummary {
   // Weapon names (unique, max 4)
   const weaponNames: string[] = [];
   for (const w of data.weapons) {
-    const name = w.weapon.HUDName || w.weapon.Name;
+    const name = w.weapon.HUDName;
     if (name && !weaponNames.includes(name)) weaponNames.push(name);
     if (weaponNames.length >= 4) break;
   }

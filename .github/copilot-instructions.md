@@ -40,6 +40,18 @@
   - **Community / callout bars**: same transparent gradient pattern, not solid raised backgrounds.
   - The `.corner-brackets` and `.hero-glow` CSS classes from global.css remain available for the home page hero but should not be used on general panels.
 
+## Deck builder patterns
+- **Deck codes** use an XOR cipher (`BAHUB_DECK_v2` key) + base64 encoding. Numbers are base-36. Delimiters: `|` (top-level), `!` (categories), `#` (units), `,` (fields), `\` (modifications), `/` (modId/optId). Encoder/decoder: [frontend/src/lib/deck/deckEncoder.ts](../frontend/src/lib/deck/deckEncoder.ts).
+- **Deck import flow** (decode → hydrate → save → navigate): `decodeDeck(code)` → collect option IDs → parallel fetch specs + options via GraphQL → `compressedToDeck(compressed, optionsById)` → `createDeckFromImport(hydrated, spec1, spec2)` → `saveDeck()` → navigate to `/decks/builder/edit/{deckId}`. Import does NOT go through the wizard — it produces a fully populated `EditorDeck` directly.
+- **`EditorDeck`** wraps a `Deck` with editor metadata (maxSlots, maxPoints, spec display names+icons, countryName/flag). Persisted in localStorage as base64-encoded JSON with `deck_` prefix. Service: [frontend/src/lib/deck/deckService.ts](../frontend/src/lib/deck/deckService.ts).
+- **Option hydration** must include `ThumbnailOverride` and `PortraitOverride` fields — these replace the unit's label icon and portrait respectively when a modification option is selected (e.g. DLC2 vehicle variants).
+- **Slot/point limits** come from summing both specialization fields (e.g. `spec1.ReconSlots + spec2.ReconSlots`, capped at 7). Category mappings are in `DECK_CATEGORIES` from `@ba-hub/shared`.
+- **Shared deck types** are in [shared/src/types/deck.ts](../shared/src/types/deck.ts): `Deck`, `Set2`, `UnitConfig`, `DeckModification`, `EditorDeck`, `CompressedDeck`, etc.
+
+## Icon path normalization
+- **CRITICAL: Game data uses mixed path separators.** Base fields like `Unit.PortraitFileName` use backslashes (`RU\\BTR_82A\\BTR_82A`). Override fields like `Option.PortraitOverride` use forward slashes (`DLC2/JALAVAE_JAGU/JALAVAE_JAGU`). **All icon path functions must normalize both separators** before splitting. Pattern: `value.replace(/\\/g, "/").split("/")`. See [frontend/src/lib/iconPaths.ts](../frontend/src/lib/iconPaths.ts).
+- The same applies to `toOptionPicturePath()` which handles legacy `Weapons\\NAME` format.
+
 ## Integration points
 - Frontend expects backend GraphQL at http://localhost:3001/graphql in dev (see [docker/README.md](../docker/README.md) for ports).
 - Backend CORS allows the frontend origin (default http://localhost:3000). Config in [backend/src/index.ts](../backend/src/index.ts).
@@ -55,7 +67,7 @@ All user-facing text in the frontend **must** go through the i18n locale system.
 - 9 locales: `en`, `ru`, `de`, `fr`, `zh`, `es`, `pt`, `ko`, `ja`. English is the canonical source.
 - Translation dictionaries are flat `Record<string, string>` with dot-notated keys. See [frontend/src/lib/i18n/locales/en.ts](../frontend/src/lib/i18n/locales/en.ts).
 - `t(store, key)` resolves a key → current locale dict → English fallback → raw key. See `t()` in [frontend/src/lib/i18n/context.tsx](../frontend/src/lib/i18n/context.tsx).
-- Game-data strings (unit names, map names, etc.) use a **separate** game-locale system via `getGameLocaleValue()` in [frontend/src/lib/i18n/gameLocales.ts](../frontend/src/lib/i18n/gameLocales.ts) — do not mix these with UI translation keys.
+- Game-data strings (unit names, map names, etc.) use a **separate** game-locale system via `getGameLocaleValue()` in [frontend/src/lib/i18n/gameLocales.ts](../frontend/src/lib/i18n/gameLocales.ts). All game strings are in a **single unified file** `all_locales.json` (not per-domain files). `GAME_LOCALES.specs`, `.maps`, `.modopts` are backward-compatible aliases pointing to the same table. Lookups are **case-insensitive** via `CI_INDEX`. Do not mix these with UI translation keys.
 
 ### Adding new text — mandatory steps
 1. **Choose a key** using the hierarchical dot-notation convention: `section.subsection.category.item`. Group related keys under a shared prefix with a section comment.

@@ -6,12 +6,15 @@ import { schema } from './graphql/schema.js';
 import { resolvers } from './graphql/resolvers.js';
 import { loadStaticData } from './data/loader.js';
 import { buildIndexes } from './data/indexes.js';
+import { DatabaseClient } from './services/databaseClient.js';
 
 const PORT = process.env.PORT || 3001;
+const DATABASE_SERVICE_URL = process.env.DATABASE_SERVICE_URL || 'http://localhost:3002';
 
 async function buildServer() {
   const data = await loadStaticData();
   const indexes = buildIndexes(data);
+  const dbClient = new DatabaseClient(DATABASE_SERVICE_URL);
 
   // Keep mutable references for hot-reloading
   let currentData = data;
@@ -65,7 +68,7 @@ async function buildServer() {
   await fastify.register(mercurius, {
     schema,
     resolvers,
-    context: () => ({ data: currentData, indexes: currentIndexes }),
+    context: () => ({ data: currentData, indexes: currentIndexes, dbClient }),
     graphiql: true, // GraphiQL interface at /graphiql
     subscription: true, // Enable subscriptions via WebSocket
   });

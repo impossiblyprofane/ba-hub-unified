@@ -693,15 +693,6 @@
         "MaxAvailabilityXp3": 0
     },
     {
-        "Id": 410,
-        "SpecializationId": 8,
-        "UnitId": 209,
-        "MaxAvailabilityXp0": 4,
-        "MaxAvailabilityXp1": 0,
-        "MaxAvailabilityXp2": 0,
-        "MaxAvailabilityXp3": 0
-    },
-    {
         "Id": 411,
         "SpecializationId": 8,
         "UnitId": 237,
@@ -756,28 +747,10 @@
         "MaxAvailabilityXp3": 0
     },
     {
-        "Id": 419,
-        "SpecializationId": 8,
-        "UnitId": 211,
-        "MaxAvailabilityXp0": 4,
-        "MaxAvailabilityXp1": 0,
-        "MaxAvailabilityXp2": 0,
-        "MaxAvailabilityXp3": 0
-    },
-    {
         "Id": 420,
         "SpecializationId": 8,
         "UnitId": 232,
         "MaxAvailabilityXp0": 3,
-        "MaxAvailabilityXp1": 0,
-        "MaxAvailabilityXp2": 0,
-        "MaxAvailabilityXp3": 0
-    },
-    {
-        "Id": 421,
-        "SpecializationId": 8,
-        "UnitId": 210,
-        "MaxAvailabilityXp0": 6,
         "MaxAvailabilityXp1": 0,
         "MaxAvailabilityXp2": 0,
         "MaxAvailabilityXp3": 0
@@ -931,15 +904,6 @@
         "SpecializationId": 7,
         "UnitId": 281,
         "MaxAvailabilityXp0": 2,
-        "MaxAvailabilityXp1": 0,
-        "MaxAvailabilityXp2": 0,
-        "MaxAvailabilityXp3": 0
-    },
-    {
-        "Id": 502,
-        "SpecializationId": 8,
-        "UnitId": 117,
-        "MaxAvailabilityXp0": 4,
         "MaxAvailabilityXp1": 0,
         "MaxAvailabilityXp2": 0,
         "MaxAvailabilityXp3": 0
@@ -1485,27 +1449,9 @@
         "MaxAvailabilityXp3": 0
     },
     {
-        "Id": 694,
-        "SpecializationId": 15,
-        "UnitId": 215,
-        "MaxAvailabilityXp0": 4,
-        "MaxAvailabilityXp1": 0,
-        "MaxAvailabilityXp2": 0,
-        "MaxAvailabilityXp3": 0
-    },
-    {
         "Id": 697,
         "SpecializationId": 15,
         "UnitId": 128,
-        "MaxAvailabilityXp0": 4,
-        "MaxAvailabilityXp1": 0,
-        "MaxAvailabilityXp2": 0,
-        "MaxAvailabilityXp3": 0
-    },
-    {
-        "Id": 698,
-        "SpecializationId": 15,
-        "UnitId": 122,
         "MaxAvailabilityXp0": 4,
         "MaxAvailabilityXp1": 0,
         "MaxAvailabilityXp2": 0,
@@ -1530,24 +1476,6 @@
         "MaxAvailabilityXp3": 0
     },
     {
-        "Id": 701,
-        "SpecializationId": 15,
-        "UnitId": 201,
-        "MaxAvailabilityXp0": 4,
-        "MaxAvailabilityXp1": 0,
-        "MaxAvailabilityXp2": 0,
-        "MaxAvailabilityXp3": 0
-    },
-    {
-        "Id": 702,
-        "SpecializationId": 15,
-        "UnitId": 203,
-        "MaxAvailabilityXp0": 6,
-        "MaxAvailabilityXp1": 0,
-        "MaxAvailabilityXp2": 0,
-        "MaxAvailabilityXp3": 0
-    },
-    {
         "Id": 703,
         "SpecializationId": 15,
         "UnitId": 98,
@@ -1561,15 +1489,6 @@
         "SpecializationId": 15,
         "UnitId": 234,
         "MaxAvailabilityXp0": 6,
-        "MaxAvailabilityXp1": 0,
-        "MaxAvailabilityXp2": 0,
-        "MaxAvailabilityXp3": 0
-    },
-    {
-        "Id": 706,
-        "SpecializationId": 15,
-        "UnitId": 202,
-        "MaxAvailabilityXp0": 4,
         "MaxAvailabilityXp1": 0,
         "MaxAvailabilityXp2": 0,
         "MaxAvailabilityXp3": 0
@@ -1597,15 +1516,6 @@
         "SpecializationId": 7,
         "UnitId": 145,
         "MaxAvailabilityXp0": 4,
-        "MaxAvailabilityXp1": 0,
-        "MaxAvailabilityXp2": 0,
-        "MaxAvailabilityXp3": 0
-    },
-    {
-        "Id": 712,
-        "SpecializationId": 15,
-        "UnitId": 199,
-        "MaxAvailabilityXp0": 8,
         "MaxAvailabilityXp1": 0,
         "MaxAvailabilityXp2": 0,
         "MaxAvailabilityXp3": 0
@@ -1686,15 +1596,6 @@
         "Id": 725,
         "SpecializationId": 10,
         "UnitId": 221,
-        "MaxAvailabilityXp0": 8,
-        "MaxAvailabilityXp1": 0,
-        "MaxAvailabilityXp2": 0,
-        "MaxAvailabilityXp3": 0
-    },
-    {
-        "Id": 726,
-        "SpecializationId": 12,
-        "UnitId": 118,
         "MaxAvailabilityXp0": 8,
         "MaxAvailabilityXp1": 0,
         "MaxAvailabilityXp2": 0,
@@ -1786,15 +1687,6 @@
         "SpecializationId": 10,
         "UnitId": 419,
         "MaxAvailabilityXp0": 6,
-        "MaxAvailabilityXp1": 0,
-        "MaxAvailabilityXp2": 0,
-        "MaxAvailabilityXp3": 0
-    },
-    {
-        "Id": 756,
-        "SpecializationId": 8,
-        "UnitId": 213,
-        "MaxAvailabilityXp0": 4,
         "MaxAvailabilityXp1": 0,
         "MaxAvailabilityXp2": 0,
         "MaxAvailabilityXp3": 0
@@ -2223,15 +2115,6 @@
         "MaxAvailabilityXp3": 0
     },
     {
-        "Id": 817,
-        "SpecializationId": 15,
-        "UnitId": 401,
-        "MaxAvailabilityXp0": 6,
-        "MaxAvailabilityXp1": 0,
-        "MaxAvailabilityXp2": 0,
-        "MaxAvailabilityXp3": 0
-    },
-    {
         "Id": 818,
         "SpecializationId": 9,
         "UnitId": 403,
@@ -2358,24 +2241,6 @@
         "MaxAvailabilityXp3": 0
     },
     {
-        "Id": 832,
-        "SpecializationId": 8,
-        "UnitId": 156,
-        "MaxAvailabilityXp0": 2,
-        "MaxAvailabilityXp1": 0,
-        "MaxAvailabilityXp2": 0,
-        "MaxAvailabilityXp3": 0
-    },
-    {
-        "Id": 833,
-        "SpecializationId": 15,
-        "UnitId": 231,
-        "MaxAvailabilityXp0": 3,
-        "MaxAvailabilityXp1": 0,
-        "MaxAvailabilityXp2": 0,
-        "MaxAvailabilityXp3": 0
-    },
-    {
         "Id": 835,
         "SpecializationId": 9,
         "UnitId": 466,
@@ -2469,6 +2334,375 @@
         "Id": 846,
         "SpecializationId": 5,
         "UnitId": 270,
+        "MaxAvailabilityXp0": 2,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 848,
+        "SpecializationId": 15,
+        "UnitId": 117,
+        "MaxAvailabilityXp0": 4,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 849,
+        "SpecializationId": 15,
+        "UnitId": 213,
+        "MaxAvailabilityXp0": 4,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 854,
+        "SpecializationId": 8,
+        "UnitId": 401,
+        "MaxAvailabilityXp0": 4,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 858,
+        "SpecializationId": 8,
+        "UnitId": 209,
+        "MaxAvailabilityXp0": 4,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 859,
+        "SpecializationId": 15,
+        "UnitId": 215,
+        "MaxAvailabilityXp0": 4,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 860,
+        "SpecializationId": 8,
+        "UnitId": 210,
+        "MaxAvailabilityXp0": 6,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 861,
+        "SpecializationId": 8,
+        "UnitId": 211,
+        "MaxAvailabilityXp0": 4,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 862,
+        "SpecializationId": 15,
+        "UnitId": 203,
+        "MaxAvailabilityXp0": 6,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 863,
+        "SpecializationId": 15,
+        "UnitId": 202,
+        "MaxAvailabilityXp0": 4,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 864,
+        "SpecializationId": 15,
+        "UnitId": 201,
+        "MaxAvailabilityXp0": 6,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 865,
+        "SpecializationId": 8,
+        "UnitId": 255,
+        "MaxAvailabilityXp0": 2,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 866,
+        "SpecializationId": 15,
+        "UnitId": 122,
+        "MaxAvailabilityXp0": 4,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 867,
+        "SpecializationId": 15,
+        "UnitId": 199,
+        "MaxAvailabilityXp0": 8,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 868,
+        "SpecializationId": 15,
+        "UnitId": 156,
+        "MaxAvailabilityXp0": 2,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 869,
+        "SpecializationId": 8,
+        "UnitId": 231,
+        "MaxAvailabilityXp0": 3,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 875,
+        "SpecializationId": 16,
+        "UnitId": 503,
+        "MaxAvailabilityXp0": 2,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 876,
+        "SpecializationId": 16,
+        "UnitId": 504,
+        "MaxAvailabilityXp0": 2,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 883,
+        "SpecializationId": 16,
+        "UnitId": 508,
+        "MaxAvailabilityXp0": 2,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 884,
+        "SpecializationId": 16,
+        "UnitId": 509,
+        "MaxAvailabilityXp0": 6,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 885,
+        "SpecializationId": 16,
+        "UnitId": 510,
+        "MaxAvailabilityXp0": 4,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 886,
+        "SpecializationId": 16,
+        "UnitId": 511,
+        "MaxAvailabilityXp0": 3,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 887,
+        "SpecializationId": 16,
+        "UnitId": 512,
+        "MaxAvailabilityXp0": 2,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 888,
+        "SpecializationId": 16,
+        "UnitId": 513,
+        "MaxAvailabilityXp0": 8,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 889,
+        "SpecializationId": 16,
+        "UnitId": 515,
+        "MaxAvailabilityXp0": 8,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 890,
+        "SpecializationId": 16,
+        "UnitId": 517,
+        "MaxAvailabilityXp0": 2,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 891,
+        "SpecializationId": 16,
+        "UnitId": 519,
+        "MaxAvailabilityXp0": 4,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 892,
+        "SpecializationId": 16,
+        "UnitId": 522,
+        "MaxAvailabilityXp0": 4,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 893,
+        "SpecializationId": 16,
+        "UnitId": 525,
+        "MaxAvailabilityXp0": 4,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 894,
+        "SpecializationId": 16,
+        "UnitId": 528,
+        "MaxAvailabilityXp0": 4,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 895,
+        "SpecializationId": 16,
+        "UnitId": 533,
+        "MaxAvailabilityXp0": 4,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 896,
+        "SpecializationId": 16,
+        "UnitId": 536,
+        "MaxAvailabilityXp0": 2,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 897,
+        "SpecializationId": 16,
+        "UnitId": 537,
+        "MaxAvailabilityXp0": 4,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 898,
+        "SpecializationId": 16,
+        "UnitId": 538,
+        "MaxAvailabilityXp0": 6,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 899,
+        "SpecializationId": 16,
+        "UnitId": 540,
+        "MaxAvailabilityXp0": 2,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 900,
+        "SpecializationId": 16,
+        "UnitId": 541,
+        "MaxAvailabilityXp0": 6,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 901,
+        "SpecializationId": 16,
+        "UnitId": 542,
+        "MaxAvailabilityXp0": 6,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 902,
+        "SpecializationId": 16,
+        "UnitId": 539,
+        "MaxAvailabilityXp0": 2,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 903,
+        "SpecializationId": 16,
+        "UnitId": 532,
+        "MaxAvailabilityXp0": 2,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 905,
+        "SpecializationId": 16,
+        "UnitId": 543,
+        "MaxAvailabilityXp0": 6,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 906,
+        "SpecializationId": 16,
+        "UnitId": 531,
+        "MaxAvailabilityXp0": 2,
+        "MaxAvailabilityXp1": 0,
+        "MaxAvailabilityXp2": 0,
+        "MaxAvailabilityXp3": 0
+    },
+    {
+        "Id": 907,
+        "SpecializationId": 16,
+        "UnitId": 545,
         "MaxAvailabilityXp0": 2,
         "MaxAvailabilityXp1": 0,
         "MaxAvailabilityXp2": 0,

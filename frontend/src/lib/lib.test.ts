@@ -148,34 +148,56 @@ describe('iconPaths', () => {
   });
 
   it('toCountryIconPath appends flag directory', () => {
-    expect(toCountryIconPath('US')).toBe('/images/flags/US.png');
+    expect(toCountryIconPath('US')).toBe('/images/nations%20&%20specs/flags/US.png');
   });
 
   it('toSpecializationIconPath builds spec path', () => {
-    // Note: encodeIconPath only encodes the filename, not directory segments
-    expect(toSpecializationIconPath('mechanized')).toBe('/images/icon specialisation/mechanized.png');
+    expect(toSpecializationIconPath('mechanized')).toBe('/images/nations%20&%20specs/specs/mechanized.png');
   });
 
   it('toWeaponIconPath uppercases', () => {
-    expect(toWeaponIconPath('ak74')).toBe('/images/weapons/AK74.png');
+    expect(toWeaponIconPath('ak74')).toBe('/images/weapons/icons/AK74.png');
   });
 
   it('toAmmunitionIconPath uppercases', () => {
-    expect(toAmmunitionIconPath('he_frag')).toBe('/images/ammunition/HE_FRAG.png');
+    expect(toAmmunitionIconPath('he_frag')).toBe('/images/ammunition/icons/HE_FRAG.png');
   });
 
   it('toPortraitIconPath splits backslash paths', () => {
     const result = toPortraitIconPath('usa\\tanks\\M1_ABRAMS');
-    expect(result).toBe('/images/unitportrait/usa/tanks/M1_ABRAMS_BASIC.png');
+    expect(result).toBe('/images/unitportraits/usa/tanks/M1_ABRAMS_BASIC.png');
   });
 
-  it('toOptionPicturePath routes weapons correctly', () => {
+  it('toOptionPicturePath routes legacy prefixed weapons correctly', () => {
     const result = toOptionPicturePath('Weapons\\M2_BROWNING');
-    expect(result).toBe('/images/weapons/M2_BROWNING.png');
+    expect(result).toBe('/images/weapons/icons/M2_BROWNING.png');
   });
 
-  it('toOptionPicturePath routes modifications to outline', () => {
+  it('toOptionPicturePath routes legacy prefixed modifications to weapons dir', () => {
     const result = toOptionPicturePath('Modifications\\ARMOR1');
-    expect(result).toBe('/images/modifications/outline/ARMOR1.png');
+    expect(result).toBe('/images/weapons/icons/ARMOR1.png');
+  });
+
+  it('toOptionPicturePath routes bare weapon name to weapons dir', () => {
+    expect(toOptionPicturePath('INF_M4_MOD2')).toBe('/images/weapons/icons/INF_M4_MOD2.png');
+    expect(toOptionPicturePath('MK44_BUSHMASTER2')).toBe('/images/weapons/icons/MK44_BUSHMASTER2.png');
+    expect(toOptionPicturePath('Kord')).toBe('/images/weapons/icons/KORD.png');
+  });
+
+  it('toOptionPicturePath routes bare mod name to weapons dir (unified)', () => {
+    expect(toOptionPicturePath('ARMOR1')).toBe('/images/weapons/icons/ARMOR1.png');
+    expect(toOptionPicturePath('APS')).toBe('/images/weapons/icons/APS.png');
+    expect(toOptionPicturePath('OPTIC2')).toBe('/images/weapons/icons/OPTIC2.png');
+    expect(toOptionPicturePath('FUEL1')).toBe('/images/weapons/icons/FUEL1.png');
+  });
+
+  it('toOptionPicturePath routes DLC2 mod icons to weapons dir (unified)', () => {
+    expect(toOptionPicturePath('MOD_JALAVAE')).toBe('/images/weapons/icons/MOD_JALAVAE.png');
+    expect(toOptionPicturePath('AIM120ER_X6')).toBe('/images/weapons/icons/AIM120ER_X6.png');
+  });
+
+  it('toOptionPicturePath normalises -OptIcon suffix', () => {
+    expect(toOptionPicturePath('CATFAE-OptIcon')).toBe('/images/weapons/icons/CATFAE-OPTICON.png');
+    expect(toOptionPicturePath('PAC2_X2-OptIcon')).toBe('/images/weapons/icons/PAC2_X2-OPTICON.png');
   });
 });

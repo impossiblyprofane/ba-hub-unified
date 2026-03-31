@@ -5,6 +5,7 @@ import { GAME_LOCALES, getGameLocaleValueOrKey, useI18n, t } from '~/lib/i18n';
 import { toCountryIconPath, toSpecializationIconPath, toUnitIconPath } from '~/lib/iconPaths';
 import { ArsenalUnitCard } from '~/components/arsenal/ArsenalUnitCard';
 import { TooltipOverlay } from '~/components/ui/TooltipOverlay';
+import { SimpleTooltip } from '~/components/ui/SimpleTooltip';
 import type { ArsenalCard, ArsenalPageData } from '~/lib/graphql-types';
 import { ARSENAL_PAGE_QUERY } from '~/lib/queries/arsenal';
 
@@ -238,15 +239,15 @@ export default component$(() => {
       if (sortBy.value === 'category') {
         const catDiff = a.unit.CategoryType - b.unit.CategoryType;
         if (catDiff !== 0) return catDiff;
-        return a.unit.Name.localeCompare(b.unit.Name);
+        return a.unit.HUDName.localeCompare(b.unit.HUDName);
       }
       if (sortBy.value === 'specialization') {
         const aSpec = a.specializationIds[0] ?? Infinity;
         const bSpec = b.specializationIds[0] ?? Infinity;
         if (aSpec !== bSpec) return aSpec - bSpec;
-        return a.unit.Name.localeCompare(b.unit.Name);
+        return a.unit.HUDName.localeCompare(b.unit.HUDName);
       }
-      return a.unit.Name.localeCompare(b.unit.Name);
+      return a.unit.HUDName.localeCompare(b.unit.HUDName);
     });
 
     if (sortDir.value === 'desc') {
@@ -407,18 +408,19 @@ export default component$(() => {
               {categorySummary.value}
             </button>
             {(selectedCountries.value.length > 0 || selectedCategories.value.length > 0 || selectedSpecializations.value.length > 0) && (
-              <button
-                class="px-2 py-2 text-xs font-mono uppercase text-[var(--text-dim)] hover:text-[var(--accent)] transition-colors"
-                onClick$={() => {
-                  search.value = '';
-                  selectedCountries.value = [];
-                  selectedCategories.value = [];
-                  selectedSpecializations.value = [];
-                }}
-                title="Clear all filters"
-              >
-                ✕
-              </button>
+              <SimpleTooltip text="Clear all filters">
+                <button
+                  class="px-2 py-2 text-xs font-mono uppercase text-[var(--text-dim)] hover:text-[var(--accent)] transition-colors"
+                  onClick$={() => {
+                    search.value = '';
+                    selectedCountries.value = [];
+                    selectedCategories.value = [];
+                    selectedSpecializations.value = [];
+                  }}
+                >
+                  ✕
+                </button>
+              </SimpleTooltip>
             )}
           </div>
 
@@ -475,15 +477,16 @@ export default component$(() => {
                 {t(i18n, 'arsenal.sort.spec')}
               </button>
             </div>
-            <button
-              class="px-2 py-2 text-xs font-mono uppercase border border-[var(--border)] text-[var(--text-dim)] hover:text-[var(--text)] transition-colors"
-              onClick$={() => {
-                sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc';
-              }}
-              title={sortDir.value === 'asc' ? t(i18n, 'arsenal.sort.ascending') : t(i18n, 'arsenal.sort.descending')}
-            >
-              {sortDir.value === 'asc' ? '↑' : '↓'}
-            </button>
+            <SimpleTooltip text={sortDir.value === 'asc' ? t(i18n, 'arsenal.sort.ascending') : t(i18n, 'arsenal.sort.descending')}>
+              <button
+                class="px-2 py-2 text-xs font-mono uppercase border border-[var(--border)] text-[var(--text-dim)] hover:text-[var(--text)] transition-colors"
+                onClick$={() => {
+                  sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc';
+                }}
+              >
+                {sortDir.value === 'asc' ? '↑' : '↓'}
+              </button>
+            </SimpleTooltip>
           </div>
         </div>
       </div>
@@ -639,7 +642,7 @@ export default component$(() => {
                       key={unit.Id}
                       href={`/arsenal/${unit.Id}`}
                       dataCardId={unit.Id}
-                      unitName={unit.Name}
+                      unitName={unit.HUDName}
                       unitIconUrl={unitIconUrl}
                       categoryCode={CATEGORY_CODE.get(unit.CategoryType) ?? 'UNK'}
                       cost={cost}
@@ -739,7 +742,7 @@ export default component$(() => {
                 key={unit.Id}
                 href={`/arsenal/${unit.Id}`}
                 dataCardId={unit.Id}
-                unitName={unit.Name}
+                unitName={unit.HUDName}
                 unitIconUrl={unitIconUrl}
                 categoryCode={CATEGORY_CODE.get(unit.CategoryType) ?? 'UNK'}
                 cost={cost}

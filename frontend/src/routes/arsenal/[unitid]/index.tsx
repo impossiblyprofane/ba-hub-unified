@@ -33,7 +33,6 @@ async function fetchUnitDetail(id: number, optionIds: number[]): Promise<UnitDet
 
 export default component$(() => {
   const loc = useLocation();
-  const unitId = parseInt(loc.params.unitid, 10);
   const i18n = useI18n();
 
   // Selected option IDs — empty = use server defaults
@@ -41,38 +40,61 @@ export default component$(() => {
   const isRefetching = useSignal(false);
   const cachedData = useSignal<UnitDetailData | null>(null);
 
-  // Reactive data resource
+  // Reactive data resource — tracks route param + selected options.
+  // Tracking loc.params.unitid ensures re-fetch on same-route navigation
+  // (e.g. clicking a transport link from one unit to another).
   const unitResource = useResource$<UnitDetailData>(async ({ track, cleanup }) => {
+    const unitIdParam = track(() => loc.params.unitid);
     const optIds = track(() => selectedOptionIds.value);
+
+    const currentUnitId = parseInt(unitIdParam, 10);
     const ctrl = new AbortController();
     cleanup(() => ctrl.abort());
 
     isRefetching.value = optIds.length > 0;
     try {
-      const data = await fetchUnitDetail(unitId, optIds);
+      const data = await fetchUnitDetail(currentUnitId, optIds);
       return data;
     } finally {
       isRefetching.value = false;
     }
   });
 
+  // On mount: read URL params and apply.
+  // On subsequent same-route navigations: reset stale modification selections.
+  const initialised = useSignal(false);
+  // eslint-disable-next-line qwik/no-use-visible-task
+  useVisibleTask$(({ track }) => {
+    track(() => loc.params.unitid);
+    if (!initialised.value) {
+      initialised.value = true;
+      const url = new URL(window.location.href);
+      const m = url.searchParams.get('m');
+      if (m) {
+        const ids = m.split('-').map(Number).filter(n => !isNaN(n) && n > 0);
+        if (ids.length) selectedOptionIds.value = ids;
+      }
+    } else {
+      // Navigated to a different unit — clear old mod selections + cached data
+      selectedOptionIds.value = [];
+      cachedData.value = null;
+      // Also strip leftover ?m= param from the URL bar
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('m')) {
+        url.searchParams.delete('m');
+        window.history.replaceState({}, '', url.toString());
+      }
+    }
+  });
+
   // URL sync: update search params when options change (for shareability)
+  // eslint-disable-next-line qwik/no-use-visible-task
   useVisibleTask$(({ track }) => {
     const opts = track(() => selectedOptionIds.value);
     if (opts.length > 0) {
       const url = new URL(window.location.href);
       url.searchParams.set('m', opts.join('-'));
       window.history.replaceState({}, '', url.toString());
-    }
-  });
-
-  // On mount: read URL params and apply
-  useVisibleTask$(() => {
-    const url = new URL(window.location.href);
-    const m = url.searchParams.get('m');
-    if (m) {
-      const ids = m.split('-').map(Number).filter(n => !isNaN(n) && n > 0);
-      if (ids.length) selectedOptionIds.value = ids;
     }
   });
 
@@ -101,7 +123,7 @@ export default component$(() => {
         </Link>
         <div class="flex items-center gap-2">
           <Link
-            href={`/arsenal/compare?a=${unitId}`}
+            href={`/arsenal/compare?a=${loc.params.unitid}`}
             class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono uppercase tracking-widest text-[var(--text-dim)] hover:text-[var(--accent)] border border-[rgba(51,51,51,0.15)] hover:border-[var(--accent)]/40 transition-colors"
           >
             <IconCompare size={14} />

@@ -1,10 +1,19 @@
 import type { MercuriusContext } from 'mercurius';
+import { GraphQLScalarType, Kind } from 'graphql';
 import type { StaticData } from '../data/loader.js';
 import type { StaticIndexes } from '../data/indexes.js';
+import type { DatabaseClient } from '../services/databaseClient.js';
+import type {
+  BrowseDecksFilter,
+  PublishDeckInput,
+  UpdatePublishedDeckInput,
+  DeletePublishedDeckInput,
+} from '@ba-hub/shared';
 
 type GraphQLContext = MercuriusContext & {
   data: StaticData;
   indexes: StaticIndexes;
+  dbClient: DatabaseClient;
 };
 
 type UnitWeaponSlot = {
@@ -20,6 +29,8 @@ type ArsenalDefaultModificationOption = {
   optRun: string | null;
   optCwun: string | null;
   type: number | null;
+  optThumbnailOverride: string | null;
+  optPortraitOverride: string | null;
 };
 
 type ArsenalUnitCard = {
@@ -161,6 +172,8 @@ const buildArsenalUnitCard = (unitId: number, ctx: GraphQLContext): ArsenalUnitC
       optRun: defaultOption.ReplaceUnitName ?? null,
       optCwun: defaultOption.ConcatenateWithUnitName ?? null,
       type: mod.Type ?? null,
+      optThumbnailOverride: defaultOption.ThumbnailOverride ?? null,
+      optPortraitOverride: defaultOption.PortraitOverride ?? null,
     }];
   });
 
@@ -344,7 +357,7 @@ const buildUnitDetailResult = (
 
   // 2. Unit replacement, display name, cost
   let resolvedUnit = baseUnit;
-  let displayName = baseUnit.Name ?? '';
+  let displayName = baseUnit.HUDName ?? '';
   let totalCost = baseUnit.Cost ?? 0;
 
   for (const opt of activeOptions) {
@@ -354,7 +367,7 @@ const buildUnitDetailResult = (
         resolvedUnit = replacement;
         // If no explicit name override, inherit the replacement unit's name
         if (!opt.ReplaceUnitName && !opt.ConcatenateWithUnitName) {
-          displayName = replacement.Name ?? displayName;
+          displayName = replacement.HUDName ?? displayName;
         }
       }
     }
@@ -503,8 +516,35 @@ const buildUnitDetailResult = (
   };
 };
 
+// ── JSON scalar for deck data ──────────────────────────────────
+const JSONScalar: GraphQLScalarType<unknown, unknown> = new GraphQLScalarType({
+  name: 'JSON',
+  description: 'Arbitrary JSON value',
+  serialize: (value) => value,
+  parseValue: (value) => value,
+  parseLiteral: (ast): unknown => {
+    if (ast.kind === Kind.STRING) return JSON.parse(ast.value);
+    if (ast.kind === Kind.INT) return parseInt(ast.value, 10);
+    if (ast.kind === Kind.FLOAT) return parseFloat(ast.value);
+    if (ast.kind === Kind.BOOLEAN) return ast.value;
+    if (ast.kind === Kind.NULL) return null;
+    if (ast.kind === Kind.OBJECT) {
+      const obj: Record<string, unknown> = {};
+      for (const field of ast.fields) {
+        obj[field.name.value] = JSONScalar.parseLiteral(field.value, {});
+      }
+      return obj;
+    }
+    if (ast.kind === Kind.LIST) {
+      return ast.values.map((v): unknown => JSONScalar.parseLiteral(v, {}));
+    }
+    return null;
+  },
+});
+
 // GraphQL resolvers
 export const resolvers = {
+  JSON: JSONScalar,
   Query: {
     units: (_: unknown, args: { filter?: Record<string, unknown>; offset?: number; limit?: number }, ctx: any) => {
       const filter = args.filter ?? {};
@@ -603,7 +643,8 @@ export const resolvers = {
       }
       return data.options;
     },
-    specializations: (_: unknown, __: unknown, ctx: any) => (ctx as GraphQLContext).data.specializations,
+    specializations: (_: unknown, __: unknown, ctx: any) =>
+      (ctx as GraphQLContext).data.specializations.filter(s => s.ShowInHangar),
     specialization: (_: unknown, args: { id: number }, ctx: any) =>
       (ctx as GraphQLContext).indexes.specializationsById.get(args.id) ?? null,
     arsenalFilters: (_: unknown, __: unknown, ctx: any) => {
@@ -618,9 +659,128 @@ export const resolvers = {
     },
     unitDetail: (_: unknown, args: { id: number; optionIds?: number[] }, ctx: any) =>
       buildUnitDetailResult(args.id, args.optionIds, ctx as GraphQLContext),
+    builderData: (_: unknown, args: { countryId: number; spec1Id: number; spec2Id: number }, ctx: any) => {
+      const typedCtx = ctx as GraphQLContext;
+      const { data } = typedCtx;
+
+      // Countries — exclude hidden
+      const countries = data.countries.filter(c => !c.Hidden);
+
+      // Only specs flagged for the deck builder, filtered to visible countries.
+      // Return all visible countries so the wizard can switch without re-fetching.
+      const countryIds = new Set(countries.map(c => c.Id));
+      const specializations = data.specializations.filter(
+        s => s.ShowInHangar && countryIds.has(s.CountryId),
+      );
+
+      // Availabilities for both selected specs
+      const specIds = new Set([args.spec1Id, args.spec2Id]);
+      const availabilities = data.specializationAvailabilities
+        .filter(sa => specIds.has(sa.SpecializationId))
+        .map(sa => ({
+          specAvailabilityId: sa.Id,
+          specializationId: sa.SpecializationId,
+          unitId: sa.UnitId,
+          maxAvailabilityXp0: sa.MaxAvailabilityXp0,
+          maxAvailabilityXp1: sa.MaxAvailabilityXp1,
+          maxAvailabilityXp2: sa.MaxAvailabilityXp2,
+          maxAvailabilityXp3: sa.MaxAvailabilityXp3,
+        }));
+
+      // Arsenal cards — reuse the existing builder
+      const arsenalUnitsCards = data.units
+        .map(unit => buildArsenalUnitCard(unit.Id, typedCtx))
+        .filter((card): card is ArsenalUnitCard => Boolean(card));
+
+      return { countries, specializations, arsenalUnitsCards, availabilities };
+    },
+    optionsByIds: (_: unknown, args: { ids: number[] }, ctx: any) => {
+      const { indexes } = ctx as GraphQLContext;
+      return args.ids
+        .map(id => indexes.optionsById.get(id))
+        .filter((opt): opt is NonNullable<typeof opt> => Boolean(opt));
+    },
+
+    // ── Deck publishing queries ─────────────────────────────
+    publishedDeck: async (_: unknown, args: { id: string }, ctx: any) => {
+      const { dbClient } = ctx as GraphQLContext;
+      try {
+        return await dbClient.getDeck(args.id);
+      } catch {
+        return null;
+      }
+    },
+
+    browseDecks: async (_: unknown, args: { filter?: BrowseDecksFilter }, ctx: any) => {
+      const { dbClient } = ctx as GraphQLContext;
+      return dbClient.browseDecks(args.filter ?? {});
+    },
+
+    publishedDecksByAuthor: async (_: unknown, args: { authorId: string }, ctx: any) => {
+      const { dbClient } = ctx as GraphQLContext;
+      return dbClient.getDecksByAuthor(args.authorId);
+    },
+
+    userProfile: async (_: unknown, args: { userId: string }, ctx: any) => {
+      const { dbClient } = ctx as GraphQLContext;
+      try {
+        return await dbClient.getUserProfile(args.userId);
+      } catch {
+        return null;
+      }
+    },
+
+    challenge: async (_: unknown, _args: unknown, ctx: any) => {
+      const { dbClient } = ctx as GraphQLContext;
+      return dbClient.getChallenge();
+    },
+
+    deckLikeStatus: async (_: unknown, args: { deckId: string; userId: string }, ctx: any) => {
+      const { dbClient } = ctx as GraphQLContext;
+      return dbClient.checkLikeStatus(args.deckId, args.userId);
+    },
   },
   Mutation: {
     ping: () => 'pong',
+
+    registerUser: async (_: unknown, args: { tentativeId: string }, ctx: any) => {
+      const { dbClient } = ctx as GraphQLContext;
+      return dbClient.registerUser({ tentativeId: args.tentativeId });
+    },
+
+    publishDeck: async (_: unknown, args: { input: PublishDeckInput }, ctx: any) => {
+      const { dbClient } = ctx as GraphQLContext;
+      return dbClient.publishDeck(args.input);
+    },
+
+    updatePublishedDeck: async (
+      _: unknown,
+      args: { deckId: string; input: UpdatePublishedDeckInput & { authorId: string } },
+      ctx: any,
+    ) => {
+      const { dbClient } = ctx as GraphQLContext;
+      return dbClient.updateDeck(args.deckId, args.input);
+    },
+
+    deletePublishedDeck: async (
+      _: unknown,
+      args: { deckId: string; input: DeletePublishedDeckInput },
+      ctx: any,
+    ) => {
+      const { dbClient } = ctx as GraphQLContext;
+      await dbClient.deleteDeck(args.deckId, args.input);
+      return true;
+    },
+
+    toggleDeckLike: async (_: unknown, args: { deckId: string; userId: string }, ctx: any) => {
+      const { dbClient } = ctx as GraphQLContext;
+      return dbClient.toggleLike(args.deckId, args.userId);
+    },
+
+    recordDeckView: async (_: unknown, args: { deckId: string; viewerKey?: string }, ctx: any) => {
+      const { dbClient } = ctx as GraphQLContext;
+      return dbClient.recordView(args.deckId, args.viewerKey);
+    },
   },
   Subscription: {
     messageAdded: {

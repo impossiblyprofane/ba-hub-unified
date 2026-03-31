@@ -90,7 +90,7 @@ function buildPortraitUrl(unitData: EmbedUnit): string | null {
   const split = raw.split('\\');
   const prefix = split.slice(0, -1).join('/').toLowerCase();
   const fileName = split[split.length - 1].toUpperCase();
-  const encoded = `/images/unitportrait/${prefix}/${fileName}_HOVER.png`.split(' ').join('%20');
+  const encoded = `/images/unitportraits/${prefix}/${fileName}_HOVER.png`.split(' ').join('%20');
   return encoded;
 }
 
@@ -118,7 +118,7 @@ function buildUnitDescription(unit: EmbedUnit): string {
   // Weapon names (unique, max 4)
   const weaponNames: string[] = [];
   for (const w of unit.weapons) {
-    const name = w.weapon.HUDName || w.weapon.Name;
+    const name = w.weapon.HUDName;
     if (name && !weaponNames.includes(name)) weaponNames.push(name);
     if (weaponNames.length >= 4) break;
   }
@@ -160,8 +160,22 @@ function getStaticRouteMeta(route: string): PageMeta | null {
 
   if (route === '/decks') {
     return {
+      title: 'Decks - BA Hub',
+      description: 'Build your own deployment decks or browse community strategies for Broken Arrow.',
+    };
+  }
+
+  if (route === '/decks/builder') {
+    return {
       title: 'Deck Builder - BA Hub',
-      description: 'Build and share competitive deck compositions for Broken Arrow.',
+      description: 'Create, import, and export custom deployment decks with full modification support.',
+    };
+  }
+
+  if (route === '/decks/browse') {
+    return {
+      title: 'Deck Arsenal - BA Hub',
+      description: 'Browse community-created decks and popular competitive strategies for Broken Arrow.',
     };
   }
 

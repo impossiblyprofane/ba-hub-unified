@@ -2,6 +2,7 @@ import { component$ } from '@builder.io/qwik';
 import { GameIcon } from '~/components/GameIcon';
 import { UtilIconPaths } from '~/lib/iconPaths';
 import { useI18n, t } from '~/lib/i18n';
+import { SimpleTooltip } from '~/components/ui/SimpleTooltip';
 import type { UnitDetailMobility, UnitDetailFlyPreset } from '~/lib/graphql-types';
 
 type Props = {
@@ -82,29 +83,33 @@ export const UnitMobilityPanel = component$<Props>(({ mobility, flyPreset, unitT
       {compact ? (
         <div class={`flex flex-wrap gap-2 ${fill ? 'flex-1' : ''} content-start`}>
           {stats.map(s => (
-            <div key={s.label} class="flex items-center gap-2 px-2 py-1 bg-[rgba(26,26,26,0.4)]" title={s.label}>
-              <GameIcon src={s.icon} size={16} variant="white" alt={s.label} />
-              {!s.iconOnly && (
-                <span class="text-xs font-semibold text-[var(--text)]">
-                  {s.value}
-                  {s.unit && <span class="text-[10px] font-mono text-[var(--text-dim)] ml-0.5">{s.unit}</span>}
-                </span>
-              )}
-            </div>
+            <SimpleTooltip key={s.label} text={s.label}>
+              <div class="flex items-center gap-2 px-2 py-1 bg-[rgba(26,26,26,0.4)]">
+                <GameIcon src={s.icon} size={16} variant="white" alt={s.label} />
+                {!s.iconOnly && (
+                  <span class="text-xs font-semibold text-[var(--text)]">
+                    {s.value}
+                    {s.unit && <span class="text-[10px] font-mono text-[var(--text-dim)] ml-0.5">{s.unit}</span>}
+                  </span>
+                )}
+              </div>
+            </SimpleTooltip>
           ))}
         </div>
       ) : (
         <div class={`grid ${gridClass} gap-1.5`}>
           {stats.map(s => (
-            <div key={s.label} class="flex flex-col items-center gap-1.5 p-3 bg-[rgba(26,26,26,0.4)]" title={s.label}>
-              <GameIcon src={s.icon} size={s.iconOnly ? 28 : 26} variant="white" alt={s.label} />
-              {!s.iconOnly && (
-                <span class="text-base font-semibold text-[var(--text)]">
-                  {s.value}
-                  {s.unit && <span class="text-xs font-mono text-[var(--text-dim)] ml-0.5">{s.unit}</span>}
-                </span>
-              )}
-            </div>
+            <SimpleTooltip key={s.label} text={s.label}>
+              <div class="flex flex-col items-center gap-1.5 p-3 bg-[rgba(26,26,26,0.4)]">
+                <GameIcon src={s.icon} size={s.iconOnly ? 28 : 26} variant="white" alt={s.label} />
+                {!s.iconOnly && (
+                  <span class="text-base font-semibold text-[var(--text)]">
+                    {s.value}
+                    {s.unit && <span class="text-xs font-mono text-[var(--text-dim)] ml-0.5">{s.unit}</span>}
+                  </span>
+                )}
+              </div>
+            </SimpleTooltip>
           ))}
         </div>
       )}

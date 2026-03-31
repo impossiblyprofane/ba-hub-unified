@@ -3,6 +3,7 @@ import { Link } from '@builder.io/qwik-city';
 import { GameIcon } from '~/components/GameIcon';
 import { toUnitIconPath, toSpecializationIconPath } from '~/lib/iconPaths';
 import { useI18n, t, getGameLocaleValueOrKey, GAME_LOCALES } from '~/lib/i18n';
+import { SimpleTooltip } from '~/components/ui/SimpleTooltip';
 import type { UnitDetailAvailability } from '~/lib/graphql-types';
 
 type Props = { availability: UnitDetailAvailability[]; compact?: boolean; fill?: boolean };
@@ -34,9 +35,11 @@ export const UnitAvailabilityPanel = component$<Props>(({ availability, compact,
                 <span class={`${compact ? 'text-[11px]' : 'text-xs'} font-semibold text-[var(--text)] truncate flex-1`}>
                   {specName}
                 </span>
-                <span class={`${compact ? 'text-xs' : 'text-sm'} font-bold text-[var(--text)]`} title="Availability">
-                  x{avail.maxAvailability ?? 0}
-                </span>
+                <SimpleTooltip text="Availability">
+                  <span class={`${compact ? 'text-xs' : 'text-sm'} font-bold text-[var(--text)]`}>
+                    x{avail.maxAvailability ?? 0}
+                  </span>
+                </SimpleTooltip>
               </div>
 
               {/* Available transports */}
@@ -58,10 +61,10 @@ export const UnitAvailabilityPanel = component$<Props>(({ availability, compact,
                             src={toUnitIconPath(transport.ThumbnailFileName)}
                             width={14} height={14}
                             class={`${compact ? 'w-3 h-3' : 'w-3.5 h-3.5'} object-contain`}
-                            alt={transport.Name}
+                            alt={transport.HUDName}
                           />
                         )}
-                        {transport.Name}
+                        {transport.HUDName}
                       </Link>
                     ))}
                   </div>

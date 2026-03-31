@@ -4,6 +4,7 @@ import { UtilIconPaths, toWeaponIconPath, toAmmunitionIconPath } from '~/lib/ico
 import { seekerTypeToString, seekerTypeDescription } from '~/lib/seeker-types';
 import { trajectoryTypeToString, trajectoryTypeDescription } from '~/lib/trajectory-types';
 import { useI18n, t } from '~/lib/i18n';
+import { SimpleTooltip } from '~/components/ui/SimpleTooltip';
 import type { UnitDetailWeapon, UnitDetailAmmo, UnitDetailAbility } from '~/lib/graphql-types';
 
 type Props = { weapons: UnitDetailWeapon[]; unitId: number; abilities?: UnitDetailAbility[] };
@@ -190,19 +191,20 @@ const WeaponSection = component$<WeaponSectionProps>(({ entry, count, isMerged, 
     <div class="bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.7)] border border-[rgba(51,51,51,0.15)] border-l-[3px] border-l-[var(--accent)]">
       {/* Weapon header bar */}
       <div class="flex items-center gap-3 px-4 py-3 border-b border-[rgba(51,51,51,0.3)]">
-        {weaponIcon && <GameIcon src={weaponIcon} size={24} variant="white" alt={weapon.Name} />}
+        {weaponIcon && <GameIcon src={weaponIcon} size={24} variant="white" alt={weapon.HUDName} />}
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2">
             <p class="text-base font-semibold text-[var(--text)] truncate">
-              {weapon.HUDName || weapon.Name}
+              {weapon.HUDName}
             </p>
             {count > 1 && (
-              <span
-                class="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-[var(--accent)]/20 text-[var(--accent)] rounded"
-                title={isMerged ? `${count} combined from multiple mounts` : `${count} instances`}
-              >
-                {count}×
-              </span>
+              <SimpleTooltip text={isMerged ? `${count} combined from multiple mounts` : `${count} instances`}>
+                <span
+                  class="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-[var(--accent)]/20 text-[var(--accent)] rounded"
+                >
+                  {count}×
+                </span>
+              </SimpleTooltip>
             )}
           </div>
           {turret && (
@@ -351,17 +353,32 @@ const AmmoTableRow = component$<AmmoTableRowProps>(({ ammo, quantity, showLowAlt
         class={`border-b border-[rgba(51,51,51,0.3)] last:border-b-0 transition-colors cursor-pointer ${expanded.value ? 'bg-[var(--bg-hover)]' : 'hover:bg-[var(--bg-hover)]'}`}
         onClick$={() => (expanded.value = !expanded.value)}
       >
-        {/* Name + icon with quantity prefix */}
+        {/* Name + icon with quantity prefix + hover tooltip */}
         <td class="px-4 py-2.5 text-left overflow-hidden">
-          <div class="flex items-center gap-2 min-w-0 pr-2">
-            <span class="text-[var(--text-dim)] text-xs shrink-0 w-5 text-right whitespace-nowrap">{quantity}×</span>
-            {ammoIcon && <div class="shrink-0 flex items-center justify-center w-[18px]"><GameIcon src={ammoIcon} size={18} variant="white" alt={ammo.Name} /></div>}
-            <span class="text-[var(--text)] truncate w-40 shrink-0">{ammo.HUDName || ammo.Name}</span>
-            <div class="flex flex-wrap gap-1 shrink-0 ml-1">
-              {trajectoryLabel && <TraitPill label={trajectoryLabel} title={trajectoryDesc || 'Trajectory'} />}
-              {seekerLabel && <TraitPill label={seekerLabel} variant="accent" title={seekerDesc || 'Seeker'} />}
+          <SimpleTooltip text={[
+            ammo.HUDName,
+            '',
+            `DMG ${ammo.Damage}${ammo.StressDamage > 0 ? `  STRESS ${ammo.StressDamage}` : ''}`,
+            (penClose > 0 || penFar > 0) ? `PEN ${penClose === penFar ? penClose : `${penClose}–${penFar}`}${armorType ? ` (${armorType.label})` : ''}` : null,
+            range > 0 ? `RNG ${minRange > 0 ? `${minRange}m – ` : ''}${range}m` : null,
+            lowAlt > 0 ? `LOW ALT ${lowAlt}m` : null,
+            highAlt > 0 ? `HIGH ALT ${highAlt}m` : null,
+            ammo.MuzzleVelocity > 0 ? `VEL ${Math.round(ammo.MuzzleVelocity)} m/s` : null,
+            '',
+            trajectoryLabel ? `Trajectory: ${trajectoryLabel}` : null,
+            seekerLabel ? `Seeker: ${seekerLabel}` : null,
+            ...traits.map(tr => tr.title || tr.label),
+          ].filter(Boolean).join('\n')}>
+            <div class="flex items-center gap-2 min-w-0 pr-2">
+              <span class="text-[var(--text-dim)] text-xs shrink-0 w-5 text-right whitespace-nowrap">{quantity}×</span>
+              {ammoIcon && <div class="shrink-0 flex items-center justify-center w-[18px]"><GameIcon src={ammoIcon} size={18} variant="white" alt={ammo.HUDName} /></div>}
+              <span class="text-[var(--text)] truncate w-40 shrink-0">{ammo.HUDName}</span>
+              <div class="flex flex-wrap gap-1 shrink-0 ml-1">
+                {trajectoryLabel && <TraitPill label={trajectoryLabel} title={trajectoryDesc || 'Trajectory'} />}
+                {seekerLabel && <TraitPill label={seekerLabel} variant="accent" title={seekerDesc || 'Seeker'} />}
+              </div>
             </div>
-          </div>
+          </SimpleTooltip>
         </td>
         {/* Armor type */}
         <td class="px-2 py-2.5 text-center">
@@ -470,7 +487,7 @@ const AmmoTableRow = component$<AmmoTableRowProps>(({ ammo, quantity, showLowAlt
               <div class="border border-[rgba(51,51,51,0.3)] bg-[var(--bg)] p-3 shadow-inner">
                 <p class="text-[10px] uppercase tracking-[0.2em] text-[var(--text-dim)] mb-2 font-semibold">Range & Trajectory</p>
                 <div class="flex flex-col gap-1.5">
-                  <AmmoStat label="Trajectory" value={trajectoryTypeToString(ammo.TrajectoryType)} />
+                  <AmmoStat label="Trajectory" value={t(i18n,trajectoryTypeToString(ammo.TrajectoryType))} />
                   <AmmoStat label="Ground Range" value={range > 0 ? `${range}m` : '—'} />
                   <AmmoStat label="Min Range" value={minRange > 0 ? `${minRange}m` : '—'} />
                   {ammo.LowAltRange > 0 && <AmmoStat label="Low Alt Range" value={`${lowAlt}m`} />}
@@ -490,7 +507,6 @@ const AmmoTableRow = component$<AmmoTableRowProps>(({ ammo, quantity, showLowAlt
               <div class="border border-[rgba(51,51,51,0.3)] bg-[var(--bg)] p-3 shadow-inner">
                 <p class="text-[10px] uppercase tracking-[0.2em] text-[var(--text-dim)] mb-2 font-semibold">Supply & Traits</p>
                 <div class="flex flex-col gap-1.5">
-                  <AmmoStat label="Supply Cost" value={ammo.SupplyCost > 0 ? ammo.SupplyCost : '—'} />
                   <AmmoStat label="Resupply Time" value={ammo.ResupplyTime > 0 ? `${ammo.ResupplyTime}s` : '—'} />
                   {ammo.AimStartDelay > 0 && <AmmoStat label="Aim Delay" value={`${ammo.AimStartDelay}s`} />}
                   {ammo.MainEngineIgnitionDelay > 0 && <AmmoStat label="Ignition Delay" value={`${ammo.MainEngineIgnitionDelay}s`} />}
@@ -533,11 +549,13 @@ const TRAIT_VARIANT_CLASSES: Record<string, string> = {
   fire: 'bg-[#e05040]/20 text-[#e05040]',
 };
 
-const TraitPill = component$<{ label: string; variant?: string; title?: string }>(({ label, variant, title }) => (
-  <span 
-    class={`px-1 py-0.5 text-[9px] leading-none font-mono uppercase tracking-wider rounded-sm ${TRAIT_VARIANT_CLASSES[variant || 'default'] || TRAIT_VARIANT_CLASSES.default}`}
-    title={title}
-  >
-    {label}
-  </span>
-));
+const TraitPill = component$<{ label: string; variant?: string; title?: string }>(({ label, variant, title }) => {
+  const pill = (
+    <span 
+      class={`px-1 py-0.5 text-[9px] leading-none font-mono uppercase tracking-wider rounded-sm ${TRAIT_VARIANT_CLASSES[variant || 'default'] || TRAIT_VARIANT_CLASSES.default}`}
+    >
+      {label}
+    </span>
+  );
+  return title ? <SimpleTooltip text={title}>{pill}</SimpleTooltip> : pill;
+});

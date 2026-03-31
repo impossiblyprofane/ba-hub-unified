@@ -183,3 +183,51 @@ export const IconCheck = component$<IconProps>(({ size = 20, class: cls }) => (
     <polyline points="20 6 9 17 4 12" />
   </svg>
 ));
+
+// ── Stats / player icons ──
+
+export const IconUser = component$<IconProps>(({ size = 20, class: cls }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class={cls}>
+    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </svg>
+));
+
+export const IconTrophy = component$<IconProps>(({ size = 20, class: cls }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class={cls}>
+    <path d="M6 9H4.5a2.5 2.5 0 010-5H6" />
+    <path d="M18 9h1.5a2.5 2.5 0 000-5H18" />
+    <path d="M4 22h16" />
+    <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+    <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+    <path d="M18 2H6v7a6 6 0 1012 0V2z" />
+  </svg>
+));
+
+export const IconClock = component$<IconProps>(({ size = 20, class: cls }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class={cls}>
+    <circle cx="12" cy="12" r="10" />
+    <polyline points="12 6 12 12 16 14" />
+  </svg>
+));
+
+export const IconChevronLeft = component$<IconProps>(({ size = 20, class: cls }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class={cls}>
+    <polyline points="15 18 9 12 15 6" />
+  </svg>
+));
+
+export const IconChevronRight = component$<IconProps>(({ size = 20, class: cls }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class={cls}>
+    <polyline points="9 18 15 12 9 6" />
+  </svg>
+));
+
+export const IconHash = component$<IconProps>(({ size = 20, class: cls }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class={cls}>
+    <line x1="4" y1="9" x2="20" y2="9" />
+    <line x1="4" y1="15" x2="20" y2="15" />
+    <line x1="10" y1="3" x2="8" y2="21" />
+    <line x1="16" y1="3" x2="14" y2="21" />
+  </svg>
+));

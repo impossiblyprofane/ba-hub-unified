@@ -3,14 +3,13 @@
 
 // Base asset path constants
 export const IconPaths = {
-  Flags: "/images/flags/",
-  SpecIcons: "/images/icon specialisation/",
-  SpecCovers: "/images/icon specialisation/illustrations/",
+  Flags: "/images/nations & specs/flags/",
+  SpecIcons: "/images/nations & specs/specs/",
+  SpecCovers: "/images/nations & specs/specs/illustrations/",
   Unit: "/images/labels/icons/",
-  Weapon: "/images/weapons/",
-  Ammunition: "/images/ammunition/",
-  Portrait: "/images/unitportrait/",
-  Modification: "/images/modifications/",
+  Weapon: "/images/weapons/icons/",
+  Ammunition: "/images/ammunition/icons/",
+  Portrait: "/images/unitportraits/",
 } as const;
 
 // Dynamic path builder functions
@@ -35,18 +34,18 @@ export function toWeaponIconPath(weaponId: string): string {
 }
 
 /**
- * Converts an OptionPicture value (e.g. "Weapons\\M2_BROWNING" or "Modifications\\ARMOR1")
- * into a usable image path. The category prefix maps to the correct image directory.
+ * Converts a bare OptionPicture name (e.g. "INF_M4_MOD2", "ARMOR1") into
+ * the correct image path.  All option-picture icons (weapons, modifications,
+ * DLC2) live in a single flat directory (/images/weapons/icons/).
+ *
+ * Also handles the legacy prefixed format ("Weapons\\NAME") for safety.
  */
 export function toOptionPicturePath(optionPicture: string): string {
+  // Handle legacy prefixed format (Weapons\NAME or Modifications\NAME)
   const parts = optionPicture.replace(/\\/g, '/').split('/');
-  const category = parts.length > 1 ? parts[0] : '';
-  const fileName = parts[parts.length - 1];
-  if (category === 'Weapons') {
-    return encodeIconPath(IconPaths.Weapon + fileName.toUpperCase() + ".png");
-  }
-  // Modifications and others → outline directory
-  return encodeIconPath(IconPaths.Modification + "outline/" + fileName.toUpperCase() + ".png");
+  const fileName = parts[parts.length - 1].toUpperCase();
+
+  return encodeIconPath(IconPaths.Weapon + fileName + '.png');
 }
 
 export function toAmmunitionIconPath(ammunitionId: string): string {
@@ -54,21 +53,20 @@ export function toAmmunitionIconPath(ammunitionId: string): string {
 }
 
 export function toPortraitIconPath(unitId: string): string {
-  const split = unitId.split("\\");
+  // Normalise backslashes and forward slashes so both
+  // Unit.PortraitFileName ("RU\\BTR_82A\\BTR_82A") and
+  // Option.PortraitOverride ("DLC2/JALAVAE_JAGU/JALAVAE_JAGU") work.
+  const split = unitId.replace(/\\/g, "/").split("/");
   const prefix = split.slice(0, -1).join("/").toLowerCase();
   const fileName = split[split.length - 1].toUpperCase();
   return encodeIconPath(IconPaths.Portrait + prefix + "/" + fileName + "_BASIC.png");
 }
 
 /**
- * Safely encodes an icon path for URL usage, handling spaces and special characters
+ * Safely encodes an icon path for URL usage, handling spaces in all segments
  */
 export function encodeIconPath(path: string): string {
-  const pathParts = path.split('/');
-  const filename = pathParts[pathParts.length - 1];
-  const directories = pathParts.slice(0, -1).join('/');
-  const encodedFilename = filename.split(' ').join('%20');
-  return directories ? `${directories}/${encodedFilename}` : encodedFilename;
+  return path.split(' ').join('%20');
 }
 
 // Static UI icon paths — complete map from game assets

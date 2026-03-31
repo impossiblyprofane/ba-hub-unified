@@ -1635,7 +1635,7 @@
         "Type": 5,
         "UIName": "Custom_Slot_Armor",
         "ThumbnailFileName": null,
-        "Order": 0
+        "Order": 1
     },
     {
         "Id": 233,
@@ -2891,7 +2891,7 @@
     {
         "Id": 399,
         "UnitId": 63,
-        "Name": "Squad SMAW",
+        "Name": "Assaultmen",
         "Type": 7,
         "UIName": "Custom_Slot_Squad_loadout",
         "ThumbnailFileName": null,
@@ -4467,6 +4467,366 @@
         "Id": 591,
         "UnitId": 452,
         "Name": "Weapons StrykerSPH",
+        "Type": 3,
+        "UIName": "Custom_Slot_Weapon_package",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 592,
+        "UnitId": 250,
+        "Name": "Weapons Centurion",
+        "Type": 3,
+        "UIName": "Custom_Slot_Weapon_package",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 593,
+        "UnitId": 503,
+        "Name": "Armor Leopard2A8",
+        "Type": 5,
+        "UIName": "Custom_Slot_Armor",
+        "ThumbnailFileName": null,
+        "Order": 1
+    },
+    {
+        "Id": 594,
+        "UnitId": 503,
+        "Name": "Weapons Leopard2A8",
+        "Type": 3,
+        "UIName": "Custom_Slot_Weapon_package",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 595,
+        "UnitId": 502,
+        "Name": "Armor DLC2M113",
+        "Type": 5,
+        "UIName": "Custom_Slot_Armor",
+        "ThumbnailFileName": null,
+        "Order": 1
+    },
+    {
+        "Id": 596,
+        "UnitId": 512,
+        "Name": "Weapons L39 InnerPylons",
+        "Type": 3,
+        "UIName": "Custom_Slot_Inner_pylons",
+        "ThumbnailFileName": null,
+        "Order": 1
+    },
+    {
+        "Id": 597,
+        "UnitId": 512,
+        "Name": "Weapons L38 OuterPylons",
+        "Type": 3,
+        "UIName": "Custom_Slot_Outer_pylons",
+        "ThumbnailFileName": null,
+        "Order": 2
+    },
+    {
+        "Id": 598,
+        "UnitId": 512,
+        "Name": "Weapons L39 Fuselage",
+        "Type": 3,
+        "UIName": "Custom_Slot_Fuselage",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 599,
+        "UnitId": 500,
+        "Name": "Abilities DLC2Vilkas",
+        "Type": 6,
+        "UIName": "Custom_Slot_Protection_system",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 600,
+        "UnitId": 501,
+        "Name": "Weapons DLC2XA180",
+        "Type": 3,
+        "UIName": "Custom_Slot_Weapon_package",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 601,
+        "UnitId": 501,
+        "Name": "Armory DLC2XA180",
+        "Type": 5,
+        "UIName": "Custom_Slot_Armor",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 602,
+        "UnitId": 513,
+        "Name": "Squad JalavaeJagu",
+        "Type": 7,
+        "UIName": "ui_arsenal_column_nation",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 603,
+        "UnitId": 515,
+        "Name": "Squad Kaitseliit",
+        "Type": 7,
+        "UIName": "ui_arsenal_column_nation",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 604,
+        "UnitId": 517,
+        "Name": "Squad ESTSOF",
+        "Type": 7,
+        "UIName": "ui_arsenal_column_nation",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 605,
+        "UnitId": 519,
+        "Name": "Squad Milan",
+        "Type": 7,
+        "UIName": "ui_arsenal_column_nation",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 606,
+        "UnitId": 522,
+        "Name": "Squad Piorun",
+        "Type": 7,
+        "UIName": "ui_arsenal_column_nation",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 607,
+        "UnitId": 499,
+        "Name": "Weapons DLC2Spartan",
+        "Type": 3,
+        "UIName": "Custom_Slot_Weapon_package",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 608,
+        "UnitId": 499,
+        "Name": "Armory DLC2Spartan",
+        "Type": 5,
+        "UIName": "Custom_Slot_Armor",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 609,
+        "UnitId": 525,
+        "Name": "Squad DLC2EesitScouts",
+        "Type": 7,
+        "UIName": "ui_arsenal_column_nation",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 610,
+        "UnitId": 528,
+        "Name": "Squad KNT",
+        "Type": 7,
+        "UIName": "ui_arsenal_column_nation",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 611,
+        "UnitId": 533,
+        "Name": "Squad DLC2M2HMG",
+        "Type": 7,
+        "UIName": "ui_arsenal_column_nation",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 612,
+        "UnitId": 535,
+        "Name": "Weapons DLC2HMMWV",
+        "Type": 3,
+        "UIName": "Custom_Slot_Weapon_package",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 613,
+        "UnitId": 538,
+        "Name": "Weapons UnimogAA ",
+        "Type": 3,
+        "UIName": "Custom_Slot_Weapon_package",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 614,
+        "UnitId": 541,
+        "Name": "Weapons DLC2Gwagen",
+        "Type": 3,
+        "UIName": "Custom_Slot_Weapon_package",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 615,
+        "UnitId": 542,
+        "Name": "Weapons TypeXRCV",
+        "Type": 3,
+        "UIName": "Custom_Slot_Weapon_package",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 616,
+        "UnitId": 502,
+        "Name": "Weapons DLC2M113",
+        "Type": 3,
+        "UIName": "Custom_Slot_Weapon_package",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 617,
+        "UnitId": 510,
+        "Name": "Armor M113Panzermorser",
+        "Type": 5,
+        "UIName": "Custom_Slot_Armor",
+        "ThumbnailFileName": null,
+        "Order": 2
+    },
+    {
+        "Id": 618,
+        "UnitId": 510,
+        "Name": "Weapons M113PzM120",
+        "Type": 3,
+        "UIName": "Custom_Slot_Selfdefence_weapon",
+        "ThumbnailFileName": null,
+        "Order": 1
+    },
+    {
+        "Id": 619,
+        "UnitId": 510,
+        "Name": "Weapons M113PzM120 Loadout",
+        "Type": 3,
+        "UIName": "Custom_Slot_Ammunition",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 620,
+        "UnitId": 508,
+        "Name": "Weapons NASAMS",
+        "Type": 3,
+        "UIName": "Custom_Slot_Weapon_package",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 621,
+        "UnitId": 505,
+        "Name": "Weapons DLC2LandRover",
+        "Type": 3,
+        "UIName": "Custom_Slot_Weapon_package",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 622,
+        "UnitId": 498,
+        "Name": "UnitVariant DLC2CV9035",
+        "Type": 1,
+        "UIName": "Custom_Slot_Modernization",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 623,
+        "UnitId": 498,
+        "Name": "Armor DLC2CV9035",
+        "Type": 5,
+        "UIName": "Custom_Slot_Armor",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 624,
+        "UnitId": 531,
+        "Name": "Weapons DLC2Uh60",
+        "Type": 3,
+        "UIName": "Custom_Slot_Weapon_package",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 625,
+        "UnitId": 532,
+        "Name": "Weapons AS365Dauphine Loadout",
+        "Type": 3,
+        "UIName": "Custom_Slot_Rear_Pylons",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 626,
+        "UnitId": 511,
+        "Name": "Weapons M109A5O",
+        "Type": 3,
+        "UIName": "Custom_Slot_Ammunition",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 627,
+        "UnitId": 509,
+        "Name": "Weapons TGB1111",
+        "Type": 3,
+        "UIName": "Custom_Slot_Weapon_package",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 628,
+        "UnitId": 540,
+        "Name": "Weapons DLC2PZH2000",
+        "Type": 3,
+        "UIName": "Custom_Slot_Ammunition",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 629,
+        "UnitId": 539,
+        "Name": "Weapons K9EST",
+        "Type": 3,
+        "UIName": "Custom_Slot_Ammunition",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 630,
+        "UnitId": 543,
+        "Name": "Armor Scimitar",
+        "Type": 5,
+        "UIName": "Custom_Slot_Armor",
+        "ThumbnailFileName": null,
+        "Order": 0
+    },
+    {
+        "Id": 631,
+        "UnitId": 545,
+        "Name": "Weapons IRISTSLM",
         "Type": 3,
         "UIName": "Custom_Slot_Weapon_package",
         "ThumbnailFileName": null,

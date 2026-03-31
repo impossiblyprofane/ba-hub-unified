@@ -35,7 +35,7 @@ export const RichTooltip = component$<{ class?: string }>(({ class: className })
       <Slot />
       {visible.value && (
         <div
-          class="fixed z-50 pointer-events-none border border-[var(--accent)]/30 bg-[#0a0e14]/95 backdrop-blur-sm px-3 py-2 max-w-xs text-xs font-mono text-[var(--text)]"
+          class="fixed z-50 pointer-events-none border border-[rgba(70,151,195,0.3)] bg-[#0a0e14]/95 backdrop-blur-sm px-3 py-2 max-w-xs text-xs font-mono text-[var(--text)] shadow-lg shadow-black/40"
           style={{
             top: `${pos.value.y - 8}px`,
             left: `${pos.value.x + 16}px`,

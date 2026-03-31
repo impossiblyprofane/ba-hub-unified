@@ -5,7 +5,8 @@
         "UIName": "Russia",
         "FlagFileName": "rus flag",
         "MaxPoints": 10000,
-        "Hidden": false
+        "Hidden": false,
+        "ContentMembership": -1
     },
     {
         "Id": 2,
@@ -13,7 +14,8 @@
         "UIName": "USA",
         "FlagFileName": "usa flag",
         "MaxPoints": 10000,
-        "Hidden": false
+        "Hidden": false,
+        "ContentMembership": -1
     },
     {
         "Id": 3,
@@ -21,6 +23,7 @@
         "UIName": "Editor",
         "FlagFileName": null,
         "MaxPoints": 800000,
-        "Hidden": true
+        "Hidden": true,
+        "ContentMembership": -1
     }
 ]

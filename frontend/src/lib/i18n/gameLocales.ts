@@ -1,7 +1,5 @@
 import type { Locale } from './types';
-import specs from './gameLocales/specs.json';
-import maps from './gameLocales/maps.json';
-import modopts from './gameLocales/modopts.json';
+import allLocales from './gameLocales/all_locales.json';
 
 export type GameLocaleRow = Record<string, string | undefined>;
 export type GameLocaleTable = Record<string, GameLocaleRow>;
@@ -20,11 +18,30 @@ const LOCALE_COLUMN: Record<Locale, string> = {
 
 const FALLBACK_COLUMN = 'col_1';
 
+const ALL = allLocales as GameLocaleTable;
+
+/**
+ * All three aliases point to the single unified locale table.
+ * Backward-compatible: consumers still access GAME_LOCALES.specs / .maps / .modopts.
+ */
 export const GAME_LOCALES = {
-  specs: specs as GameLocaleTable,
-  maps: maps as GameLocaleTable,
-  modopts: modopts as GameLocaleTable,
+  specs: ALL,
+  maps: ALL,
+  modopts: ALL,
 } as const;
+
+/** Lower-case key → original key map for case-insensitive fallback. */
+const CI_INDEX: Map<string, string> = new Map(
+  Object.keys(ALL).map((k) => [k.toLowerCase(), k]),
+);
+
+/** Resolve a row from a locale table with case-insensitive fallback. */
+function resolveRow(table: GameLocaleTable, key: string): GameLocaleRow | undefined {
+  const row = table[key];
+  if (row) return row;
+  const canon = CI_INDEX.get(key.toLowerCase());
+  return canon ? table[canon] : undefined;
+}
 
 export const getGameLocaleValue = (
   table: GameLocaleTable,
@@ -32,7 +49,7 @@ export const getGameLocaleValue = (
   locale: Locale,
   fallbackLocale: Locale = 'en',
 ): string => {
-  const row = table[key];
+  const row = resolveRow(table, key);
   if (!row) return key;
 
   const primaryCol = LOCALE_COLUMN[locale] ?? FALLBACK_COLUMN;

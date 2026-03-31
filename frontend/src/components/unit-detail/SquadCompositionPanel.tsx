@@ -2,6 +2,7 @@ import { component$, useSignal } from '@builder.io/qwik';
 import type { UnitDetailSquadMember } from '~/lib/graphql-types';
 import { toWeaponIconPath } from '~/lib/iconPaths';
 import { useI18n, t } from '~/lib/i18n';
+import { SimpleTooltip } from '~/components/ui/SimpleTooltip';
 
 type Props = {
   members: UnitDetailSquadMember[];
@@ -43,12 +44,12 @@ export const SquadCompositionPanel = component$<Props>(({ members, compact }) =>
         <p class={`font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] m-0 ${compact ? 'text-[9px]' : 'text-[10px]'}`}>
           {t(i18n, 'unitDetail.panel.squad')}
         </p>
-        <button
-          type="button"
-          onClick$={() => (showSquad.value = !showSquad.value)}
-          class="flex items-center gap-1.5 group cursor-pointer bg-transparent border-none p-0"
-          title={showSquad.value ? 'Show grouped loadouts' : 'Show individual members'}
-        >
+        <SimpleTooltip text={showSquad.value ? 'Show grouped loadouts' : 'Show individual members'}>
+          <button
+            type="button"
+            onClick$={() => (showSquad.value = !showSquad.value)}
+            class="flex items-center gap-1.5 group cursor-pointer bg-transparent border-none p-0"
+          >
           <span class="text-[9px] font-mono uppercase tracking-wider text-[var(--text-dim)] group-hover:text-[var(--text)]">
             {showSquad.value ? 'Squad' : 'Loadout'}
           </span>
@@ -57,7 +58,8 @@ export const SquadCompositionPanel = component$<Props>(({ members, compact }) =>
               class={`absolute top-0.5 w-2 h-2 bg-[var(--text-dim)] group-hover:bg-[var(--accent)] transition-all ${showSquad.value ? 'left-[calc(100%-10px)]' : 'left-0.5'}`}
             />
           </div>
-        </button>
+          </button>
+        </SimpleTooltip>
       </div>
 
       {/* Loadout view — grouped by weapon combo */}
@@ -70,15 +72,14 @@ export const SquadCompositionPanel = component$<Props>(({ members, compact }) =>
             const swIcon = sw?.HUDIcon ? toWeaponIconPath(sw.HUDIcon) : null;
             const tooltip = [
               `x${group.count}`,
-              pw ? `Primary: ${pw.HUDName || pw.Name}` : null,
-              sw ? `Special: ${sw.HUDName || sw.Name}` : null,
+              pw ? `Primary: ${pw.HUDName}` : null,
+              sw ? `Special: ${sw.HUDName}` : null,
             ].filter(Boolean).join('\n');
             return (
-              <div
-                key={group.key}
-                class="relative flex flex-col items-center gap-1 p-0 bg-[rgba(26,26,26,0.4)]"
-                title={tooltip}
-              >
+              <SimpleTooltip key={group.key} text={tooltip}>
+                <div
+                  class="relative flex flex-col items-center gap-1 p-0 bg-[rgba(26,26,26,0.4)]"
+                >
                 <span class="absolute top-1 left-1 right-1 text-[10px] font-mono text-[var(--accent)] text-center">x{group.count}</span>
                 <div class="mt-5 flex flex-col items-center gap-0 overflow-hidden">
                   {pwIcon && (
@@ -89,6 +90,7 @@ export const SquadCompositionPanel = component$<Props>(({ members, compact }) =>
                   )}
                 </div>
               </div>
+            </SimpleTooltip>
             );
           })}
         </div>
@@ -108,11 +110,10 @@ export const SquadCompositionPanel = component$<Props>(({ members, compact }) =>
               sw ? `Special: ${sw.HUDName || sw.Name}` : null,
             ].filter(Boolean).join('\n');
             return (
-              <div
-                key={`${member.Id}-${i}`}
-                class="relative flex flex-col items-center bg-[rgba(26,26,26,0.4)]"
-                title={tooltip}
-              >
+              <SimpleTooltip key={`${member.Id}-${i}`} text={tooltip}>
+                <div
+                  class="relative flex flex-col items-center bg-[rgba(26,26,26,0.4)]"
+                >
                 <span class="absolute top-0 left-0.5 text-[8px] font-mono text-[var(--text-dim)] z-10">{i + 1}</span>
                 <div class="flex flex-col items-center gap-0 overflow-hidden">
                   {pwIcon && (
@@ -123,6 +124,7 @@ export const SquadCompositionPanel = component$<Props>(({ members, compact }) =>
                   )}
                 </div>
               </div>
+            </SimpleTooltip>
             );
           })}
         </div>

@@ -30,12 +30,12 @@ export const UnitSelector = component$<UnitSelectorProps>(({ cards, selectedUnit
     if (!c.unit.DisplayInArmory) return false;
     if (!search.value) return true;
     const q = search.value.toLowerCase();
-    const name = (c.unit.HUDName || c.unit.Name || '').toLowerCase();
+    const name = (c.unit.HUDName || '').toLowerCase();
     return name.includes(q) || String(c.unit.Id).includes(q);
   }).slice(0, 50);
 
   const selectedCard = selectedUnitId ? cards.find(c => c.unit.Id === selectedUnitId) : null;
-  const selectedName = selectedCard ? (selectedCard.unit.HUDName || selectedCard.unit.Name || '') : null;
+  const selectedName = selectedCard ? (selectedCard.unit.HUDName || '') : null;
 
   const handleSelect = $((unitId: number) => {
     onSelect$(unitId);
@@ -89,7 +89,7 @@ export const UnitSelector = component$<UnitSelectorProps>(({ cards, selectedUnit
           </div>
           <div class="overflow-y-auto flex-1">
             {filtered.map(card => {
-              const name = card.unit.HUDName || card.unit.Name || '';
+              const name = card.unit.HUDName || '';
               const isSelected = card.unit.Id === selectedUnitId;
               return (
                 <button

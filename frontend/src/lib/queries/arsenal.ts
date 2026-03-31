@@ -9,6 +9,7 @@ export const ARSENAL_PAGE_QUERY = `
         CategoryType
         Cost
         ThumbnailFileName
+        PortraitFileName
         IsUnitModification
         DisplayInArmory
       }

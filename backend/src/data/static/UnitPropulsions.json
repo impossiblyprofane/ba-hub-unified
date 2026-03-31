@@ -2568,5 +2568,315 @@
         "Id": 945,
         "UnitId": 142,
         "MobilityId": 187
+    },
+    {
+        "Id": 946,
+        "UnitId": 490,
+        "MobilityId": 247
+    },
+    {
+        "Id": 947,
+        "UnitId": 491,
+        "MobilityId": 248
+    },
+    {
+        "Id": 948,
+        "UnitId": 492,
+        "MobilityId": 247
+    },
+    {
+        "Id": 949,
+        "UnitId": 493,
+        "MobilityId": 248
+    },
+    {
+        "Id": 951,
+        "UnitId": 485,
+        "MobilityId": 249
+    },
+    {
+        "Id": 953,
+        "UnitId": 496,
+        "MobilityId": 11
+    },
+    {
+        "Id": 954,
+        "UnitId": 497,
+        "MobilityId": 11
+    },
+    {
+        "Id": 955,
+        "UnitId": 494,
+        "MobilityId": 248
+    },
+    {
+        "Id": 958,
+        "UnitId": 199,
+        "MobilityId": 84
+    },
+    {
+        "Id": 959,
+        "UnitId": 199,
+        "MobilityId": 85
+    },
+    {
+        "Id": 960,
+        "UnitId": 495,
+        "MobilityId": 11
+    },
+    {
+        "Id": 961,
+        "UnitId": 498,
+        "MobilityId": 250
+    },
+    {
+        "Id": 963,
+        "UnitId": 500,
+        "MobilityId": 252
+    },
+    {
+        "Id": 964,
+        "UnitId": 501,
+        "MobilityId": 215
+    },
+    {
+        "Id": 965,
+        "UnitId": 502,
+        "MobilityId": 78
+    },
+    {
+        "Id": 967,
+        "UnitId": 504,
+        "MobilityId": 253
+    },
+    {
+        "Id": 968,
+        "UnitId": 505,
+        "MobilityId": 77
+    },
+    {
+        "Id": 969,
+        "UnitId": 506,
+        "MobilityId": 11
+    },
+    {
+        "Id": 970,
+        "UnitId": 507,
+        "MobilityId": 11
+    },
+    {
+        "Id": 971,
+        "UnitId": 508,
+        "MobilityId": 254
+    },
+    {
+        "Id": 972,
+        "UnitId": 509,
+        "MobilityId": 255
+    },
+    {
+        "Id": 973,
+        "UnitId": 510,
+        "MobilityId": 78
+    },
+    {
+        "Id": 974,
+        "UnitId": 511,
+        "MobilityId": 236
+    },
+    {
+        "Id": 975,
+        "UnitId": 512,
+        "MobilityId": 256
+    },
+    {
+        "Id": 976,
+        "UnitId": 501,
+        "MobilityId": 257
+    },
+    {
+        "Id": 977,
+        "UnitId": 513,
+        "MobilityId": 11
+    },
+    {
+        "Id": 978,
+        "UnitId": 514,
+        "MobilityId": 11
+    },
+    {
+        "Id": 979,
+        "UnitId": 515,
+        "MobilityId": 11
+    },
+    {
+        "Id": 980,
+        "UnitId": 516,
+        "MobilityId": 11
+    },
+    {
+        "Id": 982,
+        "UnitId": 518,
+        "MobilityId": 190
+    },
+    {
+        "Id": 983,
+        "UnitId": 517,
+        "MobilityId": 190
+    },
+    {
+        "Id": 984,
+        "UnitId": 519,
+        "MobilityId": 11
+    },
+    {
+        "Id": 985,
+        "UnitId": 520,
+        "MobilityId": 11
+    },
+    {
+        "Id": 986,
+        "UnitId": 521,
+        "MobilityId": 11
+    },
+    {
+        "Id": 987,
+        "UnitId": 522,
+        "MobilityId": 11
+    },
+    {
+        "Id": 988,
+        "UnitId": 523,
+        "MobilityId": 11
+    },
+    {
+        "Id": 989,
+        "UnitId": 524,
+        "MobilityId": 11
+    },
+    {
+        "Id": 990,
+        "UnitId": 525,
+        "MobilityId": 11
+    },
+    {
+        "Id": 991,
+        "UnitId": 528,
+        "MobilityId": 191
+    },
+    {
+        "Id": 993,
+        "UnitId": 526,
+        "MobilityId": 190
+    },
+    {
+        "Id": 994,
+        "UnitId": 527,
+        "MobilityId": 190
+    },
+    {
+        "Id": 995,
+        "UnitId": 529,
+        "MobilityId": 190
+    },
+    {
+        "Id": 996,
+        "UnitId": 530,
+        "MobilityId": 190
+    },
+    {
+        "Id": 997,
+        "UnitId": 532,
+        "MobilityId": 258
+    },
+    {
+        "Id": 998,
+        "UnitId": 531,
+        "MobilityId": 28
+    },
+    {
+        "Id": 999,
+        "UnitId": 533,
+        "MobilityId": 11
+    },
+    {
+        "Id": 1000,
+        "UnitId": 534,
+        "MobilityId": 11
+    },
+    {
+        "Id": 1001,
+        "UnitId": 535,
+        "MobilityId": 20
+    },
+    {
+        "Id": 1002,
+        "UnitId": 536,
+        "MobilityId": 259
+    },
+    {
+        "Id": 1003,
+        "UnitId": 537,
+        "MobilityId": 260
+    },
+    {
+        "Id": 1005,
+        "UnitId": 539,
+        "MobilityId": 261
+    },
+    {
+        "Id": 1006,
+        "UnitId": 540,
+        "MobilityId": 262
+    },
+    {
+        "Id": 1007,
+        "UnitId": 541,
+        "MobilityId": 45
+    },
+    {
+        "Id": 1008,
+        "UnitId": 542,
+        "MobilityId": 263
+    },
+    {
+        "Id": 1009,
+        "UnitId": 543,
+        "MobilityId": 251
+    },
+    {
+        "Id": 1010,
+        "UnitId": 538,
+        "MobilityId": 264
+    },
+    {
+        "Id": 1011,
+        "UnitId": 544,
+        "MobilityId": 11
+    },
+    {
+        "Id": 1012,
+        "UnitId": 465,
+        "MobilityId": 233
+    },
+    {
+        "Id": 1013,
+        "UnitId": 545,
+        "MobilityId": 265
+    },
+    {
+        "Id": 1014,
+        "UnitId": 499,
+        "MobilityId": 266
+    },
+    {
+        "Id": 1015,
+        "UnitId": 503,
+        "MobilityId": 267
+    },
+    {
+        "Id": 1016,
+        "UnitId": 503,
+        "MobilityId": 268
     }
 ]

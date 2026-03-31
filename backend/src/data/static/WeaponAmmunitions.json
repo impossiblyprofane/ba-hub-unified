@@ -7717,7 +7717,7 @@
         "WeaponId": 45,
         "AmmunitionId": 359,
         "Order": 0,
-        "Quantity": 10
+        "Quantity": 50
     },
     {
         "Id": 1706,
@@ -14835,6 +14835,1542 @@
         "Id": 2927,
         "UnitId": 159,
         "WeaponId": 227,
+        "AmmunitionId": 19,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 2928,
+        "UnitId": 490,
+        "WeaponId": 726,
+        "AmmunitionId": 582,
+        "Order": 0,
+        "Quantity": 32
+    },
+    {
+        "Id": 2929,
+        "UnitId": 491,
+        "WeaponId": 726,
+        "AmmunitionId": 582,
+        "Order": 0,
+        "Quantity": 32
+    },
+    {
+        "Id": 2930,
+        "UnitId": 492,
+        "WeaponId": 727,
+        "AmmunitionId": 583,
+        "Order": 0,
+        "Quantity": 400
+    },
+    {
+        "Id": 2933,
+        "UnitId": 495,
+        "WeaponId": 728,
+        "AmmunitionId": 587,
+        "Order": 0,
+        "Quantity": 100
+    },
+    {
+        "Id": 2934,
+        "UnitId": 496,
+        "WeaponId": 508,
+        "AmmunitionId": 341,
+        "Order": 0,
+        "Quantity": 120
+    },
+    {
+        "Id": 2935,
+        "UnitId": 497,
+        "WeaponId": 74,
+        "AmmunitionId": 588,
+        "Order": 0,
+        "Quantity": 2
+    },
+    {
+        "Id": 2936,
+        "UnitId": 492,
+        "WeaponId": 729,
+        "AmmunitionId": 589,
+        "Order": 0,
+        "Quantity": 400
+    },
+    {
+        "Id": 2937,
+        "UnitId": 493,
+        "WeaponId": 730,
+        "AmmunitionId": 584,
+        "Order": 0,
+        "Quantity": 1
+    },
+    {
+        "Id": 2938,
+        "UnitId": 494,
+        "WeaponId": 730,
+        "AmmunitionId": 586,
+        "Order": 0,
+        "Quantity": 2
+    },
+    {
+        "Id": 2939,
+        "UnitId": 493,
+        "WeaponId": 731,
+        "AmmunitionId": 590,
+        "Order": 0,
+        "Quantity": 1
+    },
+    {
+        "Id": 2941,
+        "UnitId": 401,
+        "WeaponId": 123,
+        "AmmunitionId": 30,
+        "Order": 0,
+        "Quantity": 90
+    },
+    {
+        "Id": 2942,
+        "UnitId": 401,
+        "WeaponId": 192,
+        "AmmunitionId": 21,
+        "Order": 0,
+        "Quantity": 24
+    },
+    {
+        "Id": 2943,
+        "UnitId": 117,
+        "WeaponId": 29,
+        "AmmunitionId": 30,
+        "Order": 0,
+        "Quantity": 90
+    },
+    {
+        "Id": 2944,
+        "UnitId": 117,
+        "WeaponId": 31,
+        "AmmunitionId": 21,
+        "Order": 0,
+        "Quantity": 24
+    },
+    {
+        "Id": 2945,
+        "UnitId": 405,
+        "WeaponId": 29,
+        "AmmunitionId": 30,
+        "Order": 0,
+        "Quantity": 90
+    },
+    {
+        "Id": 2946,
+        "UnitId": 405,
+        "WeaponId": 31,
+        "AmmunitionId": 21,
+        "Order": 0,
+        "Quantity": 24
+    },
+    {
+        "Id": 2947,
+        "UnitId": 123,
+        "WeaponId": 158,
+        "AmmunitionId": 75,
+        "Order": 0,
+        "Quantity": 100
+    },
+    {
+        "Id": 2948,
+        "UnitId": 250,
+        "WeaponId": 732,
+        "AmmunitionId": 560,
+        "Order": 0,
+        "Quantity": 11
+    },
+    {
+        "Id": 2949,
+        "UnitId": 271,
+        "WeaponId": 112,
+        "AmmunitionId": 437,
+        "Order": 0,
+        "Quantity": 25
+    },
+    {
+        "Id": 2950,
+        "UnitId": 498,
+        "WeaponId": 702,
+        "AmmunitionId": 569,
+        "Order": 0,
+        "Quantity": 35
+    },
+    {
+        "Id": 2951,
+        "UnitId": 498,
+        "WeaponId": 702,
+        "AmmunitionId": 570,
+        "Order": 0,
+        "Quantity": 70
+    },
+    {
+        "Id": 2952,
+        "UnitId": 498,
+        "WeaponId": 713,
+        "AmmunitionId": 27,
+        "Order": 0,
+        "Quantity": 400
+    },
+    {
+        "Id": 2953,
+        "UnitId": 499,
+        "WeaponId": 713,
+        "AmmunitionId": 27,
+        "Order": 0,
+        "Quantity": 600
+    },
+    {
+        "Id": 2954,
+        "UnitId": 499,
+        "WeaponId": 715,
+        "AmmunitionId": 571,
+        "Order": 0,
+        "Quantity": 55
+    },
+    {
+        "Id": 2955,
+        "UnitId": 499,
+        "WeaponId": 715,
+        "AmmunitionId": 567,
+        "Order": 0,
+        "Quantity": 110
+    },
+    {
+        "Id": 2956,
+        "UnitId": 500,
+        "WeaponId": 23,
+        "AmmunitionId": 22,
+        "Order": 0,
+        "Quantity": 100
+    },
+    {
+        "Id": 2957,
+        "UnitId": 500,
+        "WeaponId": 23,
+        "AmmunitionId": 53,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 2958,
+        "UnitId": 500,
+        "WeaponId": 708,
+        "AmmunitionId": 27,
+        "Order": 0,
+        "Quantity": 400
+    },
+    {
+        "Id": 2959,
+        "UnitId": 500,
+        "WeaponId": 714,
+        "AmmunitionId": 549,
+        "Order": 0,
+        "Quantity": 2
+    },
+    {
+        "Id": 2960,
+        "UnitId": 501,
+        "WeaponId": 18,
+        "AmmunitionId": 19,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 2961,
+        "UnitId": 502,
+        "WeaponId": 18,
+        "AmmunitionId": 19,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 2963,
+        "UnitId": 503,
+        "WeaponId": 719,
+        "AmmunitionId": 577,
+        "Order": 1,
+        "Quantity": 12
+    },
+    {
+        "Id": 2964,
+        "UnitId": 503,
+        "WeaponId": 719,
+        "AmmunitionId": 576,
+        "Order": 2,
+        "Quantity": 18
+    },
+    {
+        "Id": 2965,
+        "UnitId": 503,
+        "WeaponId": 708,
+        "AmmunitionId": 27,
+        "Order": 0,
+        "Quantity": 475
+    },
+    {
+        "Id": 2966,
+        "UnitId": 503,
+        "WeaponId": 18,
+        "AmmunitionId": 19,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 2967,
+        "UnitId": 505,
+        "WeaponId": 18,
+        "AmmunitionId": 19,
+        "Order": 0,
+        "Quantity": 160
+    },
+    {
+        "Id": 2972,
+        "UnitId": 506,
+        "WeaponId": 36,
+        "AmmunitionId": 33,
+        "Order": 0,
+        "Quantity": 6
+    },
+    {
+        "Id": 2975,
+        "UnitId": 508,
+        "WeaponId": 772,
+        "AmmunitionId": 464,
+        "Order": 0,
+        "Quantity": 6
+    },
+    {
+        "Id": 2976,
+        "UnitId": 509,
+        "WeaponId": 733,
+        "AmmunitionId": 591,
+        "Order": 0,
+        "Quantity": 6
+    },
+    {
+        "Id": 2977,
+        "UnitId": 512,
+        "WeaponId": 484,
+        "AmmunitionId": 333,
+        "Order": 0,
+        "Quantity": 15
+    },
+    {
+        "Id": 2978,
+        "UnitId": 512,
+        "WeaponId": 604,
+        "AmmunitionId": 294,
+        "Order": 0,
+        "Quantity": 19
+    },
+    {
+        "Id": 2979,
+        "UnitId": 512,
+        "WeaponId": 384,
+        "AmmunitionId": 61,
+        "Order": 0,
+        "Quantity": 1
+    },
+    {
+        "Id": 2980,
+        "UnitId": 512,
+        "WeaponId": 388,
+        "AmmunitionId": 284,
+        "Order": 0,
+        "Quantity": 1
+    },
+    {
+        "Id": 2981,
+        "UnitId": 512,
+        "WeaponId": 113,
+        "AmmunitionId": 59,
+        "Order": 0,
+        "Quantity": 1
+    },
+    {
+        "Id": 2982,
+        "UnitId": 501,
+        "WeaponId": 734,
+        "AmmunitionId": 50,
+        "Order": 0,
+        "Quantity": 320
+    },
+    {
+        "Id": 2984,
+        "UnitId": 513,
+        "WeaponId": 741,
+        "AmmunitionId": 29,
+        "Order": 0,
+        "Quantity": 24
+    },
+    {
+        "Id": 2987,
+        "UnitId": 513,
+        "WeaponId": 644,
+        "AmmunitionId": 485,
+        "Order": 0,
+        "Quantity": 1
+    },
+    {
+        "Id": 2988,
+        "UnitId": 514,
+        "WeaponId": 736,
+        "AmmunitionId": 16,
+        "Order": 0,
+        "Quantity": 80
+    },
+    {
+        "Id": 2989,
+        "UnitId": 514,
+        "WeaponId": 738,
+        "AmmunitionId": 29,
+        "Order": 0,
+        "Quantity": 24
+    },
+    {
+        "Id": 2991,
+        "UnitId": 514,
+        "WeaponId": 59,
+        "AmmunitionId": 86,
+        "Order": 0,
+        "Quantity": 1
+    },
+    {
+        "Id": 2992,
+        "UnitId": 514,
+        "WeaponId": 739,
+        "AmmunitionId": 51,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 2993,
+        "UnitId": 515,
+        "WeaponId": 740,
+        "AmmunitionId": 16,
+        "Order": 0,
+        "Quantity": 80
+    },
+    {
+        "Id": 2994,
+        "UnitId": 515,
+        "WeaponId": 694,
+        "AmmunitionId": 51,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 2995,
+        "UnitId": 515,
+        "WeaponId": 742,
+        "AmmunitionId": 595,
+        "Order": 0,
+        "Quantity": 5
+    },
+    {
+        "Id": 2998,
+        "UnitId": 516,
+        "WeaponId": 642,
+        "AmmunitionId": 153,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 2999,
+        "UnitId": 516,
+        "WeaponId": 745,
+        "AmmunitionId": 594,
+        "Order": 0,
+        "Quantity": 5
+    },
+    {
+        "Id": 3000,
+        "UnitId": 507,
+        "WeaponId": 735,
+        "AmmunitionId": 600,
+        "Order": 0,
+        "Quantity": 80
+    },
+    {
+        "Id": 3001,
+        "UnitId": 507,
+        "WeaponId": 743,
+        "AmmunitionId": 592,
+        "Order": 0,
+        "Quantity": 1
+    },
+    {
+        "Id": 3002,
+        "UnitId": 506,
+        "WeaponId": 735,
+        "AmmunitionId": 16,
+        "Order": 0,
+        "Quantity": 80
+    },
+    {
+        "Id": 3003,
+        "UnitId": 506,
+        "WeaponId": 737,
+        "AmmunitionId": 29,
+        "Order": 0,
+        "Quantity": 24
+    },
+    {
+        "Id": 3005,
+        "UnitId": 517,
+        "WeaponId": 751,
+        "AmmunitionId": 358,
+        "Order": 0,
+        "Quantity": 80
+    },
+    {
+        "Id": 3006,
+        "UnitId": 517,
+        "WeaponId": 752,
+        "AmmunitionId": 29,
+        "Order": 0,
+        "Quantity": 24
+    },
+    {
+        "Id": 3007,
+        "UnitId": 517,
+        "WeaponId": 753,
+        "AmmunitionId": 368,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 3008,
+        "UnitId": 517,
+        "WeaponId": 757,
+        "AmmunitionId": 593,
+        "Order": 0,
+        "Quantity": 1
+    },
+    {
+        "Id": 3009,
+        "UnitId": 518,
+        "WeaponId": 754,
+        "AmmunitionId": 469,
+        "Order": 0,
+        "Quantity": 80
+    },
+    {
+        "Id": 3010,
+        "UnitId": 518,
+        "WeaponId": 755,
+        "AmmunitionId": 471,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 3011,
+        "UnitId": 518,
+        "WeaponId": 756,
+        "AmmunitionId": 359,
+        "Order": 0,
+        "Quantity": 48
+    },
+    {
+        "Id": 3012,
+        "UnitId": 518,
+        "WeaponId": 212,
+        "AmmunitionId": 130,
+        "Order": 0,
+        "Quantity": 1
+    },
+    {
+        "Id": 3013,
+        "UnitId": 518,
+        "WeaponId": 590,
+        "AmmunitionId": 442,
+        "Order": 0,
+        "Quantity": 1
+    },
+    {
+        "Id": 3014,
+        "UnitId": 520,
+        "WeaponId": 735,
+        "AmmunitionId": 16,
+        "Order": 0,
+        "Quantity": 80
+    },
+    {
+        "Id": 3015,
+        "UnitId": 520,
+        "WeaponId": 62,
+        "AmmunitionId": 44,
+        "Order": 0,
+        "Quantity": 6
+    },
+    {
+        "Id": 3016,
+        "UnitId": 519,
+        "WeaponId": 693,
+        "AmmunitionId": 16,
+        "Order": 0,
+        "Quantity": 80
+    },
+    {
+        "Id": 3017,
+        "UnitId": 519,
+        "WeaponId": 746,
+        "AmmunitionId": 596,
+        "Order": 0,
+        "Quantity": 3
+    },
+    {
+        "Id": 3018,
+        "UnitId": 519,
+        "WeaponId": 759,
+        "AmmunitionId": 596,
+        "Order": 0,
+        "Quantity": 3
+    },
+    {
+        "Id": 3019,
+        "UnitId": 521,
+        "WeaponId": 736,
+        "AmmunitionId": 16,
+        "Order": 0,
+        "Quantity": 80
+    },
+    {
+        "Id": 3020,
+        "UnitId": 521,
+        "WeaponId": 697,
+        "AmmunitionId": 549,
+        "Order": 0,
+        "Quantity": 6
+    },
+    {
+        "Id": 3021,
+        "UnitId": 522,
+        "WeaponId": 693,
+        "AmmunitionId": 16,
+        "Order": 0,
+        "Quantity": 80
+    },
+    {
+        "Id": 3022,
+        "UnitId": 522,
+        "WeaponId": 747,
+        "AmmunitionId": 597,
+        "Order": 0,
+        "Quantity": 6
+    },
+    {
+        "Id": 3023,
+        "UnitId": 523,
+        "WeaponId": 735,
+        "AmmunitionId": 16,
+        "Order": 0,
+        "Quantity": 80
+    },
+    {
+        "Id": 3024,
+        "UnitId": 523,
+        "WeaponId": 748,
+        "AmmunitionId": 598,
+        "Order": 0,
+        "Quantity": 3
+    },
+    {
+        "Id": 3025,
+        "UnitId": 524,
+        "WeaponId": 736,
+        "AmmunitionId": 16,
+        "Order": 0,
+        "Quantity": 80
+    },
+    {
+        "Id": 3026,
+        "UnitId": 524,
+        "WeaponId": 749,
+        "AmmunitionId": 599,
+        "Order": 0,
+        "Quantity": 6
+    },
+    {
+        "Id": 3027,
+        "UnitId": 499,
+        "WeaponId": 18,
+        "AmmunitionId": 19,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 3028,
+        "UnitId": 499,
+        "WeaponId": 734,
+        "AmmunitionId": 50,
+        "Order": 0,
+        "Quantity": 320
+    },
+    {
+        "Id": 3029,
+        "UnitId": 499,
+        "WeaponId": 716,
+        "AmmunitionId": 549,
+        "Order": 0,
+        "Quantity": 3
+    },
+    {
+        "Id": 3033,
+        "UnitId": 525,
+        "WeaponId": 644,
+        "AmmunitionId": 485,
+        "Order": 0,
+        "Quantity": 1
+    },
+    {
+        "Id": 3034,
+        "UnitId": 528,
+        "WeaponId": 508,
+        "AmmunitionId": 341,
+        "Order": 0,
+        "Quantity": 80
+    },
+    {
+        "Id": 3035,
+        "UnitId": 527,
+        "WeaponId": 761,
+        "AmmunitionId": 469,
+        "Order": 0,
+        "Quantity": 80
+    },
+    {
+        "Id": 3036,
+        "UnitId": 527,
+        "WeaponId": 756,
+        "AmmunitionId": 359,
+        "Order": 0,
+        "Quantity": 48
+    },
+    {
+        "Id": 3037,
+        "UnitId": 527,
+        "WeaponId": 762,
+        "AmmunitionId": 470,
+        "Order": 0,
+        "Quantity": 60
+    },
+    {
+        "Id": 3038,
+        "UnitId": 527,
+        "WeaponId": 590,
+        "AmmunitionId": 442,
+        "Order": 0,
+        "Quantity": 1
+    },
+    {
+        "Id": 3039,
+        "UnitId": 526,
+        "WeaponId": 767,
+        "AmmunitionId": 358,
+        "Order": 0,
+        "Quantity": 80
+    },
+    {
+        "Id": 3040,
+        "UnitId": 526,
+        "WeaponId": 758,
+        "AmmunitionId": 391,
+        "Order": 0,
+        "Quantity": 60
+    },
+    {
+        "Id": 3041,
+        "UnitId": 526,
+        "WeaponId": 760,
+        "AmmunitionId": 390,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 3042,
+        "UnitId": 526,
+        "WeaponId": 766,
+        "AmmunitionId": 344,
+        "Order": 0,
+        "Quantity": 6
+    },
+    {
+        "Id": 3044,
+        "UnitId": 529,
+        "WeaponId": 736,
+        "AmmunitionId": 16,
+        "Order": 0,
+        "Quantity": 80
+    },
+    {
+        "Id": 3045,
+        "UnitId": 529,
+        "WeaponId": 738,
+        "AmmunitionId": 29,
+        "Order": 0,
+        "Quantity": 24
+    },
+    {
+        "Id": 3046,
+        "UnitId": 529,
+        "WeaponId": 763,
+        "AmmunitionId": 369,
+        "Order": 0,
+        "Quantity": 30
+    },
+    {
+        "Id": 3047,
+        "UnitId": 529,
+        "WeaponId": 764,
+        "AmmunitionId": 389,
+        "Order": 0,
+        "Quantity": 30
+    },
+    {
+        "Id": 3049,
+        "UnitId": 530,
+        "WeaponId": 765,
+        "AmmunitionId": 275,
+        "Order": 0,
+        "Quantity": 20
+    },
+    {
+        "Id": 3050,
+        "UnitId": 533,
+        "WeaponId": 693,
+        "AmmunitionId": 16,
+        "Order": 0,
+        "Quantity": 80
+    },
+    {
+        "Id": 3052,
+        "UnitId": 534,
+        "WeaponId": 735,
+        "AmmunitionId": 16,
+        "Order": 0,
+        "Quantity": 80
+    },
+    {
+        "Id": 3053,
+        "UnitId": 534,
+        "WeaponId": 750,
+        "AmmunitionId": 50,
+        "Order": 0,
+        "Quantity": 96
+    },
+    {
+        "Id": 3054,
+        "UnitId": 535,
+        "WeaponId": 18,
+        "AmmunitionId": 19,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 3055,
+        "UnitId": 535,
+        "WeaponId": 734,
+        "AmmunitionId": 50,
+        "Order": 0,
+        "Quantity": 320
+    },
+    {
+        "Id": 3056,
+        "UnitId": 538,
+        "WeaponId": 509,
+        "AmmunitionId": 162,
+        "Order": 0,
+        "Quantity": 100
+    },
+    {
+        "Id": 3057,
+        "UnitId": 538,
+        "WeaponId": 768,
+        "AmmunitionId": 601,
+        "Order": 0,
+        "Quantity": 7
+    },
+    {
+        "Id": 3058,
+        "UnitId": 510,
+        "WeaponId": 769,
+        "AmmunitionId": 6,
+        "Order": 0,
+        "Quantity": 40
+    },
+    {
+        "Id": 3059,
+        "UnitId": 541,
+        "WeaponId": 770,
+        "AmmunitionId": 596,
+        "Order": 0,
+        "Quantity": 6
+    },
+    {
+        "Id": 3060,
+        "UnitId": 541,
+        "WeaponId": 718,
+        "AmmunitionId": 574,
+        "Order": 0,
+        "Quantity": 6
+    },
+    {
+        "Id": 3061,
+        "UnitId": 541,
+        "WeaponId": 782,
+        "AmmunitionId": 549,
+        "Order": 0,
+        "Quantity": 6
+    },
+    {
+        "Id": 3062,
+        "UnitId": 542,
+        "WeaponId": 23,
+        "AmmunitionId": 22,
+        "Order": 0,
+        "Quantity": 26
+    },
+    {
+        "Id": 3063,
+        "UnitId": 542,
+        "WeaponId": 23,
+        "AmmunitionId": 53,
+        "Order": 0,
+        "Quantity": 52
+    },
+    {
+        "Id": 3064,
+        "UnitId": 542,
+        "WeaponId": 713,
+        "AmmunitionId": 27,
+        "Order": 0,
+        "Quantity": 100
+    },
+    {
+        "Id": 3065,
+        "UnitId": 542,
+        "WeaponId": 714,
+        "AmmunitionId": 549,
+        "Order": 0,
+        "Quantity": 2
+    },
+    {
+        "Id": 3066,
+        "UnitId": 542,
+        "WeaponId": 76,
+        "AmmunitionId": 508,
+        "Order": 0,
+        "Quantity": 1
+    },
+    {
+        "Id": 3067,
+        "UnitId": 542,
+        "WeaponId": 689,
+        "AmmunitionId": 36,
+        "Order": 0,
+        "Quantity": 100
+    },
+    {
+        "Id": 3068,
+        "UnitId": 542,
+        "WeaponId": 13,
+        "AmmunitionId": 278,
+        "Order": 0,
+        "Quantity": 25
+    },
+    {
+        "Id": 3069,
+        "UnitId": 542,
+        "WeaponId": 13,
+        "AmmunitionId": 277,
+        "Order": 0,
+        "Quantity": 50
+    },
+    {
+        "Id": 3070,
+        "UnitId": 502,
+        "WeaponId": 734,
+        "AmmunitionId": 50,
+        "Order": 0,
+        "Quantity": 480
+    },
+    {
+        "Id": 3071,
+        "UnitId": 503,
+        "WeaponId": 719,
+        "AmmunitionId": 602,
+        "Order": 0,
+        "Quantity": 12
+    },
+    {
+        "Id": 3072,
+        "UnitId": 510,
+        "WeaponId": 708,
+        "AmmunitionId": 27,
+        "Order": 0,
+        "Quantity": 160
+    },
+    {
+        "Id": 3073,
+        "UnitId": 510,
+        "WeaponId": 18,
+        "AmmunitionId": 19,
+        "Order": 0,
+        "Quantity": 80
+    },
+    {
+        "Id": 3074,
+        "UnitId": 510,
+        "WeaponId": 734,
+        "AmmunitionId": 50,
+        "Order": 0,
+        "Quantity": 192
+    },
+    {
+        "Id": 3075,
+        "UnitId": 510,
+        "WeaponId": 769,
+        "AmmunitionId": 87,
+        "Order": 0,
+        "Quantity": 20
+    },
+    {
+        "Id": 3076,
+        "UnitId": 510,
+        "WeaponId": 771,
+        "AmmunitionId": 6,
+        "Order": 0,
+        "Quantity": 20
+    },
+    {
+        "Id": 3077,
+        "UnitId": 510,
+        "WeaponId": 771,
+        "AmmunitionId": 87,
+        "Order": 0,
+        "Quantity": 40
+    },
+    {
+        "Id": 3078,
+        "UnitId": 508,
+        "WeaponId": 773,
+        "AmmunitionId": 465,
+        "Order": 0,
+        "Quantity": 6
+    },
+    {
+        "Id": 3080,
+        "UnitId": 508,
+        "WeaponId": 774,
+        "AmmunitionId": 603,
+        "Order": 0,
+        "Quantity": 6
+    },
+    {
+        "Id": 3081,
+        "UnitId": 505,
+        "WeaponId": 713,
+        "AmmunitionId": 27,
+        "Order": 0,
+        "Quantity": 160
+    },
+    {
+        "Id": 3083,
+        "UnitId": 498,
+        "WeaponId": 714,
+        "AmmunitionId": 549,
+        "Order": 0,
+        "Quantity": 2
+    },
+    {
+        "Id": 3084,
+        "UnitId": 504,
+        "WeaponId": 713,
+        "AmmunitionId": 27,
+        "Order": 0,
+        "Quantity": 160
+    },
+    {
+        "Id": 3085,
+        "UnitId": 531,
+        "WeaponId": 720,
+        "AmmunitionId": 27,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 3086,
+        "UnitId": 531,
+        "WeaponId": 775,
+        "AmmunitionId": 50,
+        "Order": 0,
+        "Quantity": 480
+    },
+    {
+        "Id": 3087,
+        "UnitId": 532,
+        "WeaponId": 15,
+        "AmmunitionId": 17,
+        "Order": 0,
+        "Quantity": 19
+    },
+    {
+        "Id": 3088,
+        "UnitId": 532,
+        "WeaponId": 545,
+        "AmmunitionId": 17,
+        "Order": 0,
+        "Quantity": 19
+    },
+    {
+        "Id": 3089,
+        "UnitId": 532,
+        "WeaponId": 776,
+        "AmmunitionId": 604,
+        "Order": 0,
+        "Quantity": 36
+    },
+    {
+        "Id": 3090,
+        "UnitId": 511,
+        "WeaponId": 777,
+        "AmmunitionId": 605,
+        "Order": 0,
+        "Quantity": 27
+    },
+    {
+        "Id": 3092,
+        "UnitId": 511,
+        "WeaponId": 18,
+        "AmmunitionId": 19,
+        "Order": 0,
+        "Quantity": 100
+    },
+    {
+        "Id": 3093,
+        "UnitId": 511,
+        "WeaponId": 777,
+        "AmmunitionId": 606,
+        "Order": 0,
+        "Quantity": 9
+    },
+    {
+        "Id": 3094,
+        "UnitId": 511,
+        "WeaponId": 778,
+        "AmmunitionId": 605,
+        "Order": 0,
+        "Quantity": 12
+    },
+    {
+        "Id": 3095,
+        "UnitId": 511,
+        "WeaponId": 778,
+        "AmmunitionId": 606,
+        "Order": 0,
+        "Quantity": 24
+    },
+    {
+        "Id": 3096,
+        "UnitId": 540,
+        "WeaponId": 646,
+        "AmmunitionId": 607,
+        "Order": 0,
+        "Quantity": 45
+    },
+    {
+        "Id": 3097,
+        "UnitId": 540,
+        "WeaponId": 779,
+        "AmmunitionId": 608,
+        "Order": 0,
+        "Quantity": 45
+    },
+    {
+        "Id": 3098,
+        "UnitId": 540,
+        "WeaponId": 708,
+        "AmmunitionId": 27,
+        "Order": 0,
+        "Quantity": 160
+    },
+    {
+        "Id": 3099,
+        "UnitId": 509,
+        "WeaponId": 717,
+        "AmmunitionId": 572,
+        "Order": 0,
+        "Quantity": 6
+    },
+    {
+        "Id": 3100,
+        "UnitId": 509,
+        "WeaponId": 713,
+        "AmmunitionId": 27,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 3101,
+        "UnitId": 509,
+        "WeaponId": 733,
+        "AmmunitionId": 609,
+        "Order": 0,
+        "Quantity": 12
+    },
+    {
+        "Id": 3102,
+        "UnitId": 539,
+        "WeaponId": 780,
+        "AmmunitionId": 610,
+        "Order": 0,
+        "Quantity": 36
+    },
+    {
+        "Id": 3104,
+        "UnitId": 539,
+        "WeaponId": 780,
+        "AmmunitionId": 612,
+        "Order": 0,
+        "Quantity": 12
+    },
+    {
+        "Id": 3105,
+        "UnitId": 539,
+        "WeaponId": 781,
+        "AmmunitionId": 613,
+        "Order": 0,
+        "Quantity": 33
+    },
+    {
+        "Id": 3106,
+        "UnitId": 539,
+        "WeaponId": 781,
+        "AmmunitionId": 611,
+        "Order": 2,
+        "Quantity": 6
+    },
+    {
+        "Id": 3107,
+        "UnitId": 539,
+        "WeaponId": 781,
+        "AmmunitionId": 612,
+        "Order": 1,
+        "Quantity": 9
+    },
+    {
+        "Id": 3108,
+        "UnitId": 539,
+        "WeaponId": 18,
+        "AmmunitionId": 19,
+        "Order": 0,
+        "Quantity": 100
+    },
+    {
+        "Id": 3109,
+        "UnitId": 543,
+        "WeaponId": 715,
+        "AmmunitionId": 571,
+        "Order": 0,
+        "Quantity": 55
+    },
+    {
+        "Id": 3110,
+        "UnitId": 543,
+        "WeaponId": 715,
+        "AmmunitionId": 567,
+        "Order": 0,
+        "Quantity": 110
+    },
+    {
+        "Id": 3111,
+        "UnitId": 543,
+        "WeaponId": 713,
+        "AmmunitionId": 27,
+        "Order": 0,
+        "Quantity": 600
+    },
+    {
+        "Id": 3112,
+        "UnitId": 516,
+        "WeaponId": 641,
+        "AmmunitionId": 614,
+        "Order": 0,
+        "Quantity": 80
+    },
+    {
+        "Id": 3113,
+        "UnitId": 540,
+        "WeaponId": 646,
+        "AmmunitionId": 615,
+        "Order": 0,
+        "Quantity": 15
+    },
+    {
+        "Id": 3114,
+        "UnitId": 540,
+        "WeaponId": 779,
+        "AmmunitionId": 615,
+        "Order": 0,
+        "Quantity": 15
+    },
+    {
+        "Id": 3115,
+        "UnitId": 516,
+        "WeaponId": 744,
+        "AmmunitionId": 529,
+        "Order": 0,
+        "Quantity": 24
+    },
+    {
+        "Id": 3116,
+        "UnitId": 525,
+        "WeaponId": 696,
+        "AmmunitionId": 370,
+        "Order": 0,
+        "Quantity": 50
+    },
+    {
+        "Id": 3117,
+        "UnitId": 525,
+        "WeaponId": 695,
+        "AmmunitionId": 76,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 3118,
+        "UnitId": 525,
+        "WeaponId": 693,
+        "AmmunitionId": 357,
+        "Order": 0,
+        "Quantity": 80
+    },
+    {
+        "Id": 3121,
+        "UnitId": 278,
+        "WeaponId": 208,
+        "AmmunitionId": 129,
+        "Order": 0,
+        "Quantity": 80
+    },
+    {
+        "Id": 3122,
+        "UnitId": 340,
+        "WeaponId": 208,
+        "AmmunitionId": 129,
+        "Order": 0,
+        "Quantity": 80
+    },
+    {
+        "Id": 3125,
+        "UnitId": 23,
+        "WeaponId": 97,
+        "AmmunitionId": 70,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 3126,
+        "UnitId": 441,
+        "WeaponId": 206,
+        "AmmunitionId": 19,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 3127,
+        "UnitId": 533,
+        "WeaponId": 206,
+        "AmmunitionId": 19,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 3128,
+        "UnitId": 533,
+        "WeaponId": 207,
+        "AmmunitionId": 19,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 3129,
+        "UnitId": 148,
+        "WeaponId": 206,
+        "AmmunitionId": 19,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 3130,
+        "UnitId": 148,
+        "WeaponId": 207,
+        "AmmunitionId": 19,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 3131,
+        "UnitId": 454,
+        "WeaponId": 145,
+        "AmmunitionId": 70,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 3132,
+        "UnitId": 400,
+        "WeaponId": 145,
+        "AmmunitionId": 70,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 3133,
+        "UnitId": 400,
+        "WeaponId": 174,
+        "AmmunitionId": 70,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 3135,
+        "UnitId": 544,
+        "WeaponId": 206,
+        "AmmunitionId": 19,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 3136,
+        "UnitId": 544,
+        "WeaponId": 750,
+        "AmmunitionId": 50,
+        "Order": 0,
+        "Quantity": 96
+    },
+    {
+        "Id": 3137,
+        "UnitId": 544,
+        "WeaponId": 736,
+        "AmmunitionId": 16,
+        "Order": 0,
+        "Quantity": 80
+    },
+    {
+        "Id": 3140,
+        "UnitId": 303,
+        "WeaponId": 433,
+        "AmmunitionId": 402,
+        "Order": 0,
+        "Quantity": 5
+    },
+    {
+        "Id": 3142,
+        "UnitId": 506,
+        "WeaponId": 643,
+        "AmmunitionId": 153,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 3143,
+        "UnitId": 545,
+        "WeaponId": 783,
+        "AmmunitionId": 618,
+        "Order": 0,
+        "Quantity": 4
+    },
+    {
+        "Id": 3144,
+        "UnitId": 545,
+        "WeaponId": 784,
+        "AmmunitionId": 618,
+        "Order": 0,
+        "Quantity": 8
+    },
+    {
+        "Id": 3145,
+        "UnitId": 513,
+        "WeaponId": 642,
+        "AmmunitionId": 153,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 3146,
+        "UnitId": 530,
+        "WeaponId": 696,
+        "AmmunitionId": 370,
+        "Order": 0,
+        "Quantity": 50
+    },
+    {
+        "Id": 3148,
+        "UnitId": 513,
+        "WeaponId": 785,
+        "AmmunitionId": 40,
+        "Order": 0,
+        "Quantity": 50
+    },
+    {
+        "Id": 3151,
+        "UnitId": 513,
+        "WeaponId": 693,
+        "AmmunitionId": 16,
+        "Order": 0,
+        "Quantity": 80
+    },
+    {
+        "Id": 3152,
+        "UnitId": 506,
+        "WeaponId": 786,
+        "AmmunitionId": 40,
+        "Order": 0,
+        "Quantity": 50
+    },
+    {
+        "Id": 3153,
+        "UnitId": 505,
+        "WeaponId": 734,
+        "AmmunitionId": 50,
+        "Order": 0,
+        "Quantity": 320
+    },
+    {
+        "Id": 3154,
+        "UnitId": 320,
+        "WeaponId": 206,
+        "AmmunitionId": 19,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 3155,
+        "UnitId": 408,
+        "WeaponId": 206,
+        "AmmunitionId": 19,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 3156,
+        "UnitId": 147,
+        "WeaponId": 206,
+        "AmmunitionId": 19,
+        "Order": 0,
+        "Quantity": 200
+    },
+    {
+        "Id": 3157,
+        "UnitId": 343,
+        "WeaponId": 206,
         "AmmunitionId": 19,
         "Order": 0,
         "Quantity": 200

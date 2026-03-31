@@ -19,8 +19,8 @@ import type {
 /** Unit fields returned inside an ArsenalCard. */
 export type ArsenalUnit = Pick<
   Unit,
-  'Id' | 'Name' | 'HUDName' | 'CountryId' | 'CategoryType' | 'Cost' |
-  'ThumbnailFileName' | 'IsUnitModification' | 'DisplayInArmory'
+  'Id' | 'Name' | 'HUDName' | 'CountryId' | 'CategoryType' | 'Type' | 'Cost' |
+  'ThumbnailFileName' | 'PortraitFileName' | 'IsUnitModification' | 'DisplayInArmory'
 >;
 
 /** A single card in the arsenal grid. */
@@ -31,7 +31,16 @@ export type ArsenalCard = {
   transportCapacity: number;
   cargoCapacity: number;
   availableTransports: number[];
-  defaultModificationOptions: Array<{ optCost: number }>;
+  defaultModificationOptions: Array<{
+    modId: number;
+    optId: number;
+    optCost: number;
+    optRun: string | null;
+    optCwun: string | null;
+    type: number | null;
+    optThumbnailOverride: string | null;
+    optPortraitOverride: string | null;
+  }>;
 };
 
 /** Country fields used in the arsenal page. */
@@ -173,7 +182,8 @@ export type UnitDetailModSlot = {
     Pick<
       Option,
       'Id' | 'Name' | 'UIName' | 'Cost' | 'IsDefault' | 'Order' |
-      'ReplaceUnitName' | 'ConcatenateWithUnitName' | 'OptionPicture'
+      'ReplaceUnitName' | 'ConcatenateWithUnitName' | 'OptionPicture' |
+      'ThumbnailOverride' | 'PortraitOverride'
     >
   >;
   selectedOptionId: number;
@@ -192,7 +202,7 @@ export type UnitDetailSquadMember = {
 export type UnitDetailAvailability = {
   specialization: Pick<Specialization, 'Id' | 'Name' | 'UIName' | 'Icon' | 'CountryId'>;
   maxAvailability: number;
-  transports: Array<Pick<Unit, 'Id' | 'Name' | 'ThumbnailFileName'>>;
+  transports: Array<Pick<Unit, 'Id' | 'Name' | 'HUDName' | 'ThumbnailFileName'>>;
 };
 
 /** Complete unitDetail query response. */
@@ -211,4 +221,116 @@ export type UnitDetailData = {
   modifications: UnitDetailModSlot[];
   squadMembers: UnitDetailSquadMember[];
   availability: UnitDetailAvailability[];
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+ * Builder Page — builderData query
+ * ═══════════════════════════════════════════════════════════════════ */
+
+/** Country fields for the builder wizard. */
+export type BuilderCountry = Pick<Country, 'Id' | 'Name' | 'FlagFileName' | 'MaxPoints' | 'Hidden'>;
+
+/** Specialization with full slot/point budget fields. */
+export type BuilderSpecialization = Pick<
+  Specialization,
+  'Id' | 'Name' | 'UIName' | 'UIDescription' | 'Icon' | 'Illustration' | 'CountryId' |
+  'ReconSlots' | 'InfantrySlots' | 'CombatSlots' | 'SupportSlots' | 'LogisticsSlots' | 'HelicoptersSlots' | 'AirSlots' | 'MaxSlots' |
+  'ReconPoints' | 'InfantryPoints' | 'CombatPoints' | 'SupportPoints' | 'LogisticsPoints' | 'HelicoptersPoints' | 'AirPoints'
+>;
+
+/** Availability entry keyed by spec + unit. */
+export type BuilderAvailability = {
+  specAvailabilityId: number;
+  specializationId: number;
+  unitId: number;
+  maxAvailabilityXp0: number;
+  maxAvailabilityXp1: number;
+  maxAvailabilityXp2: number;
+  maxAvailabilityXp3: number;
+};
+
+/** Full builderData query response. */
+export type BuilderPageData = {
+  countries: BuilderCountry[];
+  specializations: BuilderSpecialization[];
+  arsenalUnitsCards: ArsenalCard[];
+  availabilities: BuilderAvailability[];
+};
+
+/** Option fields returned by optionsByIds query. */
+export type BuilderOption = Pick<
+  Option,
+  'Id' | 'ModificationId' | 'Name' | 'UIName' | 'Cost' | 'IsDefault' | 'Order' |
+  'ReplaceUnitName' | 'ConcatenateWithUnitName' | 'OptionPicture' |
+  'ThumbnailOverride' | 'PortraitOverride'
+>;
+
+/* ═══════════════════════════════════════════════════════════════════
+ * Unit Modifications — modifications(unitId) query
+ * ═══════════════════════════════════════════════════════════════════ */
+
+/** A modification slot as returned by the modifications(unitId) query. */
+export type BuilderModSlot = {
+  modification: Pick<
+    Modification,
+    'Id' | 'Name' | 'UIName' | 'Type' | 'Order' | 'ThumbnailFileName'
+  >;
+  options: BuilderOption[];
+};
+
+/** Response shape for the UNIT_MODIFICATIONS_QUERY. */
+export type UnitModificationsResponse = Pick<
+  Modification,
+  'Id' | 'Name' | 'UIName' | 'Type' | 'Order' | 'ThumbnailFileName'
+> & {
+  options: Array<Pick<
+    Option,
+    'Id' | 'Name' | 'UIName' | 'Cost' | 'IsDefault' | 'Order' |
+    'ReplaceUnitName' | 'ConcatenateWithUnitName' | 'OptionPicture' |
+    'ThumbnailOverride' | 'PortraitOverride'
+  >>;
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+ * Builder Unit Summary — lightweight unitDetail for floating panel
+ * ═══════════════════════════════════════════════════════════════════ */
+
+/** Lightweight weapon summary for the builder floating panel. */
+export type BuilderWeaponSummary = {
+  weapon: Pick<Weapon, 'Id' | 'HUDName' | 'Type' | 'HUDIcon' | 'CanShootOnTheMove'>;
+  ammunition: Array<{
+    quantity: number;
+    ammunition: Pick<Ammunition,
+      'HUDName' | 'HUDIcon' | 'HUDMultiplier' | 'Damage' | 'GroundRange' | 'MinimalRange' | 'TargetType' | 'ArmorTargeted' |
+      'PenetrationAtMinRange' | 'PenetrationAtGroundRange' |
+      'SupplyCost' | 'TopArmorAttack' | 'LaserGuided'
+    >;
+  }>;
+};
+
+/** Lightweight ability summary for the builder floating panel. */
+export type BuilderAbilitySummary = {
+  ECMAccuracyMultiplier: number;
+  IsRadar: boolean;
+  IsLaserDesignator: boolean;
+  IsSmoke: boolean;
+  IsAPS: boolean;
+  IsDecoy: boolean;
+};
+
+/** Lightweight unit summary from BUILDER_UNIT_SUMMARY_QUERY. */
+export type BuilderUnitSummary = {
+  displayName: string;
+  totalCost: number;
+  unit: Pick<Unit, 'Id' | 'Name' | 'Type' | 'CategoryType' | 'Cost' | 'Weight' | 'Stealth' | 'InfantrySlots' | 'ThumbnailFileName' | 'PortraitFileName'>;
+  armor: Pick<Armor, 'ArmorValue' | 'MaxHealthPoints' | 'KinArmorFront' | 'HeatArmorFront' | 'KinArmorRear' | 'HeatArmorRear' | 'KinArmorSides' | 'HeatArmorSides' | 'KinArmorTop' | 'HeatArmorTop'> | null;
+  mobility: Pick<Mobility, 'MaxSpeedRoad' | 'MaxCrossCountrySpeed' | 'MaxSpeedReverse' | 'IsAmphibious' | 'IsAirDroppable' | 'Agility' | 'TurnRate' | 'LoiteringTime' | 'IsAfterburner'> | null;
+  sensors: Array<{ OpticsGround: number; OpticsLowAltitude: number; OpticsHighAltitude: number }>;
+  weapons: BuilderWeaponSummary[];
+  abilities: BuilderAbilitySummary[];
+  squadMembers: Array<{
+    Id: number;
+    primaryWeapon: Pick<Weapon, 'Id' | 'HUDName' | 'Type' | 'HUDIcon'> | null;
+    specialWeapon: Pick<Weapon, 'Id' | 'HUDName' | 'Type' | 'HUDIcon'> | null;
+  }>;
 };

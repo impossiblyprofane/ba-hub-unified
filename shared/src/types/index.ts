@@ -19,3 +19,5 @@ export * from './transport.js';
 export * from './turret.js';
 export * from './unit.js';
 export * from './weapon.js';
+export * from './user.js';
+export * from './published-deck.js';

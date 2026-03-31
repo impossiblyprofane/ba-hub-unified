@@ -1250,11 +1250,6 @@
         "AbilityId": 28
     },
     {
-        "Id": 755,
-        "UnitId": 389,
-        "AbilityId": 59
-    },
-    {
         "Id": 757,
         "UnitId": 425,
         "AbilityId": 5
@@ -2428,5 +2423,275 @@
         "Id": 1050,
         "UnitId": 144,
         "AbilityId": 9
+    },
+    {
+        "Id": 1051,
+        "UnitId": 493,
+        "AbilityId": 104
+    },
+    {
+        "Id": 1052,
+        "UnitId": 496,
+        "AbilityId": 90
+    },
+    {
+        "Id": 1053,
+        "UnitId": 497,
+        "AbilityId": 90
+    },
+    {
+        "Id": 1056,
+        "UnitId": 389,
+        "AbilityId": 58
+    },
+    {
+        "Id": 1057,
+        "UnitId": 498,
+        "AbilityId": 5
+    },
+    {
+        "Id": 1060,
+        "UnitId": 502,
+        "AbilityId": 5
+    },
+    {
+        "Id": 1061,
+        "UnitId": 503,
+        "AbilityId": 9
+    },
+    {
+        "Id": 1062,
+        "UnitId": 503,
+        "AbilityId": 93
+    },
+    {
+        "Id": 1063,
+        "UnitId": 503,
+        "AbilityId": 4
+    },
+    {
+        "Id": 1064,
+        "UnitId": 506,
+        "AbilityId": 11
+    },
+    {
+        "Id": 1066,
+        "UnitId": 508,
+        "AbilityId": 58
+    },
+    {
+        "Id": 1067,
+        "UnitId": 511,
+        "AbilityId": 5
+    },
+    {
+        "Id": 1068,
+        "UnitId": 512,
+        "AbilityId": 44
+    },
+    {
+        "Id": 1069,
+        "UnitId": 500,
+        "AbilityId": 1
+    },
+    {
+        "Id": 1070,
+        "UnitId": 500,
+        "AbilityId": 88
+    },
+    {
+        "Id": 1071,
+        "UnitId": 500,
+        "AbilityId": 4
+    },
+    {
+        "Id": 1072,
+        "UnitId": 501,
+        "AbilityId": 1
+    },
+    {
+        "Id": 1073,
+        "UnitId": 501,
+        "AbilityId": 4
+    },
+    {
+        "Id": 1074,
+        "UnitId": 513,
+        "AbilityId": 11
+    },
+    {
+        "Id": 1075,
+        "UnitId": 514,
+        "AbilityId": 11
+    },
+    {
+        "Id": 1078,
+        "UnitId": 517,
+        "AbilityId": 11
+    },
+    {
+        "Id": 1079,
+        "UnitId": 518,
+        "AbilityId": 81
+    },
+    {
+        "Id": 1080,
+        "UnitId": 519,
+        "AbilityId": 90
+    },
+    {
+        "Id": 1081,
+        "UnitId": 520,
+        "AbilityId": 90
+    },
+    {
+        "Id": 1082,
+        "UnitId": 521,
+        "AbilityId": 90
+    },
+    {
+        "Id": 1083,
+        "UnitId": 522,
+        "AbilityId": 90
+    },
+    {
+        "Id": 1084,
+        "UnitId": 523,
+        "AbilityId": 90
+    },
+    {
+        "Id": 1085,
+        "UnitId": 524,
+        "AbilityId": 90
+    },
+    {
+        "Id": 1086,
+        "UnitId": 499,
+        "AbilityId": 5
+    },
+    {
+        "Id": 1087,
+        "UnitId": 525,
+        "AbilityId": 11
+    },
+    {
+        "Id": 1090,
+        "UnitId": 526,
+        "AbilityId": 11
+    },
+    {
+        "Id": 1092,
+        "UnitId": 530,
+        "AbilityId": 89
+    },
+    {
+        "Id": 1094,
+        "UnitId": 529,
+        "AbilityId": 89
+    },
+    {
+        "Id": 1095,
+        "UnitId": 533,
+        "AbilityId": 90
+    },
+    {
+        "Id": 1096,
+        "UnitId": 534,
+        "AbilityId": 90
+    },
+    {
+        "Id": 1098,
+        "UnitId": 535,
+        "AbilityId": 5
+    },
+    {
+        "Id": 1100,
+        "UnitId": 510,
+        "AbilityId": 5
+    },
+    {
+        "Id": 1101,
+        "UnitId": 540,
+        "AbilityId": 5
+    },
+    {
+        "Id": 1102,
+        "UnitId": 542,
+        "AbilityId": 1
+    },
+    {
+        "Id": 1103,
+        "UnitId": 542,
+        "AbilityId": 4
+    },
+    {
+        "Id": 1104,
+        "UnitId": 531,
+        "AbilityId": 25
+    },
+    {
+        "Id": 1105,
+        "UnitId": 498,
+        "AbilityId": 4
+    },
+    {
+        "Id": 1106,
+        "UnitId": 498,
+        "AbilityId": 88
+    },
+    {
+        "Id": 1107,
+        "UnitId": 532,
+        "AbilityId": 23
+    },
+    {
+        "Id": 1110,
+        "UnitId": 543,
+        "AbilityId": 5
+    },
+    {
+        "Id": 1112,
+        "UnitId": 536,
+        "AbilityId": 30
+    },
+    {
+        "Id": 1113,
+        "UnitId": 527,
+        "AbilityId": 81
+    },
+    {
+        "Id": 1114,
+        "UnitId": 528,
+        "AbilityId": 11
+    },
+    {
+        "Id": 1115,
+        "UnitId": 544,
+        "AbilityId": 90
+    },
+    {
+        "Id": 1116,
+        "UnitId": 544,
+        "AbilityId": 90
+    },
+    {
+        "Id": 1117,
+        "UnitId": 545,
+        "AbilityId": 59
+    },
+    {
+        "Id": 1121,
+        "UnitId": 516,
+        "AbilityId": 90
+    },
+    {
+        "Id": 1122,
+        "UnitId": 507,
+        "AbilityId": 90
+    },
+    {
+        "Id": 1123,
+        "UnitId": 515,
+        "AbilityId": 90
     }
 ]

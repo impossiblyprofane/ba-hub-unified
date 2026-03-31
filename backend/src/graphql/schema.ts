@@ -22,10 +22,28 @@ export const schema = `
     specialization(id: Int!): Specialization
     arsenalFilters: ArsenalFilters!
     unitDetail(id: Int!, optionIds: [Int!]): UnitDetailResult
+    builderData(countryId: Int!, spec1Id: Int!, spec2Id: Int!): BuilderData!
+    optionsByIds(ids: [Int!]!): [Option!]!
+
+    # ── Deck publishing ──────────────────────────────────────
+    publishedDeck(id: String!): PublishedDeck
+    browseDecks(filter: BrowseDecksFilterInput): BrowseDecksResult!
+    publishedDecksByAuthor(authorId: String!): [PublishedDeckSummary!]!
+    userProfile(userId: String!): UserProfile
+    challenge: TrivialChallenge!
+    deckLikeStatus(deckId: String!, userId: String!): LikeStatus!
   }
 
   type Mutation {
     ping: String!
+
+    # ── Deck publishing ──────────────────────────────────────
+    registerUser(tentativeId: String!): RegisterUserResult!
+    publishDeck(input: PublishDeckInput!): PublishedDeck!
+    updatePublishedDeck(deckId: String!, input: UpdatePublishedDeckInput!): PublishedDeck!
+    deletePublishedDeck(deckId: String!, input: DeletePublishedDeckInput!): Boolean!
+    toggleDeckLike(deckId: String!, userId: String!): ToggleLikeResult!
+    recordDeckView(deckId: String!, viewerKey: String): RecordViewResult!
   }
 
   type Subscription {
@@ -56,6 +74,8 @@ export const schema = `
     optRun: String
     optCwun: String
     type: Int
+    optThumbnailOverride: String
+    optPortraitOverride: String
   }
 
   type ArsenalUnitCard {
@@ -328,6 +348,9 @@ export const schema = `
     Order: Int
     UIName: String
     OptionPicture: String
+    ThumbnailOverride: String
+    PortraitOverride: String
+    StealthOverride: Int
     ConcatenateWithUnitName: String
     ReplaceUnitName: String
     ReplaceUnitId: Int
@@ -529,4 +552,141 @@ export const schema = `
     maxAvailability: Int
     transports: [Unit!]!
   }
+
+  type BuilderAvailability {
+    specAvailabilityId: Int!
+    specializationId: Int!
+    unitId: Int!
+    maxAvailabilityXp0: Int!
+    maxAvailabilityXp1: Int!
+    maxAvailabilityXp2: Int!
+    maxAvailabilityXp3: Int!
+  }
+
+  type BuilderData {
+    countries: [Country!]!
+    specializations: [Specialization!]!
+    arsenalUnitsCards: [ArsenalUnitCard!]!
+    availabilities: [BuilderAvailability!]!
+  }
+
+  # ══════════════════════════════════════════════════════════════
+  # Deck Publishing types
+  # ══════════════════════════════════════════════════════════════
+
+  type PublishedDeck {
+    id: String!
+    authorId: String!
+    name: String!
+    description: String!
+    deckCode: String!
+    countryId: Int!
+    spec1Id: Int!
+    spec2Id: Int!
+    deckData: JSON
+    tags: [String!]!
+    viewCount: Int!
+    likeCount: Int!
+    createdAt: String!
+    updatedAt: String!
+  }
+
+  type PublishedDeckSummary {
+    id: String!
+    authorId: String!
+    name: String!
+    description: String!
+    deckCode: String!
+    countryId: Int!
+    spec1Id: Int!
+    spec2Id: Int!
+    tags: [String!]!
+    viewCount: Int!
+    likeCount: Int!
+    createdAt: String!
+    updatedAt: String!
+  }
+
+  type BrowseDecksResult {
+    decks: [PublishedDeckSummary!]!
+    total: Int!
+    page: Int!
+    pageSize: Int!
+    totalPages: Int!
+  }
+
+  type UserProfile {
+    id: String!
+    publishedCount: Int!
+    totalLikesReceived: Int!
+    createdAt: String!
+  }
+
+  type TrivialChallenge {
+    challengeId: String!
+    question: String!
+  }
+
+  type RegisterUserResult {
+    userId: String!
+    isNew: Boolean!
+  }
+
+  type ToggleLikeResult {
+    liked: Boolean!
+    newLikeCount: Int!
+  }
+
+  type RecordViewResult {
+    newViewCount: Int!
+  }
+
+  type LikeStatus {
+    liked: Boolean!
+  }
+
+  input BrowseDecksFilterInput {
+    countryId: Int
+    spec1Id: Int
+    spec2Id: Int
+    tags: [String!]
+    search: String
+    authorId: String
+    sort: String
+    page: Int
+    pageSize: Int
+  }
+
+  input PublishDeckInput {
+    authorId: String!
+    name: String!
+    description: String
+    deckCode: String!
+    countryId: Int!
+    spec1Id: Int!
+    spec2Id: Int!
+    deckData: JSON!
+    tags: [String!]!
+    challengeId: String!
+    challengeAnswer: Int!
+  }
+
+  input UpdatePublishedDeckInput {
+    authorId: String!
+    name: String
+    description: String
+    deckCode: String
+    deckData: JSON
+    tags: [String!]
+    challengeId: String!
+    challengeAnswer: Int!
+  }
+
+  input DeletePublishedDeckInput {
+    authorId: String!
+    challengeId: String!
+    challengeAnswer: Int!
+  }
+
+  scalar JSON
 `;

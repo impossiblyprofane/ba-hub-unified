@@ -79,7 +79,7 @@ export const UNIT_DETAIL_QUERY = `
       modifications {
         selectedOptionId
         modification { Id Name UIName Type Order ThumbnailFileName }
-        options { Id Name UIName Cost IsDefault Order ReplaceUnitName ConcatenateWithUnitName OptionPicture }
+        options { Id Name UIName Cost IsDefault Order ReplaceUnitName ConcatenateWithUnitName OptionPicture ThumbnailOverride PortraitOverride }
       }
       squadMembers {
         Id DeathPriority ModelFileName
@@ -89,7 +89,7 @@ export const UNIT_DETAIL_QUERY = `
       availability {
         maxAvailability
         specialization { Id Name UIName Icon CountryId }
-        transports { Id Name ThumbnailFileName }
+        transports { Id Name HUDName ThumbnailFileName }
       }
     }
   }

@@ -16,8 +16,7 @@ export const onGet: RequestHandler = async ({ headers }) => {
 const NAV_ITEMS = [
   { i18nKey: 'nav.home', href: '/', icon: encodeIconPath(UtilIconPaths.ORDER_BACK_TO_BASE) },
   { i18nKey: 'nav.arsenal', href: '/arsenal', icon: encodeIconPath(UtilIconPaths.POINTS) },
-  { i18nKey: 'nav.deckArsenal', href: '/decks', icon: encodeIconPath(UtilIconPaths.DECK) },
-  { i18nKey: 'nav.builder', href: '/builder', icon: UtilIconPaths.DECK_OUTLINE },
+  { i18nKey: 'nav.decks', href: '/decks', icon: encodeIconPath(UtilIconPaths.DECK) },
   { i18nKey: 'nav.maps', href: '/maps', icon: encodeIconPath(UtilIconPaths.LOCATION_MAP) },
   { i18nKey: 'nav.statistics', href: '/stats', icon: encodeIconPath(UtilIconPaths.KILL_DEATH_RATIO) },
   { i18nKey: 'nav.guides', href: '/guides', icon: encodeIconPath(UtilIconPaths.LEAST_FAVORITE_SPEC) },

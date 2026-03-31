@@ -1,10 +1,11 @@
 import { component$ } from '@builder.io/qwik';
 import { GameIcon } from '~/components/GameIcon';
 import {
-  toCountryIconPath, toPortraitIconPath,
+  toCountryIconPath, toPortraitIconPath, toUnitIconPath,
   UtilIconPaths,
 } from '~/lib/iconPaths';
 import { useI18n, t } from '~/lib/i18n';
+import { SimpleTooltip } from '~/components/ui/SimpleTooltip';
 import type { UnitDetailModSlot, UnitDetailData } from '~/lib/graphql-types';
 import { UnitModifications } from '~/components/unit-detail/UnitModifications';
 import { UnitArmorDiagram } from '~/components/unit-detail/UnitArmorDiagram';
@@ -33,6 +34,7 @@ export const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetch
   const unit = data.unit;
   const catLabel = t(i18n, CATEGORY_I18N[unit.CategoryType] ?? 'unitDetail.category.rec');
   const portraitUrl = toPortraitIconPath(unit.PortraitFileName || unit.ThumbnailFileName);
+  const unitLabelUrl = unit.ThumbnailFileName ? toUnitIconPath(unit.ThumbnailFileName) : null;
   const countryFlagUrl = data.country?.FlagFileName ? toCountryIconPath(data.country.FlagFileName) : null;
 
   // ECM: find the active ECM ability (multiplier between 0 and 1 = accuracy reduction)
@@ -65,6 +67,11 @@ export const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetch
               </div>
             )}
           </div>
+          {unitLabelUrl && (
+            <div class="flex justify-center py-2 bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.7)] border-b border-[rgba(51,51,51,0.15)]">
+              <GameIcon src={unitLabelUrl} size={48} variant="white" alt="Unit label" />
+            </div>
+          )}
           <div class="px-3 py-2 border-b border-[rgba(51,51,51,0.3)] bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.7)]">
             <div class="flex items-center justify-center gap-2">
               <span class="text-[10px] font-mono tracking-[0.2em] uppercase text-[var(--text-dim)]">{catLabel}</span>
@@ -76,9 +83,9 @@ export const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetch
           </div>
           {(unit.Length > 0 || unit.Width > 0 || unit.Height > 0) && (
             <div class="flex items-center justify-center gap-4 px-3 py-1.5 border-t border-[rgba(51,51,51,0.3)] bg-[rgba(26,26,26,0.4)]">
-              <span class="text-[9px] font-mono text-[var(--text-dim)]" title="Length">L <span class="text-[var(--text)]">{unit.Length?.toFixed(1) ?? '—'}</span>m</span>
-              <span class="text-[9px] font-mono text-[var(--text-dim)]" title="Width">W <span class="text-[var(--text)]">{unit.Width?.toFixed(1) ?? '—'}</span>m</span>
-              <span class="text-[9px] font-mono text-[var(--text-dim)]" title="Height">H <span class="text-[var(--text)]">{unit.Height?.toFixed(1) ?? '—'}</span>m</span>
+              <SimpleTooltip text="Length"><span class="text-[9px] font-mono text-[var(--text-dim)]">L <span class="text-[var(--text)]">{unit.Length?.toFixed(1) ?? '—'}</span>m</span></SimpleTooltip>
+              <SimpleTooltip text="Width"><span class="text-[9px] font-mono text-[var(--text-dim)]">W <span class="text-[var(--text)]">{unit.Width?.toFixed(1) ?? '—'}</span>m</span></SimpleTooltip>
+              <SimpleTooltip text="Height"><span class="text-[9px] font-mono text-[var(--text-dim)]">H <span class="text-[var(--text)]">{unit.Height?.toFixed(1) ?? '—'}</span>m</span></SimpleTooltip>
             </div>
           )}
         </div>
@@ -170,6 +177,11 @@ export const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetch
               </div>
             )}
           </div>
+          {unitLabelUrl && (
+            <div class="flex justify-center py-2 bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.7)] border-b border-[rgba(51,51,51,0.15)]">
+              <GameIcon src={unitLabelUrl} size={48} variant="white" alt="Unit label" />
+            </div>
+          )}
           <div class="px-3 py-2 border-b border-[rgba(51,51,51,0.3)] bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.7)]">
             <div class="flex items-center justify-center gap-2">
               <span class="text-[10px] font-mono tracking-[0.2em] uppercase text-[var(--text-dim)]">{catLabel}</span>
@@ -181,9 +193,9 @@ export const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetch
           </div>
           {(unit.Length > 0 || unit.Width > 0 || unit.Height > 0) && (
             <div class="flex items-center justify-center gap-4 px-3 py-1.5 border-t border-[rgba(51,51,51,0.3)] bg-[rgba(26,26,26,0.4)]">
-              <span class="text-[9px] font-mono text-[var(--text-dim)]" title="Length">L <span class="text-[var(--text)]">{unit.Length?.toFixed(1) ?? '—'}</span>m</span>
-              <span class="text-[9px] font-mono text-[var(--text-dim)]" title="Width">W <span class="text-[var(--text)]">{unit.Width?.toFixed(1) ?? '—'}</span>m</span>
-              <span class="text-[9px] font-mono text-[var(--text-dim)]" title="Height">H <span class="text-[var(--text)]">{unit.Height?.toFixed(1) ?? '—'}</span>m</span>
+              <SimpleTooltip text="Length"><span class="text-[9px] font-mono text-[var(--text-dim)]">L <span class="text-[var(--text)]">{unit.Length?.toFixed(1) ?? '—'}</span>m</span></SimpleTooltip>
+              <SimpleTooltip text="Width"><span class="text-[9px] font-mono text-[var(--text-dim)]">W <span class="text-[var(--text)]">{unit.Width?.toFixed(1) ?? '—'}</span>m</span></SimpleTooltip>
+              <SimpleTooltip text="Height"><span class="text-[9px] font-mono text-[var(--text-dim)]">H <span class="text-[var(--text)]">{unit.Height?.toFixed(1) ?? '—'}</span>m</span></SimpleTooltip>
             </div>
           )}
         </div>
@@ -298,6 +310,11 @@ export const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetch
                 </div>
               )}
             </div>
+            {unitLabelUrl && (
+              <div class="flex justify-center py-2.5 bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.7)] border-b border-[rgba(51,51,51,0.15)]">
+                <GameIcon src={unitLabelUrl} size={56} variant="white" alt="Unit label" />
+              </div>
+            )}
             <div class="px-4 py-2 border-b border-[rgba(51,51,51,0.3)] bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.7)]">
               <div class="flex items-center justify-center gap-2.5">
                 <span class="text-[10px] font-mono tracking-[0.2em] uppercase text-[var(--text-dim)]">{catLabel}</span>
@@ -309,9 +326,9 @@ export const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetch
             </div>
             {(unit.Length > 0 || unit.Width > 0 || unit.Height > 0) && (
               <div class="flex items-center justify-center gap-5 px-4 py-1.5 border-t border-[rgba(51,51,51,0.3)] bg-[rgba(26,26,26,0.4)]">
-                <span class="text-[10px] font-mono text-[var(--text-dim)]" title="Length">L <span class="text-[var(--text)]">{unit.Length?.toFixed(1) ?? '—'}</span>m</span>
-                <span class="text-[10px] font-mono text-[var(--text-dim)]" title="Width">W <span class="text-[var(--text)]">{unit.Width?.toFixed(1) ?? '—'}</span>m</span>
-                <span class="text-[10px] font-mono text-[var(--text-dim)]" title="Height">H <span class="text-[var(--text)]">{unit.Height?.toFixed(1) ?? '—'}</span>m</span>
+                <SimpleTooltip text="Length"><span class="text-[10px] font-mono text-[var(--text-dim)]">L <span class="text-[var(--text)]">{unit.Length?.toFixed(1) ?? '—'}</span>m</span></SimpleTooltip>
+                <SimpleTooltip text="Width"><span class="text-[10px] font-mono text-[var(--text-dim)]">W <span class="text-[var(--text)]">{unit.Width?.toFixed(1) ?? '—'}</span>m</span></SimpleTooltip>
+                <SimpleTooltip text="Height"><span class="text-[10px] font-mono text-[var(--text-dim)]">H <span class="text-[var(--text)]">{unit.Height?.toFixed(1) ?? '—'}</span>m</span></SimpleTooltip>
               </div>
             )}
           </div>
