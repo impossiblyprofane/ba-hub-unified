@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { db } from '../db.js';
 import { publishedDecks, deckLikes, deckViews } from '../schema/index.js';
-import { eq, and, sql, desc, ilike, inArray } from 'drizzle-orm';
+import { eq, and, sql, desc, ilike } from 'drizzle-orm';
 import { verifyChallenge } from './challenges.js';
 import type {
   PublishDeckInput,

@@ -18,10 +18,10 @@ async function main() {
     credentials: true,
   });
 
-  await app.register(rateLimit, {
+  await app.register(rateLimit as any, {
     max: 100,
     timeWindow: '1 minute',
-    keyGenerator: (req) => {
+    keyGenerator: (req: any) => {
       // Prefer X-User-Id header for per-user rate limiting,
       // fall back to IP for anonymous visitors.
       return (req.headers['x-user-id'] as string) ?? req.ip;
