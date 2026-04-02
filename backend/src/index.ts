@@ -11,6 +11,7 @@ import { StatsClient } from './services/statsClient.js';
 import { StatsCollector } from './services/statsCollector.js';
 import { encryptDek, decryptDek } from './services/dekEncryption.js';
 import { isrRelayPlugin } from './routes/isrRelay.js';
+import { encryptPayload, decryptPayload, isEncryptionConfigured } from '@ba-hub/shared';
 
 const PORT = process.env.PORT || 3001;
 const DATABASE_SERVICE_URL = process.env.DATABASE_SERVICE_URL || 'http://localhost:3002';
@@ -133,10 +134,42 @@ async function buildServer() {
     subscription: true, // Enable subscriptions via WebSocket
   });
 
-  // Cache headers for GraphQL responses — data is static, so cache aggressively
+  // ── API traffic encryption (surface-level anti-scraping) ──────
+  const encryptApi = process.env.ENCRYPT_API === 'true' && isEncryptionConfigured();
+  if (encryptApi) {
+    fastify.log.info('API traffic encryption enabled');
+  }
+
+  // Decrypt incoming GraphQL requests if encrypted (body has { e: "..." })
+  // Tag request so we know to encrypt the response
+  fastify.addHook('preHandler', async (request) => {
+    if (request.url !== '/graphql' || request.method !== 'POST') return;
+    const body = request.body as Record<string, unknown> | undefined;
+    if (body && typeof body.e === 'string' && !body.query) {
+      try {
+        const decrypted = decryptPayload<Record<string, unknown>>(body.e);
+        (request as any).body = decrypted;
+        (request as any)._encrypted = true; // tag for response encryption
+      } catch {
+        // Not encrypted or invalid — pass through for Mercurius to handle
+      }
+    }
+  });
+
+  // Encrypt outgoing GraphQL responses + set cache headers
   fastify.addHook('onSend', async (request, reply, payload) => {
     if (request.url === '/graphql' && request.method === 'POST') {
       reply.header('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+
+      // Only encrypt response if the request was encrypted (preserves GraphiQL)
+      if ((request as any)._encrypted && typeof payload === 'string') {
+        try {
+          const parsed = JSON.parse(payload);
+          return JSON.stringify({ e: encryptPayload(parsed) });
+        } catch {
+          return payload;
+        }
+      }
     }
     return payload;
   });
