@@ -701,6 +701,7 @@ const en: TranslationDict = {
   'stats.match.sortSpawn': 'Spawn',
   'stats.match.sortKills': 'Kills',
   'stats.match.sortDamage': 'Damage',
+  'stats.match.openingLineup': 'Opening Lineup',
 
   // Stats: player profile — expanded
   'stats.profile.winRateByMap': 'Win Rate by Map',

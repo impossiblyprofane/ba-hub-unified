@@ -7,6 +7,7 @@ import type { AnalyticsFightData, AnalyticsFightPlayer, AnalyticsFightUnit } fro
 import { STATS_FIGHT_DATA_QUERY } from '~/lib/queries/stats';
 import { toCountryIconPath, toSpecializationIconPath } from '~/lib/iconPaths';
 import { ReadonlyUnitPanel } from '~/components/decks/ReadonlyUnitPanel';
+import { getMapBackgroundByName } from '~/lib/maps/mapData';
 import type { UnitConfig } from '@ba-hub/shared';
 
 /** Resolve raw option UIName through the game locale system, with fallback cleanup */
@@ -114,6 +115,28 @@ function markTransported(units: AnalyticsFightUnit[]): boolean[] {
   return result;
 }
 
+/**
+ * Mark units that form the opening lineup (first units whose cumulative
+ * cost stays at or under 1000 points — the starting budget).
+ * Transported infantry cost is attributed to the group but the transport
+ * itself is what "spends" the budget, so we accumulate continuously.
+ */
+function markOpeningLineup(units: AnalyticsFightUnit[]): { isOpener: boolean[]; lastOpenerIdx: number } {
+  const isOpener = new Array(units.length).fill(false);
+  let cumulative = 0;
+  let lastOpenerIdx = -1;
+
+  for (let i = 0; i < units.length; i++) {
+    const cost = units[i].totalCost ?? 0;
+    if (cumulative + cost > 1000) break;
+    cumulative += cost;
+    isOpener[i] = true;
+    lastOpenerIdx = i;
+  }
+
+  return { isOpener, lastOpenerIdx };
+}
+
 /* ─── Panel wrapper ──────────────────────────────────────── */
 
 const Panel = component$<{ title: string }>(({ title }) => {
@@ -162,8 +185,9 @@ const PlayerUnitsTable = component$<{
     sorted.sort((a, b) => (b.totalDamageDealt ?? 0) - (a.totalDamageDealt ?? 0));
   }
 
-  // Only detect transport grouping in spawn order
+  // Only detect transport grouping and opening lineup in spawn order
   const transported = sortMode.value === 'spawn' ? markTransported(sorted) : new Array(sorted.length).fill(false);
+  const opener = sortMode.value === 'spawn' ? markOpeningLineup(sorted) : { isOpener: new Array(sorted.length).fill(false), lastOpenerIdx: -1 };
 
   return (
     <div>
@@ -218,12 +242,30 @@ const PlayerUnitsTable = component$<{
         <tbody>
           {sorted.map((u, idx) => {
             const isTransported = transported[idx];
+            const isOpenerUnit = opener.isOpener[idx];
+            const isLastOpener = idx === opener.lastOpenerIdx;
             const resolvedOpts = resolveOptionNames(u.optionNames ?? [], i18n.locale);
             const hasOptions = resolvedOpts.length > 0;
             return (
+              <>
+              {isOpenerUnit && idx === 0 && (
+                <tr key="opener-label">
+                  <td colSpan={7} class="py-1 px-1">
+                    <span class="text-[8px] font-mono uppercase tracking-[0.2em] text-[var(--accent)] opacity-60">
+                      {t(i18n, 'stats.match.openingLineup')}
+                    </span>
+                  </td>
+                </tr>
+              )}
               <tr
                 key={`u-${u.id}-${idx}`}
-                class="border-b border-[rgba(51,51,51,0.1)] hover:bg-[rgba(70,151,195,0.04)] transition-colors"
+                class={[
+                  'hover:bg-[rgba(70,151,195,0.04)] transition-colors',
+                  isOpenerUnit
+                    ? 'bg-[rgba(70,151,195,0.06)] border-b border-[rgba(51,51,51,0.1)]'
+                    : 'border-b border-[rgba(51,51,51,0.1)]',
+                  isLastOpener ? 'border-b-[rgba(70,151,195,0.25)]' : '',
+                ].join(' ')}
               >
                 <td class={`py-1 px-1 ${isTransported ? 'pl-5' : ''}`}>
                   <div>
@@ -270,6 +312,14 @@ const PlayerUnitsTable = component$<{
                   {u.wasRefunded ? t(i18n, 'stats.match.yes') : t(i18n, 'stats.match.no')}
                 </td>
               </tr>
+              {isLastOpener && idx < sorted.length - 1 && (
+                <tr key="opener-sep">
+                  <td colSpan={7} class="py-0">
+                    <div class="border-b border-[rgba(70,151,195,0.2)]" />
+                  </td>
+                </tr>
+              )}
+              </>
             );
           })}
         </tbody>
@@ -422,37 +472,49 @@ export default component$(() => {
         </button>
       )}
 
-      {/* Match header */}
-      <div class="mb-4">
-        <p class="text-[var(--accent)] text-xs font-mono tracking-[0.3em] uppercase mb-2">
-          {t(i18n, 'stats.match.title')}
-        </p>
-        <h1 class="text-2xl font-semibold text-[var(--text)] tracking-tight">
-          {f.mapName ?? `Map ${f.mapId ?? '?'}`}
-        </h1>
-        <div class="flex flex-wrap gap-4 mt-2 text-xs text-[var(--text-dim)]">
-          <span>
-            {t(i18n, 'stats.match.duration')}: {formatPlaytime(f.totalPlayTimeSec)}
-          </span>
-          <span>
-            {t(i18n, 'stats.match.players')}: {f.players.length}
-          </span>
-          {f.victoryLevel != null && (
-            <span>
-              {t(i18n, 'stats.match.victoryLevel')}: {f.victoryLevel}
-            </span>
-          )}
-          {f.totalObjectiveZonesCount != null && (
-            <span>
-              {t(i18n, 'stats.match.objectives')}: {f.totalObjectiveZonesCount}
-            </span>
-          )}
-          <span>{formatTimestamp(f.endTime)}</span>
-        </div>
-      </div>
+      {/* Match header + team panels with map background */}
+      {(() => {
+        const mapImg = getMapBackgroundByName(f.mapName);
+        return (
+          <div class="mb-3 relative overflow-hidden">
+            {mapImg && (
+              <div
+                class="absolute inset-0 bg-cover bg-center opacity-[0.12] pointer-events-none"
+                style={{ backgroundImage: `url(${mapImg})` }}
+              />
+            )}
+            <div class="relative">
+              {/* Match header */}
+              <div class="p-4 mb-3">
+                <p class="text-[var(--accent)] text-xs font-mono tracking-[0.3em] uppercase mb-2">
+                  {t(i18n, 'stats.match.title')}
+                </p>
+                <h1 class="text-2xl font-semibold text-[var(--text)] tracking-tight">
+                  {f.mapName ?? `Map ${f.mapId ?? '?'}`}
+                </h1>
+                <div class="flex flex-wrap gap-4 mt-2 text-xs text-[var(--text-dim)]">
+                  <span>
+                    {t(i18n, 'stats.match.duration')}: {formatPlaytime(f.totalPlayTimeSec)}
+                  </span>
+                  <span>
+                    {t(i18n, 'stats.match.players')}: {f.players.length}
+                  </span>
+                  {f.victoryLevel != null && (
+                    <span>
+                      {t(i18n, 'stats.match.victoryLevel')}: {f.victoryLevel}
+                    </span>
+                  )}
+                  {f.totalObjectiveZonesCount != null && (
+                    <span>
+                      {t(i18n, 'stats.match.objectives')}: {f.totalObjectiveZonesCount}
+                    </span>
+                  )}
+                  <span>{formatTimestamp(f.endTime)}</span>
+                </div>
+              </div>
 
-      {/* Team panels */}
-      <div class="flex flex-col gap-3 mb-3">
+              {/* Team panels */}
+              <div class="flex flex-col gap-3">
         {teamEntries.map(([teamKey, players]) => {
           const isWinner = teamKey === winnerTeam;
           const headerLabel = isWinner ? '★ VICTORY' : '⊘ DEFEAT';
@@ -486,7 +548,20 @@ export default component$(() => {
 
                   {/* Player scoreboard */}
                   <div class="overflow-x-auto">
-                    <table class="w-full text-xs border-collapse">
+                    <table class="w-full text-xs border-collapse table-fixed">
+                      <colgroup>
+                        <col style={{ width: '28%' }} />
+                        <col style={{ width: '5%' }} />
+                        <col style={{ width: '5%' }} />
+                        <col style={{ width: '8%' }} />
+                        <col style={{ width: '8%' }} />
+                        <col style={{ width: '5%' }} />
+                        <col style={{ width: '8%' }} />
+                        <col style={{ width: '8%' }} />
+                        <col style={{ width: '8%' }} />
+                        <col style={{ width: '5%' }} />
+                        <col style={{ width: '12%' }} />
+                      </colgroup>
                       <thead>
                         <tr class="text-[var(--text-dim)] uppercase tracking-[0.2em] text-[8px]">
                           <th class="text-left py-1 border-b border-[rgba(51,51,51,0.3)]">
@@ -656,7 +731,11 @@ export default component$(() => {
             </div>
           );
         })}
-      </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Shared unit roster — renders for each player, visibility controlled by signal */}
       {f.players.map((sp) => (

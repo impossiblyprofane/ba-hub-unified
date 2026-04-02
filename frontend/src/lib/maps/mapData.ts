@@ -227,3 +227,28 @@ export function getMapByKey(key: string): MapData | undefined {
 export function getMapById(id: number): MapData | undefined {
   return MAPS.find(m => m.id === id);
 }
+
+/**
+ * API display names that differ from MAPS.displayName.
+ * Maps external API name → MAPS key for lookup.
+ */
+const API_NAME_ALIASES: Record<string, string> = {
+  'Tallinn Harbour': 'tallinn',
+  'Oil refinery': 'oilRefinery',
+  'Ignalina Powerplant': 'ignalinaPowerPlant',
+};
+
+/** Maps without a votemap asset — fall back to preview. */
+const NO_VOTEMAP = new Set(['suwalki', 'tallinn', 'jelgava', 'narva']);
+
+/** Get a map background image path from an API map display name.
+ *  Prefers votemap, falls back to preview for maps that lack one. */
+export function getMapBackgroundByName(name: string | null): string | null {
+  if (!name) return null;
+  const aliasKey = API_NAME_ALIASES[name];
+  const map = aliasKey
+    ? MAPS.find(m => m.key === aliasKey)
+    : MAPS.find(m => m.displayName === name);
+  if (!map) return null;
+  return NO_VOTEMAP.has(map.key) ? map.image.preview : map.image.votemap;
+}
