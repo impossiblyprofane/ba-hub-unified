@@ -6,6 +6,8 @@ import { UtilIconPaths, encodeIconPath } from '~/lib/iconPaths';
 import { IconSearch, IconMenu, IconClose } from '~/components/icons';
 import { LanguageSelectorButton, LanguageSelectorDropdown, useLocaleMenuProvider } from '~/components/LanguageSelector';
 import { useI18nProvider, useI18n, t, setLocale, LOCALES, type Locale } from '~/lib/i18n';
+import { ToastProvider } from '~/components/ui/Toast';
+import { SearchOverlay } from '~/components/SearchOverlay';
 
 // Metadata for SEO (will be customized per route)
 export const onGet: RequestHandler = async ({ headers }) => {
@@ -26,11 +28,12 @@ export default component$(() => {
   useI18nProvider();
   useLocaleMenuProvider();
   const i18n = useI18n();
-  const searchQuery = useSignal('');
+  const searchOpen = useSignal(false);
   const menuOpen = useSignal(false);
   const nav = useNavigate();
 
   return (
+    <ToastProvider>
     <div
       class="min-h-screen bg-[var(--bg)]"
       onClick$={async (e: MouseEvent) => {
@@ -96,19 +99,18 @@ export default component$(() => {
               </button>
             </div>
 
-            <div class="bg-[var(--bg)]/40 border border-[var(--border)]">
+            <button
+              type="button"
+              onClick$={() => { menuOpen.value = false; searchOpen.value = true; }}
+              class="w-full bg-[var(--bg)]/40 border border-[var(--border)] text-left"
+            >
               <div class="px-3 py-2 flex items-center gap-2">
                 <IconSearch size={14} class="text-[var(--text-dim)] shrink-0" />
-                <input
-                  type="text"
-                  placeholder={t(i18n, 'nav.search')}
-                  value={searchQuery.value}
-                  onInput$={(e) => (searchQuery.value = (e.target as HTMLInputElement).value)}
-                  class="w-full bg-transparent text-[var(--text)] text-sm placeholder-[var(--text-dim)] focus:outline-none"
-                  style={{ fontFamily: 'var(--mono)' }}
-                />
+                <span class="text-sm text-[var(--text-dim)]" style={{ fontFamily: 'var(--mono)' }}>
+                  {t(i18n, 'nav.search')}
+                </span>
               </div>
-            </div>
+            </button>
 
             <div class="flex flex-col gap-1">
               {NAV_ITEMS.map((item) => (
@@ -250,28 +252,25 @@ export default component$(() => {
         <span class="border-l border-[var(--border)] pl-4">v3.0.0</span>
       </div>
 
-      {/* Top Search Bar - Fixed top, horizontally centered */}
+      {/* Top Search Bar - Fixed top, horizontally centered — click to open overlay */}
       <div class="fixed top-4 left-0 right-0 z-50 flex justify-center pointer-events-none hidden md:flex">
-        <div class="w-80 bg-[var(--bg-raised)]/90 backdrop-blur-sm border border-[var(--border)] pointer-events-auto">
+        <button
+          type="button"
+          onClick$={() => (searchOpen.value = true)}
+          class="w-80 bg-[var(--bg-raised)]/90 backdrop-blur-sm border border-[var(--border)] pointer-events-auto text-left hover:border-[rgba(51,51,51,0.5)] transition-colors"
+        >
           <div class="px-3 py-2 flex items-center gap-2">
             <IconSearch size={14} class="text-[var(--text-dim)] shrink-0" />
-            <input
-              type="text"
-              placeholder={t(i18n, 'nav.search')}
-              value={searchQuery.value}
-              onInput$={(e) => (searchQuery.value = (e.target as HTMLInputElement).value)}
-              class="w-full bg-transparent text-[var(--text)] text-sm placeholder-[var(--text-dim)] focus:outline-none"
-              style={{ fontFamily: 'var(--mono)' }}
-              onKeyDown$={(e) => {
-                if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-                  e.preventDefault();
-                }
-              }}
-            />
+            <span class="flex-1 text-sm text-[var(--text-dim)]" style={{ fontFamily: 'var(--mono)' }}>
+              {t(i18n, 'nav.search')}
+            </span>
             <kbd class="text-[10px] text-[var(--text-dim)] border border-[var(--border)] px-1.5 py-0.5 shrink-0" style={{ fontFamily: 'var(--mono)' }}>⌘K</kbd>
           </div>
-        </div>
+        </button>
       </div>
+
+      {/* Search Command Palette Overlay */}
+      <SearchOverlay open={searchOpen} />
 
       {/* Main Content — offset for collapsed nav width */}
       <div class="pl-0 md:pl-20 min-h-screen flex flex-col">
@@ -299,5 +298,6 @@ export default component$(() => {
         </footer>
       </div>
     </div>
+    </ToastProvider>
   );
 });

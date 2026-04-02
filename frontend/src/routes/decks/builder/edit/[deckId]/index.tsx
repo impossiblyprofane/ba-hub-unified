@@ -23,6 +23,7 @@ import { DeckSlotCard } from '~/components/builder/DeckSlotCard';
 import { UnitSelectorModal } from '~/components/builder/UnitSelectorModal';
 import { UnitEditorPanel } from '~/components/builder/UnitEditorPanel';
 import { ExportModal } from '~/components/builder/ExportModal';
+import { PublishModal } from '~/components/builder/PublishModal';
 import { GameIcon } from '~/components/GameIcon';
 import { toCountryIconPath, toSpecializationIconPath } from '~/lib/iconPaths';
 import { SimpleTooltip } from '~/components/ui/SimpleTooltip';
@@ -39,6 +40,7 @@ interface EditorState {
   showUnitSelector: boolean;
   showUnitEditor: boolean;
   showExport: boolean;
+  showPublish: boolean;
   showAdvisor: boolean;
   isRenaming: boolean;
   showDeleteConfirm: boolean;
@@ -57,6 +59,7 @@ export default component$(() => {
     showUnitSelector: false,
     showUnitEditor: false,
     showExport: false,
+    showPublish: false,
     showAdvisor: false,
     isRenaming: false,
     showDeleteConfirm: false,
@@ -487,8 +490,8 @@ export default component$(() => {
                 </SimpleTooltip>
                 <SimpleTooltip text={t(i18n, 'builder.controls.publishDesc')}>
                   <button
-                    disabled
-                    class="px-3 py-1.5 border border-[rgba(51,51,51,0.15)] text-[var(--text-dim)] text-[10px] font-mono uppercase tracking-wider opacity-40 cursor-not-allowed"
+                    onClick$={() => { state.showPublish = true; }}
+                    class="px-3 py-1.5 border border-[var(--border)] text-[var(--text-dim)] text-[10px] font-mono uppercase tracking-wider hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
                   >
                     {t(i18n, 'builder.controls.publish')}
                   </button>
@@ -938,6 +941,20 @@ export default component$(() => {
                     <ExportModal
                       deck={state.deck}
                       onClose$={$(() => { state.showExport = false; })}
+                    />
+                  )}
+
+                  {/* ── Publish modal ── */}
+                  {state.showPublish && state.deck && (
+                    <PublishModal
+                      deck={state.deck}
+                      onClose$={$(() => { state.showPublish = false; })}
+                      onPublished$={$((publishedId: string) => {
+                        if (state.deck) {
+                          state.deck.publishedDeckId = publishedId;
+                          saveDeck(state.deck, toCardMap(arsenalCardLookup.value));
+                        }
+                      })}
                     />
                   )}
 

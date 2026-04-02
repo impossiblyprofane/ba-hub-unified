@@ -144,6 +144,8 @@ export interface EditorDeck {
   spec1Icon?: string;
   /** Spec 2 icon filename for toSpecializationIconPath(). */
   spec2Icon?: string;
+  /** ID of the published deck this local deck is linked to (set after first publish). */
+  publishedDeckId?: string;
   /** Cached total points (updated on every save from the editor). */
   cachedTotalPoints?: number;
   /** Cached per-category points (updated on every save from the editor). */

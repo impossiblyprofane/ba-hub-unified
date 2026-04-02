@@ -23,15 +23,36 @@ export const schema = `
     arsenalFilters: ArsenalFilters!
     unitDetail(id: Int!, optionIds: [Int!]): UnitDetailResult
     builderData(countryId: Int!, spec1Id: Int!, spec2Id: Int!): BuilderData!
+
+    # ── Search ───────────────────────────────────────────────
+    searchUnits(search: String!, limit: Int = 12): [SearchUnitResult!]!
     optionsByIds(ids: [Int!]!): [Option!]!
 
     # ── Deck publishing ──────────────────────────────────────
-    publishedDeck(id: String!): PublishedDeck
-    browseDecks(filter: BrowseDecksFilterInput): BrowseDecksResult!
+    publishedDeck(id: String!, viewerId: String): PublishedDeck
+    browseDecks(filter: BrowseDecksFilterInput, viewerId: String): BrowseDecksResult!
     publishedDecksByAuthor(authorId: String!): [PublishedDeckSummary!]!
     userProfile(userId: String!): UserProfile
     challenge: TrivialChallenge!
     deckLikeStatus(deckId: String!, userId: String!): LikeStatus!
+
+    # ── Analytics (maps + players) ─────────────────────────
+    analyticsMapRatings: [AnalyticsStatItem!]!
+    analyticsMapTeamSides: AnalyticsMapTeamSides!
+    analyticsSpecUsage: [AnalyticsStatItem!]!
+    analyticsLeaderboard(start: Int = 0, end: Int = 100): [AnalyticsLeaderboardEntry!]!
+    analyticsPlayer(marketId: String!): AnalyticsPlayerStats
+    analyticsCountryStats: AnalyticsCountryStats!
+    analyticsUserLookup(steamId: String!): AnalyticsUserInfo
+    analyticsUserProfile(steamId: String!): AnalyticsUserProfile
+    analyticsRecentFights(steamId: String!): AnalyticsRecentFightsResult!
+    analyticsFightData(fightId: String!): AnalyticsFightData
+
+    # ── Snapshot / history data ──────────────────────────────
+    snapshotLeaderboardHistory(steamId: String!, since: String): [SnapshotLeaderboardEntry!]!
+    snapshotMapHistory(since: String): [SnapshotMapEntry!]!
+    snapshotFactionHistory(since: String): [SnapshotFactionEntry!]!
+    snapshotUnitRankings(limit: Int = 50): SnapshotUnitRankings!
   }
 
   type Mutation {
@@ -48,6 +69,15 @@ export const schema = `
 
   type Subscription {
     messageAdded: String!
+  }
+
+  type SearchUnitResult {
+    Id: Int!
+    HUDName: String!
+    ThumbnailFileName: String
+    CountryId: Int!
+    CategoryType: Int!
+    Cost: Int!
   }
 
   input UnitFilter {
@@ -576,7 +606,8 @@ export const schema = `
 
   type PublishedDeck {
     id: String!
-    authorId: String!
+    isOwner: Boolean!
+    publisherName: String!
     name: String!
     description: String!
     deckCode: String!
@@ -593,7 +624,8 @@ export const schema = `
 
   type PublishedDeckSummary {
     id: String!
-    authorId: String!
+    isOwner: Boolean!
+    publisherName: String!
     name: String!
     description: String!
     deckCode: String!
@@ -645,6 +677,217 @@ export const schema = `
     liked: Boolean!
   }
 
+  type AnalyticsStatItem {
+    id: Int
+    name: String
+    count: Float
+  }
+
+  type AnalyticsMapTeamSide {
+    map: String
+    winData: [AnalyticsStatItem!]!
+  }
+
+  type AnalyticsMapTeamSides {
+    updateDate: String
+    data: [AnalyticsMapTeamSide!]!
+  }
+
+  type AnalyticsLeaderboardEntry {
+    rank: Int!
+    userId: Int
+    steamId: String
+    name: String
+    rating: Float
+    elo: Float
+    level: Int
+    winRate: Float
+    kdRatio: Float
+  }
+
+  type AnalyticsPlayerStats {
+    marketId: String!
+    name: String
+    level: Int
+    kdRatio: Float
+    fightsCount: Int
+    winsCount: Int
+    losesCount: Int
+    killsCount: Int
+    deathsCount: Int
+    totalMatchTimeSec: Int
+    capturedZonesCount: Int
+    supplyPointsConsumed: Int
+    supplyCapturedCount: Int
+    supplyCapturedByEnemyCount: Int
+    mapsPlayCount: [AnalyticsStatItem!]!
+  }
+
+  type AnalyticsCountryStats {
+    updateDate: String
+    matchesCount: [AnalyticsStatItem!]!
+    winsCount: [AnalyticsStatItem!]!
+  }
+
+  type AnalyticsUserInfo {
+    id: Int!
+    name: String
+    steamId: String
+    level: Int
+    rating: Float
+    rank: Int
+    marketId: String
+    ratedGames: Int
+  }
+
+  type AnalyticsUserProfile {
+    user: AnalyticsUserInfo!
+    stats: AnalyticsPlayerStats
+    recentFightIds: [String!]!
+  }
+
+  type FrequentPlayer {
+    name: String
+    odId: Int
+    steamId: String
+    count: Int!
+    wins: Int!
+    losses: Int!
+  }
+
+  type UnitPerformance {
+    unitId: Int!
+    unitName: String
+    optionIds: [Int!]!
+    optionNames: [String!]!
+    configKey: String!
+    count: Int!
+    totalKills: Int!
+    totalDamageDealt: Float!
+    totalDamageReceived: Float!
+    avgKills: Float!
+    avgDamage: Float!
+  }
+
+  type FactionCount {
+    name: String!
+    count: Int!
+  }
+
+  type SpecCount {
+    name: String!
+    specId: Int!
+    count: Int!
+  }
+
+  type SpecCombo {
+    names: [String!]!
+    specIds: [Int!]!
+    count: Int!
+  }
+
+  type AnalyticsRecentFightsResult {
+    fights: [AnalyticsRecentFight!]!
+    frequentTeammates: [FrequentPlayer!]!
+    frequentOpponents: [FrequentPlayer!]!
+    mostUsedUnits: [UnitPerformance!]!
+    topKillerUnits: [UnitPerformance!]!
+    topDamageUnits: [UnitPerformance!]!
+    factionBreakdown: [FactionCount!]!
+    specUsage: [SpecCount!]!
+    specCombos: [SpecCombo!]!
+  }
+
+  type AnalyticsRecentFight {
+    fightId: String!
+    mapId: Int
+    mapName: String
+    totalPlayTimeSec: Int
+    endTime: Float
+    victoryLevel: Int
+    playerCount: Int
+    teamSize: String
+    result: String
+    ratingChange: Float
+    winnerTeam: Int
+    destruction: Int
+    losses: Int
+    damageDealt: Int
+    damageReceived: Int
+    allyAvgRating: Int
+    enemyAvgRating: Int
+    objectivesCaptured: Int
+    oldRating: Float
+  }
+
+  type AnalyticsFightData {
+    fightId: String!
+    mapId: Int
+    mapName: String
+    totalPlayTimeSec: Int
+    endTime: Float
+    victoryLevel: Int
+    endMatchReason: Int
+    totalObjectiveZonesCount: Int
+    players: [AnalyticsFightPlayer!]!
+  }
+
+  type AnalyticsFightPlayer {
+    id: Int!
+    teamId: Int
+    name: String
+    steamId: String
+    destruction: Int
+    losses: Int
+    oldRating: Float
+    newRating: Float
+    damageDealt: Int
+    damageReceived: Int
+    objectivesCaptured: Int
+    totalSpawnedUnitScore: Int
+    totalRefundedUnitScore: Int
+    supplyPointsConsumed: Int
+    destructionScore: Int
+    lossesScore: Int
+    supplyConsumedByAllies: Int
+    supplyConsumedFromAllies: Int
+    dlRatio: Float
+    medals: [Int!]
+    countryId: Int
+    countryName: String
+    countryFlag: String
+    specNames: [String!]!
+    specIcons: [String!]!
+    badges: [String!]!
+    units: [AnalyticsFightUnit!]!
+  }
+
+  type AnalyticsFightUnit {
+    id: Int!
+    unitName: String
+    unitType: Int
+    categoryType: Int
+    thumbnailFileName: String
+    portraitFileName: String
+    optionIds: [Int!]!
+    killedCount: Int
+    totalDamageDealt: Float
+    totalDamageReceived: Float
+    supplyPointsConsumed: Int
+    wasRefunded: Boolean
+    optionNames: [String!]!
+    totalCost: Int
+    modList: [FightUnitMod!]!
+  }
+
+  type FightUnitMod {
+    modId: Int!
+    optId: Int!
+    cost: Int!
+    run: String
+    cwun: String
+  }
+
   input BrowseDecksFilterInput {
     countryId: Int
     spec1Id: Int
@@ -659,6 +902,7 @@ export const schema = `
 
   input PublishDeckInput {
     authorId: String!
+    publisherName: String
     name: String!
     description: String
     deckCode: String!
@@ -673,6 +917,7 @@ export const schema = `
 
   input UpdatePublishedDeckInput {
     authorId: String!
+    publisherName: String
     name: String
     description: String
     deckCode: String
@@ -686,6 +931,50 @@ export const schema = `
     authorId: String!
     challengeId: String!
     challengeAnswer: Int!
+  }
+
+  # ── Snapshot / history types ─────────────────────────────
+
+  type SnapshotLeaderboardEntry {
+    rank: Int!
+    rating: Float
+    elo: Float
+    winRate: Float
+    kdRatio: Float
+    snapshotType: String!
+    createdAt: String!
+  }
+
+  type SnapshotMapEntry {
+    mapName: String!
+    playCount: Int!
+    snapshotType: String!
+    createdAt: String!
+  }
+
+  type SnapshotFactionEntry {
+    factionName: String!
+    matchCount: Int!
+    winCount: Int!
+    snapshotType: String!
+    createdAt: String!
+  }
+
+  type SnapshotUnitEntry {
+    unitName: String!
+    timesDeployed: Int!
+    totalKills: Int!
+    totalDamageDealt: Float!
+    totalDamageReceived: Float!
+    totalSupplyConsumed: Float!
+    timesRefunded: Int!
+    avgKills: Float!
+    avgDamage: Float!
+  }
+
+  type SnapshotUnitRankings {
+    snapshotDate: String
+    units: [SnapshotUnitEntry!]!
   }
 
   scalar JSON

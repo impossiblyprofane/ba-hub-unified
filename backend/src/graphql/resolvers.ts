@@ -3,6 +3,7 @@ import { GraphQLScalarType, Kind } from 'graphql';
 import type { StaticData } from '../data/loader.js';
 import type { StaticIndexes } from '../data/indexes.js';
 import type { DatabaseClient } from '../services/databaseClient.js';
+import type { StatsClient } from '../services/statsClient.js';
 import type {
   BrowseDecksFilter,
   PublishDeckInput,
@@ -14,7 +15,43 @@ type GraphQLContext = MercuriusContext & {
   data: StaticData;
   indexes: StaticIndexes;
   dbClient: DatabaseClient;
+  statsClient: StatsClient;
 };
+
+/**
+ * MapId (numeric, from fight JSON) → human-readable map name.
+ * Derived by correlating /statistic/mapsrating (sv_play_map_N) with
+ * /statistic/matches/teamsides (readable names) sorted by play count.
+ * Updated: 2025-01-30 — covers all current ranked maps.
+ */
+const MAP_ID_TO_NAME: Record<number, string> = {
+  1: 'Test_map',
+  3: 'Baltiisk',
+  4: 'Coast',
+  5: 'Airport',
+  6: 'River',
+  7: 'Dam',
+  8: 'Tallinn Harbour',
+  9: 'Airbase',
+  10: 'Frontiers',
+  11: 'Central Village',
+  12: 'Oil refinery',
+  13: 'Suwalki',
+  14: 'Jelgava',
+  15: 'Narva',
+  16: 'Klaipeda',
+  17: 'Ruda',
+  20: 'Parnu',
+  21: 'Chernyakhovsk',
+  22: 'Ignalina Powerplant',
+  23: 'Kaliningrad',
+  25: 'Kadaga Military Base',
+};
+
+function resolveMapName(mapId: number | undefined): string | null {
+  if (mapId == null) return null;
+  return MAP_ID_TO_NAME[mapId] ?? null;
+}
 
 type UnitWeaponSlot = {
   weapon: unknown;
@@ -597,6 +634,35 @@ export const resolvers = {
     arsenalUnitCard: (_: unknown, args: { unitId: number }, ctx: any) =>
       buildArsenalUnitCard(args.unitId, ctx as GraphQLContext),
     countries: (_: unknown, __: unknown, ctx: any) => (ctx as GraphQLContext).data.countries,
+
+    // ── Search ──────────────────────────────────────────────────
+    searchUnits: (_: unknown, args: { search: string; limit?: number }, ctx: any) => {
+      const { data } = ctx as GraphQLContext;
+      const search = normalizeSearch(args.search);
+      if (!search) return [];
+      const limit = Math.min(args.limit ?? 12, 30);
+      const results: Array<{ Id: number; HUDName: string; ThumbnailFileName: string; CountryId: number; CategoryType: number; Cost: number }> = [];
+      for (const unit of data.units) {
+        if (!unit.DisplayInArmory) continue;
+        if (
+          matchesSearch(unit.Name, search) ||
+          matchesSearch(unit.HUDName, search) ||
+          matchesSearch(unit.OriginalName, search)
+        ) {
+          results.push({
+            Id: unit.Id,
+            HUDName: unit.HUDName,
+            ThumbnailFileName: unit.ThumbnailFileName,
+            CountryId: unit.CountryId,
+            CategoryType: unit.CategoryType,
+            Cost: unit.Cost,
+          });
+          if (results.length >= limit) break;
+        }
+      }
+      return results;
+    },
+
     weapons: (_: unknown, args: { search?: string; offset?: number; limit?: number }, ctx: any) => {
       const { data } = ctx as GraphQLContext;
       let weapons = data.weapons;
@@ -702,23 +768,41 @@ export const resolvers = {
     },
 
     // ── Deck publishing queries ─────────────────────────────
-    publishedDeck: async (_: unknown, args: { id: string }, ctx: any) => {
+    publishedDeck: async (_: unknown, args: { id: string; viewerId?: string }, ctx: any) => {
       const { dbClient } = ctx as GraphQLContext;
       try {
-        return await dbClient.getDeck(args.id);
+        const deck = await dbClient.getDeck(args.id);
+        if (!deck) return null;
+        // Database returns authorId; strip it and compute isOwner server-side
+        const { authorId, ...rest } = deck;
+        return { ...rest, isOwner: !!(args.viewerId && args.viewerId === authorId) };
       } catch {
         return null;
       }
     },
 
-    browseDecks: async (_: unknown, args: { filter?: BrowseDecksFilter }, ctx: any) => {
+    browseDecks: async (_: unknown, args: { filter?: BrowseDecksFilter; viewerId?: string }, ctx: any) => {
       const { dbClient } = ctx as GraphQLContext;
-      return dbClient.browseDecks(args.filter ?? {});
+      const result = await dbClient.browseDecks(args.filter ?? {});
+      const viewerId = args.viewerId;
+      return {
+        ...result,
+        decks: result.decks.map((d) => {
+          const { authorId, ...rest } = d;
+          return { ...rest, isOwner: !!(viewerId && viewerId === authorId) };
+        }),
+      };
     },
 
     publishedDecksByAuthor: async (_: unknown, args: { authorId: string }, ctx: any) => {
       const { dbClient } = ctx as GraphQLContext;
-      return dbClient.getDecksByAuthor(args.authorId);
+      const decks = await dbClient.getDecksByAuthor(args.authorId);
+      // These are always the caller's own decks, so isOwner = true.
+      // Strip authorId from the response.
+      return decks.map((d) => {
+        const { authorId, ...rest } = d;
+        return { ...rest, isOwner: true };
+      });
     },
 
     userProfile: async (_: unknown, args: { userId: string }, ctx: any) => {
@@ -739,6 +823,666 @@ export const resolvers = {
       const { dbClient } = ctx as GraphQLContext;
       return dbClient.checkLikeStatus(args.deckId, args.userId);
     },
+
+    // ── Analytics queries ────────────────────────────────
+    analyticsMapRatings: async (_: unknown, _args: unknown, ctx: any) => {
+      const { statsClient } = ctx as GraphQLContext;
+      try {
+        // Derive map play counts from teamsides (which has human-readable names)
+        // instead of mapsrating (which has sv_play_map_* internal IDs)
+        const teamsides = await statsClient.getMapTeamSides();
+        if (!teamsides.data || teamsides.data.length === 0) {
+          // Fallback to raw mapsrating if teamsides fails
+          return await statsClient.getMapRatings();
+        }
+        return teamsides.data.map(entry => ({
+          name: entry.map ?? null,
+          count: (entry.winData ?? []).reduce((sum, w) => sum + (w.count ?? 0), 0),
+        })).sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
+      } catch {
+        return [];
+      }
+    },
+
+    analyticsMapTeamSides: async (_: unknown, _args: unknown, ctx: any) => {
+      const { statsClient } = ctx as GraphQLContext;
+      try {
+        return await statsClient.getMapTeamSides();
+      } catch {
+        return { updateDate: null, data: [] };
+      }
+    },
+
+    analyticsSpecUsage: async (_: unknown, _args: unknown, ctx: any) => {
+      const { statsClient, indexes } = ctx as GraphQLContext;
+      try {
+        const raw = await statsClient.getSpecUsage();
+        // Resolve numeric spec IDs to human-readable names
+        return raw.map(item => {
+          const specId = item.name ? parseInt(item.name, 10) : NaN;
+          if (!Number.isNaN(specId)) {
+            const spec = indexes.specializationsById.get(specId);
+            if (spec) {
+              return { ...item, name: spec.Name };
+            }
+          }
+          return item;
+        });
+      } catch {
+        return [];
+      }
+    },
+
+    analyticsLeaderboard: async (_: unknown, args: { start?: number; end?: number }, ctx: any) => {
+      const { statsClient } = ctx as GraphQLContext;
+      try {
+        const entries = await statsClient.getLeaderboard(args.start ?? 0, args.end ?? 100);
+
+        // Batch-resolve user IDs to get names, steamIds, etc.
+        const userIds = entries
+          .map(e => e.userId)
+          .filter((id): id is number => id != null);
+
+        if (userIds.length > 0) {
+          const users = await statsClient.getUsersByIds(userIds);
+          for (const entry of entries) {
+            if (entry.userId == null) continue;
+            const user = users.get(entry.userId);
+            if (!user) continue;
+            if (!entry.name && user.name) entry.name = user.name;
+            if (!entry.steamId && user.steamId) entry.steamId = user.steamId;
+            if (entry.level == null && user.level != null) entry.level = user.level;
+          }
+        }
+
+        return entries;
+      } catch {
+        return [];
+      }
+    },
+
+    analyticsPlayer: async (_: unknown, args: { marketId: string }, ctx: any) => {
+      const { statsClient } = ctx as GraphQLContext;
+      try {
+        return await statsClient.getPlayerStats(args.marketId);
+      } catch {
+        return null;
+      }
+    },
+
+    analyticsCountryStats: async (_: unknown, _args: unknown, ctx: any) => {
+      const { statsClient } = ctx as GraphQLContext;
+      try {
+        return await statsClient.getCountryStats();
+      } catch {
+        return { updateDate: null, matchesCount: [], winsCount: [] };
+      }
+    },
+
+    analyticsUserLookup: async (_: unknown, args: { steamId: string }, ctx: any) => {
+      const { statsClient } = ctx as GraphQLContext;
+      try {
+        return await statsClient.getUserById(args.steamId, { steam: true });
+      } catch {
+        return null;
+      }
+    },
+
+    analyticsUserProfile: async (_: unknown, args: { steamId: string }, ctx: any) => {
+      const { statsClient } = ctx as GraphQLContext;
+      try {
+        // Resolve Steam ID → internal user info
+        const user = await statsClient.getUserById(args.steamId, { steam: true });
+        if (!user) return null;
+
+        // Fetch player stats using marketId (which equals steamId for Steam users)
+        const marketId = user.marketId ?? user.steamId ?? args.steamId;
+        const stats = await statsClient.getPlayerStats(marketId);
+
+        // Fetch recent fight IDs
+        const recentFightIds = await statsClient.getRecentFightIds(user.id);
+
+        return {
+          user,
+          stats,
+          recentFightIds: recentFightIds.slice(0, 50),
+        };
+      } catch {
+        return null;
+      }
+    },
+
+    analyticsRecentFights: async (_: unknown, args: { steamId: string }, ctx: any) => {
+      const { statsClient, indexes, data } = ctx as GraphQLContext;
+      const emptyResult = { fights: [], frequentTeammates: [], frequentOpponents: [], mostUsedUnits: [], topKillerUnits: [], topDamageUnits: [], factionBreakdown: [], specUsage: [], specCombos: [] };
+      try {
+        // Resolve Steam ID → internal user
+        const user = await statsClient.getUserById(args.steamId, { steam: true });
+        if (!user) return emptyResult;
+
+        const fightIds = await statsClient.getRecentFightIds(user.id);
+        const targetIds = fightIds.slice(0, 100);
+
+        // Track teammate/opponent frequency across all fights
+        const teammateMap = new Map<number, { name: string; count: number; wins: number; losses: number }>();
+        const opponentMap = new Map<number, { name: string; count: number; wins: number; losses: number }>();
+
+        // Track unit performance across ranked fights
+        // Key: "unitId:sortedOptionIds" for unique configurations
+        type UnitAgg = {
+          unitId: number;
+          optionIds: number[];
+          count: number;
+          totalKills: number;
+          totalDamageDealt: number;
+          totalDamageReceived: number;
+        };
+        const unitMap = new Map<string, UnitAgg>();
+
+        // Track faction play counts (ranked only)
+        const factionCounts = new Map<string, number>();
+        // Track spec usage and combos (ranked only)
+        const specCounts = new Map<number, number>(); // specId -> count
+        const specComboCounts = new Map<string, { specIds: number[]; count: number }>(); // "id1:id2" -> count
+
+        // Build reverse index: unitId -> Set<specId> for spec inference
+        const unitIdToSpecIds = new Map<number, Set<number>>();
+        for (const sa of data.specializationAvailabilities) {
+          let set = unitIdToSpecIds.get(sa.UnitId);
+          if (!set) { set = new Set(); unitIdToSpecIds.set(sa.UnitId, set); }
+          set.add(sa.SpecializationId);
+        }
+
+        // Fetch S3 fight data with concurrency control (10 at a time)
+        const CONCURRENCY = 10;
+        const results: (Record<string, unknown> | null)[] = new Array(targetIds.length).fill(null);
+
+        for (let i = 0; i < targetIds.length; i += CONCURRENCY) {
+          const batch = targetIds.slice(i, i + CONCURRENCY);
+          const batchResults = await Promise.all(
+            batch.map(async (fightId) => {
+              try {
+                const fight = await statsClient.getFightData(fightId);
+                if (!fight) return null;
+
+                // Find this player in the fight by internal ID (SteamId is rarely in S3 data)
+                const player = fight.players.find(
+                  (p) => p.steamId === args.steamId || String(p.id) === String(user.id),
+                );
+
+                // Compute rating change
+                let ratingChange: number | null = null;
+                if (player?.oldRating != null && player?.newRating != null) {
+                  ratingChange = player.newRating - player.oldRating;
+                }
+
+                // Win/loss detection — multi-signal approach:
+                // 1. Primary: teamId vs winnerTeam (when both are available)
+                // 2. Fallback: infer from rating change direction (positive = win, negative = loss)
+                let result: string | null = null;
+                const playerTeam = player?.teamId;
+                if (fight.winnerTeam != null && playerTeam != null) {
+                  result = playerTeam === fight.winnerTeam ? 'win' : 'loss';
+                } else if (ratingChange != null && ratingChange !== 0) {
+                  result = ratingChange > 0 ? 'win' : 'loss';
+                }
+
+                // Determine teammates vs opponents by rating change direction
+                // In ranked games, players gaining ELO are on the winning team
+                const isRanked = ratingChange != null && ratingChange !== 0;
+                const allyRatings: number[] = [];
+                const enemyRatings: number[] = [];
+
+                // Include this player's own rating
+                if (player?.oldRating != null) allyRatings.push(player.oldRating);
+
+                if (isRanked && fight.players.length > 2) {
+                  const playerWon = ratingChange! > 0;
+                  for (const other of fight.players) {
+                    if (other.id === player?.id) continue;
+                    const otherChange =
+                      other.oldRating != null && other.newRating != null
+                        ? other.newRating - other.oldRating
+                        : null;
+                    if (otherChange == null) continue;
+                    const otherWon = otherChange > 0;
+                    const isSameTeam = playerWon === otherWon;
+
+                    // Track team ratings
+                    if (other.oldRating != null) {
+                      (isSameTeam ? allyRatings : enemyRatings).push(other.oldRating);
+                    }
+
+                    const map = isSameTeam ? teammateMap : opponentMap;
+                    const existing = map.get(other.id);
+                    if (existing) {
+                      existing.count++;
+                      if (result === 'win') existing.wins++;
+                      else if (result === 'loss') existing.losses++;
+                    } else {
+                      map.set(other.id, {
+                        name: other.name ?? `Player ${other.id}`,
+                        count: 1,
+                        wins: result === 'win' ? 1 : 0,
+                        losses: result === 'loss' ? 1 : 0,
+                      });
+                    }
+                  }
+                }
+
+                // Compute team average ratings
+                const allyAvgRating = allyRatings.length > 0
+                  ? Math.round(allyRatings.reduce((s, r) => s + r, 0) / allyRatings.length)
+                  : null;
+                const enemyAvgRating = enemyRatings.length > 0
+                  ? Math.round(enemyRatings.reduce((s, r) => s + r, 0) / enemyRatings.length)
+                  : null;
+
+                // Aggregate unit performance + faction detection (ranked only)
+                if (isRanked && player) {
+                  // Determine faction from majority country of deployed units
+                  const countryCounts = new Map<number, number>();
+                  for (const unit of player.units) {
+                    const unitData = indexes.unitsById.get(unit.id);
+                    if (unitData?.CountryId) {
+                      countryCounts.set(unitData.CountryId, (countryCounts.get(unitData.CountryId) ?? 0) + 1);
+                    }
+
+                    const sorted = [...unit.optionIds].sort((a, b) => a - b);
+                    const key = `${unit.id}:${sorted.join(',')}`;
+                    const existing = unitMap.get(key);
+                    if (existing) {
+                      existing.count++;
+                      existing.totalKills += unit.killedCount ?? 0;
+                      existing.totalDamageDealt += unit.totalDamageDealt ?? 0;
+                      existing.totalDamageReceived += unit.totalDamageReceived ?? 0;
+                    } else {
+                      unitMap.set(key, {
+                        unitId: unit.id,
+                        optionIds: sorted,
+                        count: 1,
+                        totalKills: unit.killedCount ?? 0,
+                        totalDamageDealt: unit.totalDamageDealt ?? 0,
+                        totalDamageReceived: unit.totalDamageReceived ?? 0,
+                      });
+                    }
+                  }
+                  // Majority country = faction for this fight
+                  if (countryCounts.size > 0) {
+                    const topCountryId = [...countryCounts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+                    const country = indexes.countriesById?.get(topCountryId);
+                    const factionName = country?.Name ?? `Faction ${topCountryId}`;
+                    factionCounts.set(factionName, (factionCounts.get(factionName) ?? 0) + 1);
+                  }
+
+                  // Infer specs from deployed units: count which specs each unit belongs to
+                  const specScores = new Map<number, number>();
+                  for (const unit of player.units) {
+                    const specs = unitIdToSpecIds.get(unit.id);
+                    if (specs) {
+                      for (const specId of specs) {
+                        specScores.set(specId, (specScores.get(specId) ?? 0) + 1);
+                      }
+                    }
+                  }
+                  // Top 2 specs by score = likely deck spec pair
+                  const topSpecs = [...specScores.entries()]
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 2)
+                    .map(([id]) => id);
+                  for (const specId of topSpecs) {
+                    specCounts.set(specId, (specCounts.get(specId) ?? 0) + 1);
+                  }
+                  if (topSpecs.length === 2) {
+                    const comboKey = topSpecs.sort((a, b) => a - b).join(':');
+                    const existing = specComboCounts.get(comboKey);
+                    if (existing) {
+                      existing.count++;
+                    } else {
+                      specComboCounts.set(comboKey, { specIds: [...topSpecs], count: 1 });
+                    }
+                  }
+                }
+
+                // Format team size (e.g. "5v5", "1v1") from player count
+                const pc = fight.players.length;
+                const teamSize = pc >= 2 ? `${Math.ceil(pc / 2)}v${Math.floor(pc / 2)}` : `${pc}`;
+
+                return {
+                  fightId,
+                  mapId: fight.mapId,
+                  mapName: resolveMapName(fight.mapId),
+                  totalPlayTimeSec: fight.totalPlayTimeSec,
+                  endTime: fight.endTime,
+                  victoryLevel: fight.victoryLevel,
+                  playerCount: pc,
+                  teamSize,
+                  result,
+                  ratingChange,
+                  winnerTeam: fight.winnerTeam,
+                  destruction: player?.destruction ?? null,
+                  losses: player?.losses ?? null,
+                  damageDealt: player?.damageDealt ?? null,
+                  damageReceived: player?.damageReceived ?? null,
+                  allyAvgRating,
+                  enemyAvgRating,
+                  objectivesCaptured: player?.objectivesCaptured ?? null,
+                  oldRating: player?.oldRating ?? null,
+                };
+              } catch {
+                return null;
+              }
+            }),
+          );
+          for (let j = 0; j < batchResults.length; j++) {
+            results[i + j] = batchResults[j] as Record<string, unknown> | null;
+          }
+        }
+
+        // Build sorted frequent player lists (top 10) and resolve Steam IDs
+        const toSortedList = (map: Map<number, { name: string; count: number; wins: number; losses: number }>) =>
+          [...map.entries()]
+            .sort((a, b) => b[1].count - a[1].count)
+            .slice(0, 10)
+            .map(([id, v]) => ({ odId: id, name: v.name, steamId: null as string | null, count: v.count, wins: v.wins, losses: v.losses }));
+
+        const teammates = toSortedList(teammateMap);
+        const opponents = toSortedList(opponentMap);
+
+        // Batch-resolve internal IDs → Steam IDs for profile linking
+        const allIds = [...teammates, ...opponents].map((p) => p.odId).filter(Boolean);
+        if (allIds.length > 0) {
+          try {
+            const userMap = await statsClient.getUsersByIds(allIds);
+            for (const p of [...teammates, ...opponents]) {
+              const resolved = userMap.get(p.odId);
+              if (resolved?.steamId) p.steamId = resolved.steamId;
+            }
+          } catch {
+            // Non-critical — profiles still show without links
+          }
+        }
+
+        // Build unit performance rankings with name resolution
+        const resolveUnitPerf = (agg: UnitAgg) => {
+          const unitData = indexes.unitsById.get(agg.unitId);
+          const optionNames = agg.optionIds
+            .map((oid) => {
+              const opt = indexes.optionsById.get(oid);
+              if (!opt) return null;
+              // Return raw UIName — frontend resolves via game locale system
+              return opt.UIName || opt.Name || null;
+            })
+            .filter((n): n is string => n != null);
+          return {
+            unitId: agg.unitId,
+            unitName: unitData?.HUDName ?? unitData?.Name ?? null,
+            optionIds: agg.optionIds,
+            optionNames,
+            configKey: `${agg.unitId}:${agg.optionIds.join(',')}`,
+            count: agg.count,
+            totalKills: Math.round(agg.totalKills),
+            totalDamageDealt: Math.round(agg.totalDamageDealt),
+            totalDamageReceived: Math.round(agg.totalDamageReceived),
+            avgKills: agg.count > 0 ? Math.round((agg.totalKills / agg.count) * 100) / 100 : 0,
+            avgDamage: agg.count > 0 ? Math.round((agg.totalDamageDealt / agg.count) * 100) / 100 : 0,
+          };
+        };
+
+        const allUnits = [...unitMap.values()];
+        const mostUsedUnits = [...allUnits]
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 10)
+          .map(resolveUnitPerf);
+        const topKillerUnits = [...allUnits]
+          .sort((a, b) => b.totalKills - a.totalKills)
+          .slice(0, 10)
+          .map(resolveUnitPerf);
+        const topDamageUnits = [...allUnits]
+          .sort((a, b) => b.totalDamageDealt - a.totalDamageDealt)
+          .slice(0, 10)
+          .map(resolveUnitPerf);
+
+        // Build faction breakdown sorted by count
+        const factionBreakdown = [...factionCounts.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .map(([name, count]) => ({ name, count }));
+
+        // Build spec usage list with names
+        const specUsage = [...specCounts.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 10)
+          .map(([specId, count]) => {
+            const spec = indexes.specializationsById.get(specId);
+            return { specId, name: spec?.Name || spec?.UIName || `Spec ${specId}`, count };
+          });
+
+        // Build spec combo list with names
+        const specCombos = [...specComboCounts.values()]
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 10)
+          .map((combo) => ({
+            specIds: combo.specIds,
+            names: combo.specIds.map((id) => {
+              const spec = indexes.specializationsById.get(id);
+              return spec?.Name || spec?.UIName || `Spec ${id}`;
+            }),
+            count: combo.count,
+          }));
+
+        return {
+          fights: results.filter(Boolean),
+          frequentTeammates: teammates,
+          frequentOpponents: opponents,
+          mostUsedUnits,
+          topKillerUnits,
+          topDamageUnits,
+          factionBreakdown,
+          specUsage,
+          specCombos,
+        };
+      } catch {
+        return emptyResult;
+      }
+    },
+
+    analyticsFightData: async (_: unknown, args: { fightId: string }, ctx: any) => {
+      const { statsClient, indexes, data } = ctx as GraphQLContext;
+      try {
+        const fight = await statsClient.getFightData(args.fightId);
+        if (!fight) return null;
+
+        // Batch-resolve player internal IDs → Steam IDs for profile linking
+        const playerIds = fight.players.map((p) => p.id).filter(Boolean);
+        let userMap = new Map<number, { steamId?: string }>();
+        if (playerIds.length > 0) {
+          try {
+            userMap = await statsClient.getUsersByIds(playerIds);
+          } catch { /* Non-critical */ }
+        }
+
+        // Build reverse index for spec inference: unitId → Set<specId>
+        const unitIdToSpecIds = new Map<number, Set<number>>();
+        for (const sa of data.specializationAvailabilities) {
+          let set = unitIdToSpecIds.get(sa.UnitId);
+          if (!set) { set = new Set(); unitIdToSpecIds.set(sa.UnitId, set); }
+          set.add(sa.SpecializationId);
+        }
+
+        // Enrich players
+        const enrichedPlayers = fight.players.map(player => {
+          const resolved = userMap.get(player.id);
+
+          // Infer country + flag from majority of deployed units
+          const countryCounts = new Map<number, number>();
+          const specScores = new Map<number, number>();
+          for (const unit of player.units) {
+            const ud = indexes.unitsById.get(unit.id);
+            if (ud?.CountryId) countryCounts.set(ud.CountryId, (countryCounts.get(ud.CountryId) ?? 0) + 1);
+            // Spec inference
+            const specs = unitIdToSpecIds.get(unit.id);
+            if (specs) {
+              for (const specId of specs) specScores.set(specId, (specScores.get(specId) ?? 0) + 1);
+            }
+          }
+
+          let countryId: number | null = null;
+          let countryName: string | null = null;
+          let countryFlag: string | null = null;
+          if (countryCounts.size > 0) {
+            countryId = [...countryCounts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+            const country = indexes.countriesById?.get(countryId);
+            countryName = country?.Name ?? null;
+            countryFlag = country?.FlagFileName ?? null;
+          }
+
+          // Top 2 specs
+          const topSpecs = [...specScores.entries()]
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 2)
+            .map(([id]) => id);
+          const specNames: string[] = [];
+          const specIcons: string[] = [];
+          for (const specId of topSpecs) {
+            const spec = indexes.specializationsById.get(specId);
+            if (spec) {
+              specNames.push(spec.Name || spec.UIName);
+              specIcons.push(spec.Icon || '');
+            }
+          }
+
+          return {
+            ...player,
+            steamId: resolved?.steamId ?? player.steamId ?? null,
+            countryId,
+            countryName,
+            countryFlag,
+            specNames,
+            specIcons,
+            badges: [] as string[], // populated below
+            units: player.units.map(unit => {
+              const unitData = indexes.unitsById.get(unit.id);
+              const baseCost = unitData?.Cost ?? 0;
+              let optionCost = 0;
+              const optionNames: string[] = [];
+              const modList: { modId: number; optId: number; cost: number; run: string | null; cwun: string | null }[] = [];
+              for (const oid of unit.optionIds) {
+                const opt = indexes.optionsById.get(oid);
+                if (opt) {
+                  optionCost += opt.Cost ?? 0;
+                  modList.push({
+                    modId: opt.ModificationId,
+                    optId: opt.Id,
+                    cost: opt.Cost ?? 0,
+                    run: opt.ReplaceUnitName || null,
+                    cwun: opt.ConcatenateWithUnitName || null,
+                  });
+                  // Return raw UIName — frontend resolves via game locale system
+                  const raw = opt.UIName || opt.Name || null;
+                  if (raw) optionNames.push(raw);
+                }
+              }
+              return {
+                ...unit,
+                unitName: unitData?.HUDName ?? unitData?.Name ?? null,
+                unitType: unitData?.Type ?? null,
+                categoryType: unitData?.CategoryType ?? null,
+                thumbnailFileName: unitData?.ThumbnailFileName ?? null,
+                portraitFileName: unitData?.PortraitFileName ?? null,
+                optionNames,
+                totalCost: baseCost + optionCost,
+                modList,
+              };
+            }),
+            };
+          });
+
+        // Compute performance badges
+        if (enrichedPlayers.length > 0) {
+          // MVP — highest positive rating change
+          const withRating = enrichedPlayers
+            .filter((p) => p.oldRating != null && p.newRating != null)
+            .map((p) => ({ p, delta: (p.newRating ?? 0) - (p.oldRating ?? 0) }))
+            .filter((x) => x.delta > 0)
+            .sort((a, b) => b.delta - a.delta);
+          if (withRating.length > 0) withRating[0].p.badges.push('MVP');
+
+          // Top Fragger — most kills
+          const maxKills = Math.max(...enrichedPlayers.map((p) => p.destruction ?? 0));
+          if (maxKills > 0) {
+            enrichedPlayers.filter((p) => (p.destruction ?? 0) === maxKills).forEach((p) => p.badges.push('Top Fragger'));
+          }
+
+          // Objective Hero — most objectives
+          const maxObj = Math.max(...enrichedPlayers.map((p) => p.objectivesCaptured ?? 0));
+          if (maxObj > 0) {
+            enrichedPlayers.filter((p) => (p.objectivesCaptured ?? 0) === maxObj).forEach((p) => p.badges.push('Objective Hero'));
+          }
+
+          // Supply Master — most supply consumed
+          const maxSupply = Math.max(...enrichedPlayers.map((p) => p.supplyPointsConsumed ?? 0));
+          if (maxSupply > 0) {
+            enrichedPlayers.filter((p) => (p.supplyPointsConsumed ?? 0) === maxSupply).forEach((p) => p.badges.push('Supply Master'));
+          }
+
+          // Damage Dealer — most damage dealt
+          const maxDmg = Math.max(...enrichedPlayers.map((p) => p.damageDealt ?? 0));
+          if (maxDmg > 0) {
+            enrichedPlayers.filter((p) => (p.damageDealt ?? 0) === maxDmg).forEach((p) => p.badges.push('Damage Dealer'));
+          }
+        }
+
+        return {
+          ...fight,
+          mapName: resolveMapName(fight.mapId),
+          players: enrichedPlayers,
+        };
+      } catch {
+        return null;
+      }
+    },
+
+    // ── Snapshot / history queries ────────────────────────────
+
+    snapshotLeaderboardHistory: async (
+      _: unknown,
+      args: { steamId: string; since?: string },
+      ctx: any,
+    ) => {
+      const { dbClient } = ctx as GraphQLContext;
+      try {
+        return await dbClient.getLeaderboardHistory(args.steamId, args.since);
+      } catch {
+        return [];
+      }
+    },
+
+    snapshotMapHistory: async (_: unknown, args: { since?: string }, ctx: any) => {
+      const { dbClient } = ctx as GraphQLContext;
+      try {
+        return await dbClient.getMapHistory(args.since);
+      } catch {
+        return [];
+      }
+    },
+
+    snapshotFactionHistory: async (_: unknown, args: { since?: string }, ctx: any) => {
+      const { dbClient } = ctx as GraphQLContext;
+      try {
+        return await dbClient.getFactionHistory(args.since);
+      } catch {
+        return [];
+      }
+    },
+
+    snapshotUnitRankings: async (_: unknown, args: { limit?: number }, ctx: any) => {
+      const { dbClient } = ctx as GraphQLContext;
+      try {
+        return await dbClient.getUnitRankings(args.limit);
+      } catch {
+        return { snapshotDate: null, units: [] };
+      }
+    },
   },
   Mutation: {
     ping: () => 'pong',
@@ -750,7 +1494,9 @@ export const resolvers = {
 
     publishDeck: async (_: unknown, args: { input: PublishDeckInput }, ctx: any) => {
       const { dbClient } = ctx as GraphQLContext;
-      return dbClient.publishDeck(args.input);
+      const deck = await dbClient.publishDeck(args.input);
+      const { authorId, ...rest } = deck;
+      return { ...rest, isOwner: true };
     },
 
     updatePublishedDeck: async (
@@ -759,7 +1505,9 @@ export const resolvers = {
       ctx: any,
     ) => {
       const { dbClient } = ctx as GraphQLContext;
-      return dbClient.updateDeck(args.deckId, args.input);
+      const deck = await dbClient.updateDeck(args.deckId, args.input);
+      const { authorId, ...rest } = deck;
+      return { ...rest, isOwner: true };
     },
 
     deletePublishedDeck: async (

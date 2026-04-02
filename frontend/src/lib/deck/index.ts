@@ -8,6 +8,7 @@ export {
   decodeDeck,
   decodeDeckMeta,
   compressedToDeck,
+  deckToCompressedDeck,
 } from './deckEncoder';
 
 // ── Sanitizer ───────────────────────────────────────────────────
@@ -15,6 +16,13 @@ export {
   sanitizeDeck,
   sanitizeEditorDeck,
 } from './deckSanitizer';
+
+// ── .dek game file format ────────────────────────────────────────
+export {
+  encryptDekFile,
+  decryptDekFile,
+  downloadDekFile,
+} from './dekFile';
 
 // ── Service (localStorage CRUD) ─────────────────────────────────
 export {

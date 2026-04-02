@@ -11,6 +11,21 @@ import type {
   Sensor, Ability, Weapon, Turret, Modification, Option,
   Ammunition,
 } from '@ba-hub/shared';
+import type {
+  PublishedDeck, PublishedDeckSummary, BrowseDecksResult,
+  TrivialChallenge, ToggleLikeResult, RecordViewResult,
+  DeckTag,
+} from '@ba-hub/shared';
+import type { RegisterUserResult, UserProfile } from '@ba-hub/shared';
+
+/* ═══════════════════════════════════════════════════════════════════
+ * Global Search — searchUnits query
+ * ═══════════════════════════════════════════════════════════════════ */
+
+/** A lightweight unit result from the searchUnits query. */
+export type SearchUnitResult = Pick<
+  Unit, 'Id' | 'HUDName' | 'ThumbnailFileName' | 'CountryId' | 'CategoryType' | 'Cost'
+>;
 
 /* ═══════════════════════════════════════════════════════════════════
  * Arsenal List Page — arsenalUnitsCards query
@@ -224,6 +239,306 @@ export type UnitDetailData = {
 };
 
 /* ═══════════════════════════════════════════════════════════════════
+ * Statistics Page — analytics queries
+ * ═══════════════════════════════════════════════════════════════════ */
+
+export type AnalyticsStatItem = {
+  id: number | null;
+  name: string | null;
+  count: number | null;
+};
+
+export type AnalyticsMapTeamSide = {
+  map: string | null;
+  winData: AnalyticsStatItem[];
+};
+
+export type AnalyticsMapTeamSides = {
+  updateDate: string | null;
+  data: AnalyticsMapTeamSide[];
+};
+
+export type AnalyticsLeaderboardEntry = {
+  rank: number;
+  userId: number | null;
+  steamId: string | null;
+  name: string | null;
+  rating: number | null;
+  elo: number | null;
+  level: number | null;
+  winRate: number | null;
+  kdRatio: number | null;
+};
+
+export type AnalyticsPlayerStats = {
+  marketId: string;
+  name: string | null;
+  level: number | null;
+  kdRatio: number | null;
+  fightsCount: number | null;
+  winsCount: number | null;
+  losesCount: number | null;
+  killsCount: number | null;
+  deathsCount: number | null;
+  totalMatchTimeSec: number | null;
+  capturedZonesCount: number | null;
+  supplyPointsConsumed: number | null;
+  supplyCapturedCount: number | null;
+  supplyCapturedByEnemyCount: number | null;
+  mapsPlayCount: AnalyticsStatItem[];
+};
+
+export type StatsOverviewData = {
+  analyticsMapRatings: AnalyticsStatItem[];
+  analyticsMapTeamSides: AnalyticsMapTeamSides;
+  analyticsSpecUsage: AnalyticsStatItem[];
+  analyticsLeaderboard: AnalyticsLeaderboardEntry[];
+};
+
+export type StatsPlayerLookupData = {
+  analyticsPlayer: AnalyticsPlayerStats | null;
+};
+
+export type AnalyticsCountryStats = {
+  updateDate: string | null;
+  matchesCount: AnalyticsStatItem[];
+  winsCount: AnalyticsStatItem[];
+};
+
+export type AnalyticsUserInfo = {
+  id: number;
+  name: string | null;
+  steamId: string | null;
+  level: number | null;
+  rating: number | null;
+  rank: number | null;
+  marketId: string | null;
+  ratedGames: number | null;
+};
+
+export type AnalyticsUserProfile = {
+  user: AnalyticsUserInfo;
+  stats: AnalyticsPlayerStats | null;
+  recentFightIds: string[];
+};
+
+export type AnalyticsRecentFight = {
+  fightId: string;
+  mapId: number | null;
+  mapName: string | null;
+  totalPlayTimeSec: number | null;
+  endTime: number | null;
+  victoryLevel: number | null;
+  playerCount: number | null;
+  teamSize: string | null;
+  result: string | null;
+  ratingChange: number | null;
+  winnerTeam: number | null;
+  destruction: number | null;
+  losses: number | null;
+  damageDealt: number | null;
+  damageReceived: number | null;
+  allyAvgRating: number | null;
+  enemyAvgRating: number | null;
+  objectivesCaptured: number | null;
+  oldRating: number | null;
+};
+
+export type FrequentPlayer = {
+  name: string | null;
+  odId: number | null;
+  steamId: string | null;
+  count: number;
+  wins: number;
+  losses: number;
+};
+
+export type UnitPerformance = {
+  unitId: number;
+  unitName: string | null;
+  optionIds: number[];
+  optionNames: string[];
+  configKey: string;
+  count: number;
+  totalKills: number;
+  totalDamageDealt: number;
+  totalDamageReceived: number;
+  avgKills: number;
+  avgDamage: number;
+};
+
+export type FactionCount = {
+  name: string;
+  count: number;
+};
+
+export type SpecCount = {
+  name: string;
+  specId: number;
+  count: number;
+};
+
+export type SpecCombo = {
+  names: string[];
+  specIds: number[];
+  count: number;
+};
+
+export type AnalyticsRecentFightsResult = {
+  fights: AnalyticsRecentFight[];
+  frequentTeammates: FrequentPlayer[];
+  frequentOpponents: FrequentPlayer[];
+  mostUsedUnits: UnitPerformance[];
+  topKillerUnits: UnitPerformance[];
+  topDamageUnits: UnitPerformance[];
+  factionBreakdown: FactionCount[];
+  specUsage: SpecCount[];
+  specCombos: SpecCombo[];
+};
+
+export type AnalyticsFightUnit = {
+  id: number;
+  unitName: string | null;
+  unitType: number | null;
+  categoryType: number | null;
+  thumbnailFileName: string | null;
+  portraitFileName: string | null;
+  optionIds: number[];
+  killedCount: number | null;
+  totalDamageDealt: number | null;
+  totalDamageReceived: number | null;
+  supplyPointsConsumed: number | null;
+  wasRefunded: boolean | null;
+  optionNames: string[];
+  totalCost: number | null;
+  modList: { modId: number; optId: number; cost: number; run: string | null; cwun: string | null }[];
+};
+
+export type AnalyticsFightPlayer = {
+  id: number;
+  teamId: number | null;
+  name: string | null;
+  steamId: string | null;
+  destruction: number | null;
+  losses: number | null;
+  oldRating: number | null;
+  newRating: number | null;
+  damageDealt: number | null;
+  damageReceived: number | null;
+  objectivesCaptured: number | null;
+  totalSpawnedUnitScore: number | null;
+  totalRefundedUnitScore: number | null;
+  supplyPointsConsumed: number | null;
+  dlRatio: number | null;
+  medals: number[] | null;
+  destructionScore: number | null;
+  lossesScore: number | null;
+  supplyConsumedByAllies: number | null;
+  supplyConsumedFromAllies: number | null;
+  countryId: number | null;
+  countryName: string | null;
+  countryFlag: string | null;
+  specNames: string[];
+  specIcons: string[];
+  badges: string[];
+  units: AnalyticsFightUnit[];
+};
+
+export type AnalyticsFightData = {
+  fightId: string;
+  mapId: number | null;
+  mapName: string | null;
+  totalPlayTimeSec: number | null;
+  endTime: number | null;
+  victoryLevel: number | null;
+  endMatchReason: number | null;
+  totalObjectiveZonesCount: number | null;
+  players: AnalyticsFightPlayer[];
+};
+
+export type StatsCountryData = {
+  analyticsCountryStats: AnalyticsCountryStats;
+};
+
+export type StatsUserLookupData = {
+  analyticsUserLookup: AnalyticsUserInfo | null;
+};
+
+export type StatsUserProfileData = {
+  analyticsUserProfile: AnalyticsUserProfile | null;
+};
+
+export type StatsRecentFightsData = {
+  analyticsRecentFights: AnalyticsRecentFightsResult;
+};
+
+export type StatsFightData = {
+  analyticsFightData: AnalyticsFightData | null;
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+ * Snapshot / Historical Data
+ * ═══════════════════════════════════════════════════════════════════ */
+
+export type SnapshotLeaderboardEntry = {
+  rank: number;
+  rating: number | null;
+  elo: number | null;
+  winRate: number | null;
+  kdRatio: number | null;
+  snapshotType: string;
+  createdAt: string;
+};
+
+export type SnapshotMapEntry = {
+  mapName: string;
+  playCount: number;
+  snapshotType: string;
+  createdAt: string;
+};
+
+export type SnapshotFactionEntry = {
+  factionName: string;
+  matchCount: number;
+  winCount: number;
+  snapshotType: string;
+  createdAt: string;
+};
+
+export type SnapshotUnitEntry = {
+  unitName: string;
+  timesDeployed: number;
+  totalKills: number;
+  totalDamageDealt: number;
+  totalDamageReceived: number;
+  totalSupplyConsumed: number;
+  timesRefunded: number;
+  avgKills: number;
+  avgDamage: number;
+};
+
+export type SnapshotUnitRankings = {
+  snapshotDate: string | null;
+  units: SnapshotUnitEntry[];
+};
+
+export type SnapshotLeaderboardHistoryData = {
+  snapshotLeaderboardHistory: SnapshotLeaderboardEntry[];
+};
+
+export type SnapshotMapHistoryData = {
+  snapshotMapHistory: SnapshotMapEntry[];
+};
+
+export type SnapshotFactionHistoryData = {
+  snapshotFactionHistory: SnapshotFactionEntry[];
+};
+
+export type SnapshotUnitRankingsData = {
+  snapshotUnitRankings: SnapshotUnitRankings;
+};
+
+/* ═══════════════════════════════════════════════════════════════════
  * Builder Page — builderData query
  * ═══════════════════════════════════════════════════════════════════ */
 
@@ -333,4 +648,21 @@ export type BuilderUnitSummary = {
     primaryWeapon: Pick<Weapon, 'Id' | 'HUDName' | 'Type' | 'HUDIcon'> | null;
     specialWeapon: Pick<Weapon, 'Id' | 'HUDName' | 'Type' | 'HUDIcon'> | null;
   }>;
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+ * Published Decks — browse, detail, publish
+ * ═══════════════════════════════════════════════════════════════════ */
+
+/** Re-export shared types used directly in queries. */
+export type {
+  PublishedDeck, PublishedDeckSummary, BrowseDecksResult,
+  TrivialChallenge, ToggleLikeResult, RecordViewResult,
+  DeckTag,
+  RegisterUserResult, UserProfile,
+};
+
+/** Like status query response. */
+export type LikeStatus = {
+  liked: boolean;
 };

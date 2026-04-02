@@ -20,6 +20,11 @@
     "type-check": "npm run type-check -w backend && npm run type-check -w frontend && npm run type-check -w shared && npm run type-check -w database",
     "test": "npm run test -w backend && npm run test -w frontend",
     "clean": "rimraf **/node_modules **/dist **/.qwik",
+    "dev:db": "docker compose -f docker-compose.dev.yml up -d",
+    "dev:db:stop": "docker compose -f docker-compose.dev.yml down",
+    "dev:db:reset": "docker compose -f docker-compose.dev.yml down -v",
+    "dev:migrate": "npm run db:migrate -w database",
+    "dev:setup": "npm run dev:db && timeout /t 3 && npm run dev:migrate",
     "docker:build": "cd docker && docker-compose build",
     "docker:up": "cd docker && docker-compose up",
     "docker:down": "cd docker && docker-compose down"

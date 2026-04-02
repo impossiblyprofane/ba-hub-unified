@@ -1,17 +1,21 @@
 # Copilot instructions for BA Hub Unified
 
 ## Big picture architecture
-- Monorepo with npm workspaces: frontend (Qwik SPA), backend (Fastify + Mercurius GraphQL), shared (TypeScript types). See root [package.json](../package.json).
+- Monorepo with npm workspaces: frontend (Qwik SPA), backend (Fastify + Mercurius GraphQL), database (Fastify + Drizzle ORM + PostgreSQL), shared (TypeScript types). See root [package.json](../package.json).
 - Backend serves GraphQL and WebSocket subscriptions via Mercurius. Entry: [backend/src/index.ts](../backend/src/index.ts).
 - Backend data is static JSON tables loaded once at startup into typed arrays. Loader: [backend/src/data/loader.ts](../backend/src/data/loader.ts). Data files live in [backend/src/data/static](../backend/src/data/static).
+- Database service is a Fastify REST API using Drizzle ORM with PostgreSQL for dynamic data (published decks, likes, views, challenges, users). Entry: [database/src/index.ts](../database/src/index.ts). Schema: [database/src/schema](../database/src/schema). Routes: [database/src/routes](../database/src/routes).
+- Data flow: Frontend → GraphQL (backend) → REST (database) → PostgreSQL. Static game data is served directly from backend memory; dynamic data goes through the database service.
 - Frontend is Qwik with Qwik City routing; metadata-only SSR is handled by a Fastify server that serves SPA HTML and crawler-specific metadata. See [frontend/server/index.ts](../frontend/server/index.ts), [frontend/src/root.tsx](../frontend/src/root.tsx).
-- Shared types are published as @ba-hub/shared and imported by backend for static data typing. See [shared/src/types](../shared/src/types).
+- Shared types are published as @ba-hub/shared and imported by all workspaces. See [shared/src/types](../shared/src/types).
 
 ## Critical workflows
-- Dev (root): `npm run dev` runs backend + frontend concurrently. See scripts in [package.json](../package.json).
-- Backend dev: `npm run dev -w backend` (tsx watch). See [backend/package.json](../backend/package.json).
-- Frontend dev: `npm run dev -w frontend` (Vite SSR mode). See [frontend/package.json](../frontend/package.json).
-- Build: `npm run build` (shared → backend → frontend). See [package.json](../package.json).
+- Dev (root): `npm run dev` runs backend + frontend + database concurrently. See scripts in [package.json](../package.json).
+- Backend dev: `npm run dev -w backend` (tsx watch, port 3001). See [backend/package.json](../backend/package.json).
+- Frontend dev: `npm run dev -w frontend` (Vite SSR mode, port 3000). See [frontend/package.json](../frontend/package.json).
+- Database dev: `npm run dev -w database` (tsx watch, port 3002). See [database/package.json](../database/package.json).
+- Database setup: `npm run dev:db` (start PostgreSQL Docker), `npm run dev:migrate` (run Drizzle migrations).
+- Build: `npm run build` (shared → database → backend → frontend). See [package.json](../package.json).
 - Docker: `npm run docker:build` / `npm run docker:up`. See [docker/README.md](../docker/README.md).
 
 ## Project-specific patterns
@@ -39,6 +43,15 @@
   - **Section labels / page tags**: `text-[var(--accent)] text-xs font-mono tracking-[0.3em] uppercase` — keep consistent across all pages.
   - **Community / callout bars**: same transparent gradient pattern, not solid raised backgrounds.
   - The `.corner-brackets` and `.hero-glow` CSS classes from global.css remain available for the home page hero but should not be used on general panels.
+
+## Security & ownership model
+- **Bearer-secret auth**: Each user gets a random UUID (`ba_user_id`) in localStorage. This UUID is both identifier and proof of ownership — never exposed to other users.
+- **`authorId` is internal-only**: The database stores `authorId` on published decks. GraphQL resolvers **strip `authorId`** from all responses and return a computed `isOwner: boolean` instead. Frontend sends `viewerId` to queries; server compares `viewerId === authorId` internally.
+- **`Raw*` types for internal data**: When a field exists in the database but must not reach the client, use separate type layers in `@ba-hub/shared`:
+  - `RawPublishedDeck` / `RawPublishedDeckSummary` (with `authorId`) — used by database service + backend databaseClient.
+  - `PublishedDeck` / `PublishedDeckSummary` (with `isOwner: boolean`) — used by frontend + GraphQL schema.
+- **Challenge verification**: All deck mutations (publish, update, delete) require a one-time math challenge (`challengeId` + `challengeAnswer`). Challenges expire after 5 minutes and are deleted after use. See [database/src/routes/challenges.ts](../database/src/routes/challenges.ts).
+- **Ownership check**: Database service verifies `body.authorId === storedDeck.authorId` server-side before any mutation. Returns 403 on mismatch. See [database/src/routes/decks.ts](../database/src/routes/decks.ts).
 
 ## Deck builder patterns
 - **Deck codes** use an XOR cipher (`BAHUB_DECK_v2` key) + base64 encoding. Numbers are base-36. Delimiters: `|` (top-level), `!` (categories), `#` (units), `,` (fields), `\` (modifications), `/` (modId/optId). Encoder/decoder: [frontend/src/lib/deck/deckEncoder.ts](../frontend/src/lib/deck/deckEncoder.ts).

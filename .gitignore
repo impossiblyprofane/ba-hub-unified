@@ -8,3 +8,5 @@ dist/
 # AI / Copilot
 .github/copilot-instructions.md
 .github/skills/
+CLAUDE.md
+.claude/

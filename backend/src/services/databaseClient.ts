@@ -6,13 +6,13 @@
  */
 
 import type {
-  PublishedDeck,
-  PublishedDeckSummary,
+  RawPublishedDeck,
+  RawPublishedDeckSummary,
   PublishDeckInput,
   UpdatePublishedDeckInput,
   DeletePublishedDeckInput,
   BrowseDecksFilter,
-  BrowseDecksResult,
+  RawBrowseDecksResult,
   ToggleLikeResult,
   RecordViewResult,
   RegisterUserInput,
@@ -86,11 +86,11 @@ export class DatabaseClient {
 
   // ── Decks — CRUD ──────────────────────────────────────────
 
-  async publishDeck(input: PublishDeckInput): Promise<PublishedDeck> {
+  async publishDeck(input: PublishDeckInput): Promise<RawPublishedDeck> {
     return this.request('POST', '/api/decks', input);
   }
 
-  async updateDeck(deckId: string, input: UpdatePublishedDeckInput & { authorId: string }): Promise<PublishedDeck> {
+  async updateDeck(deckId: string, input: UpdatePublishedDeckInput & { authorId: string }): Promise<RawPublishedDeck> {
     return this.request('PUT', `/api/decks/${deckId}`, input);
   }
 
@@ -98,13 +98,13 @@ export class DatabaseClient {
     return this.request('DELETE', `/api/decks/${deckId}`, input);
   }
 
-  async getDeck(deckId: string): Promise<PublishedDeck> {
+  async getDeck(deckId: string): Promise<RawPublishedDeck> {
     return this.request('GET', `/api/decks/${deckId}`);
   }
 
   // ── Decks — Browse ────────────────────────────────────────
 
-  async browseDecks(filter: BrowseDecksFilter): Promise<BrowseDecksResult> {
+  async browseDecks(filter: BrowseDecksFilter): Promise<RawBrowseDecksResult> {
     const query: Record<string, string | number | string[] | undefined> = {
       countryId: filter.countryId,
       spec1Id: filter.spec1Id,
@@ -119,7 +119,7 @@ export class DatabaseClient {
     return this.request('GET', '/api/decks', undefined, query);
   }
 
-  async getDecksByAuthor(authorId: string): Promise<PublishedDeckSummary[]> {
+  async getDecksByAuthor(authorId: string): Promise<RawPublishedDeckSummary[]> {
     return this.request('GET', `/api/decks/author/${authorId}`);
   }
 
@@ -136,4 +136,66 @@ export class DatabaseClient {
   async recordView(deckId: string, viewerKey?: string): Promise<RecordViewResult> {
     return this.request('POST', `/api/decks/${deckId}/view`, { viewerKey });
   }
+
+  // ── Snapshot data (read) ──────────────────────────────────
+
+  async getLeaderboardHistory(steamId: string, since?: string): Promise<LeaderboardHistoryEntry[]> {
+    return this.request('GET', '/api/snapshots/leaderboard-history', undefined, { steamId, since });
+  }
+
+  async getMapHistory(since?: string): Promise<MapHistoryEntry[]> {
+    return this.request('GET', '/api/snapshots/map-history', undefined, { since });
+  }
+
+  async getFactionHistory(since?: string): Promise<FactionHistoryEntry[]> {
+    return this.request('GET', '/api/snapshots/faction-history', undefined, { since });
+  }
+
+  async getUnitRankings(limit?: number): Promise<UnitRankingsResult> {
+    return this.request('GET', '/api/snapshots/unit-rankings', undefined, { limit });
+  }
+}
+
+// ── Snapshot result types ──────────────────────────────────
+
+export interface LeaderboardHistoryEntry {
+  rank: number;
+  rating: number | null;
+  elo: number | null;
+  winRate: number | null;
+  kdRatio: number | null;
+  snapshotType: string;
+  createdAt: string;
+}
+
+export interface MapHistoryEntry {
+  mapName: string;
+  playCount: number;
+  snapshotType: string;
+  createdAt: string;
+}
+
+export interface FactionHistoryEntry {
+  factionName: string;
+  matchCount: number;
+  winCount: number;
+  snapshotType: string;
+  createdAt: string;
+}
+
+export interface UnitRankingEntry {
+  unitName: string;
+  timesDeployed: number;
+  totalKills: number;
+  totalDamageDealt: number;
+  totalDamageReceived: number;
+  totalSupplyConsumed: number;
+  timesRefunded: number;
+  avgKills: number;
+  avgDamage: number;
+}
+
+export interface UnitRankingsResult {
+  snapshotDate: string | null;
+  units: UnitRankingEntry[];
 }

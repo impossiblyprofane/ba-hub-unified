@@ -7,14 +7,22 @@ import { resolvers } from './graphql/resolvers.js';
 import { loadStaticData } from './data/loader.js';
 import { buildIndexes } from './data/indexes.js';
 import { DatabaseClient } from './services/databaseClient.js';
+import { StatsClient } from './services/statsClient.js';
+import { StatsCollector } from './services/statsCollector.js';
+import { encryptDek, decryptDek } from './services/dekEncryption.js';
+import { isrRelayPlugin } from './routes/isrRelay.js';
 
 const PORT = process.env.PORT || 3001;
 const DATABASE_SERVICE_URL = process.env.DATABASE_SERVICE_URL || 'http://localhost:3002';
+const STATS_API_URL = process.env.STATS_API_URL || 'https://api.brokenarrowgame.tech';
+const STATS_PARTNER_TOKEN = process.env.STATS_PARTNER_TOKEN || '';
+const STATS_COLLECTION_ENABLED = process.env.STATS_COLLECTION_ENABLED !== 'false';
 
 async function buildServer() {
   const data = await loadStaticData();
   const indexes = buildIndexes(data);
   const dbClient = new DatabaseClient(DATABASE_SERVICE_URL);
+  const statsClient = new StatsClient(STATS_API_URL, STATS_PARTNER_TOKEN || undefined);
 
   // Keep mutable references for hot-reloading
   let currentData = data;
@@ -61,14 +69,66 @@ async function buildServer() {
     credentials: true,
   });
 
+  // ── .dek file encrypt/decrypt REST endpoints ──────────────────
+  // Binary data is exchanged as base64 to avoid multipart dependencies.
+  // Max body 2 MB (deck JSON is typically < 50 KB).
+
+  /** POST /api/dek/encrypt  — { deckJson: string } → { data: base64 } */
+  fastify.post<{ Body: { deckJson: string } }>('/api/dek/encrypt', {
+    config: { rawBody: false },
+    schema: {
+      body: {
+        type: 'object',
+        required: ['deckJson'],
+        properties: { deckJson: { type: 'string' } },
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      // Validate it's parseable JSON before encrypting
+      JSON.parse(request.body.deckJson);
+      const encrypted = encryptDek(request.body.deckJson);
+      return { data: encrypted.toString('base64') };
+    } catch (err) {
+      fastify.log.warn(err, '.dek encrypt failed');
+      return reply.status(400).send({ error: 'Encryption failed — invalid deck JSON' });
+    }
+  });
+
+  /** POST /api/dek/decrypt  — { data: base64 } → { deckJson: string } */
+  fastify.post<{ Body: { data: string } }>('/api/dek/decrypt', {
+    config: { rawBody: false },
+    schema: {
+      body: {
+        type: 'object',
+        required: ['data'],
+        properties: { data: { type: 'string' } },
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const buf = Buffer.from(request.body.data, 'base64');
+      const json = decryptDek(buf);
+      // Validate the decrypted string is valid JSON
+      JSON.parse(json);
+      return { deckJson: json };
+    } catch (err) {
+      fastify.log.warn(err, '.dek decrypt failed');
+      return reply.status(400).send({ error: 'Decryption failed — invalid or corrupted .dek file' });
+    }
+  });
+
   // WebSocket support
   await fastify.register(websocket);
+
+  // ISR collaborative session relay (must register before Mercurius which also uses WS)
+  await fastify.register(isrRelayPlugin);
 
   // GraphQL with Mercurius
   await fastify.register(mercurius, {
     schema,
     resolvers,
-    context: () => ({ data: currentData, indexes: currentIndexes, dbClient }),
+    context: () => ({ data: currentData, indexes: currentIndexes, dbClient, statsClient }),
     graphiql: true, // GraphiQL interface at /graphiql
     subscription: true, // Enable subscriptions via WebSocket
   });
@@ -81,17 +141,37 @@ async function buildServer() {
     return payload;
   });
 
-  return fastify;
+  return { fastify, indexes: currentIndexes, statsClient };
 }
 
 async function start() {
   try {
-    const fastify = await buildServer();
+    const { fastify, indexes, statsClient } = await buildServer();
     
     await fastify.listen({ port: PORT as number, host: '0.0.0.0' });
     
     console.log(`🚀 Backend server running on http://localhost:${PORT}`);
     console.log(`🎮 GraphiQL: http://localhost:${PORT}/graphiql`);
+
+    // Start periodic stats collection
+    const collector = new StatsCollector({
+      statsClient,
+      databaseServiceUrl: DATABASE_SERVICE_URL,
+      enabled: STATS_COLLECTION_ENABLED,
+      resolveUnitName: (unitId: number) => {
+        const unit = indexes.unitsById.get(unitId);
+        return unit?.Name ?? null;
+      },
+    });
+    collector.start();
+
+    // Graceful shutdown
+    const shutdown = () => {
+      collector.stop();
+      fastify.close();
+    };
+    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', shutdown);
   } catch (err) {
     console.error('Error starting server:', err);
     process.exit(1);

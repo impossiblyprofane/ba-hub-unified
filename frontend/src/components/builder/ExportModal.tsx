@@ -1,11 +1,11 @@
 /**
- * ExportModal — displays the encoded deck code for sharing.
+ * ExportModal — displays the encoded deck code for sharing + .dek download.
  */
 import { $, component$, useSignal } from '@builder.io/qwik';
 import type { PropFunction } from '@builder.io/qwik';
 import type { EditorDeck } from '@ba-hub/shared';
 import { useI18n, t } from '~/lib/i18n';
-import { encodeDeck } from '~/lib/deck';
+import { encodeDeck, encryptDekFile, downloadDekFile } from '~/lib/deck';
 
 interface ExportModalProps {
   deck: EditorDeck;
@@ -15,6 +15,7 @@ interface ExportModalProps {
 export const ExportModal = component$<ExportModalProps>(({ deck, onClose$ }) => {
   const i18n = useI18n();
   const copied = useSignal(false);
+  const dekLoading = useSignal(false);
   const code = encodeDeck(deck.deck);
 
   const handleCopy = $(() => {
@@ -22,6 +23,18 @@ export const ExportModal = component$<ExportModalProps>(({ deck, onClose$ }) => 
       copied.value = true;
       setTimeout(() => { copied.value = false; }, 2000);
     });
+  });
+
+  const handleDownloadDek = $(async () => {
+    dekLoading.value = true;
+    try {
+      const buffer = await encryptDekFile(deck.deck);
+      downloadDekFile(buffer, deck.deck.name || 'deck');
+    } catch {
+      // Silently fail — user can retry
+    } finally {
+      dekLoading.value = false;
+    }
   });
 
   return (
@@ -50,6 +63,15 @@ export const ExportModal = component$<ExportModalProps>(({ deck, onClose$ }) => 
             }}
           />
           <div class="flex gap-2 justify-end">
+            <button
+              onClick$={handleDownloadDek}
+              disabled={dekLoading.value}
+              class={`px-3 py-1.5 border border-[var(--border)] text-[var(--text-dim)] text-[10px] font-mono uppercase tracking-wider transition-colors ${
+                dekLoading.value ? 'opacity-50 cursor-wait' : 'hover:border-[var(--accent)] hover:text-[var(--accent)]'
+              }`}
+            >
+              {dekLoading.value ? t(i18n, 'common.loading') : t(i18n, 'builder.export.downloadDek')}
+            </button>
             <button
               onClick$={onClose$}
               class="px-3 py-1.5 border border-[var(--border)] text-[var(--text-dim)] text-[10px] font-mono uppercase tracking-wider hover:border-[var(--accent)] transition-colors"

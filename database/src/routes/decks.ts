@@ -7,10 +7,10 @@ import type {
   PublishDeckInput,
   UpdatePublishedDeckInput,
   DeletePublishedDeckInput,
-  PublishedDeck,
-  PublishedDeckSummary,
+  RawPublishedDeck,
+  RawPublishedDeckSummary,
   BrowseDecksFilter,
-  BrowseDecksResult,
+  RawBrowseDecksResult,
   BrowseDeckSort,
   ToggleLikeResult,
   RecordViewResult,
@@ -23,6 +23,7 @@ import { DECK_TAGS } from '@ba-hub/shared';
 const SUMMARY_COLUMNS = {
   id: publishedDecks.id,
   authorId: publishedDecks.authorId,
+  publisherName: publishedDecks.publisherName,
   name: publishedDecks.name,
   description: publishedDecks.description,
   deckCode: publishedDecks.deckCode,
@@ -36,10 +37,11 @@ const SUMMARY_COLUMNS = {
   updatedAt: publishedDecks.updatedAt,
 } as const;
 
-function toSummary(row: any): PublishedDeckSummary {
+function toSummary(row: any): RawPublishedDeckSummary {
   return {
     id: row.id,
     authorId: row.authorId,
+    publisherName: row.publisherName ?? '',
     name: row.name,
     description: row.description,
     deckCode: row.deckCode,
@@ -54,10 +56,10 @@ function toSummary(row: any): PublishedDeckSummary {
   };
 }
 
-function toFullDeck(row: any): PublishedDeck {
+function toFullDeck(row: any): RawPublishedDeck {
   return {
     ...toSummary(row),
-    deckData: row.deckData as PublishedDeck['deckData'],
+    deckData: row.deckData as RawPublishedDeck['deckData'],
   };
 }
 
@@ -71,7 +73,7 @@ function validateTags(tags: unknown): DeckTag[] {
 export async function registerDeckRoutes(app: FastifyInstance) {
 
   // ── Publish a new deck ───────────────────────────────────────
-  app.post<{ Body: PublishDeckInput; Reply: PublishedDeck }>('/', {
+  app.post<{ Body: PublishDeckInput; Reply: RawPublishedDeck }>('/', {
     config: { rateLimit: { max: 10, timeWindow: '1 hour' } },
   }, async (req, reply) => {
     const body = req.body;
@@ -98,8 +100,13 @@ export async function registerDeckRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: 'Description must be 500 characters or less' } as any);
     }
 
+    if (body.publisherName && body.publisherName.length > 50) {
+      return reply.status(400).send({ error: 'Publisher name must be 50 characters or less' } as any);
+    }
+
     const [row] = await db.insert(publishedDecks).values({
       authorId: body.authorId,
+      publisherName: (body.publisherName ?? '').trim(),
       name: body.name.trim(),
       description: (body.description ?? '').trim(),
       deckCode: body.deckCode,
@@ -117,7 +124,7 @@ export async function registerDeckRoutes(app: FastifyInstance) {
   app.put<{
     Params: { id: string };
     Body: UpdatePublishedDeckInput & { authorId: string };
-    Reply: PublishedDeck;
+    Reply: RawPublishedDeck;
   }>('/:id', {
     config: { rateLimit: { max: 20, timeWindow: '1 hour' } },
   }, async (req, reply) => {
@@ -145,6 +152,12 @@ export async function registerDeckRoutes(app: FastifyInstance) {
 
     // Build update set
     const updates: Record<string, unknown> = { updatedAt: new Date() };
+    if (body.publisherName !== undefined) {
+      if (body.publisherName.length > 50) {
+        return reply.status(400).send({ error: 'Publisher name must be 50 characters or less' } as any);
+      }
+      updates.publisherName = body.publisherName.trim();
+    }
     if (body.name !== undefined) {
       if (body.name.length > 100) {
         return reply.status(400).send({ error: 'Name must be 100 characters or less' } as any);
@@ -202,7 +215,7 @@ export async function registerDeckRoutes(app: FastifyInstance) {
   });
 
   // ── Get single deck ──────────────────────────────────────────
-  app.get<{ Params: { id: string }; Reply: PublishedDeck }>('/:id', async (req, reply) => {
+  app.get<{ Params: { id: string }; Reply: RawPublishedDeck }>('/:id', async (req, reply) => {
     const { id } = req.params;
 
     const [row] = await db.select()
@@ -218,7 +231,7 @@ export async function registerDeckRoutes(app: FastifyInstance) {
   });
 
   // ── Browse / search ──────────────────────────────────────────
-  app.get<{ Querystring: BrowseDecksFilter; Reply: BrowseDecksResult }>('/', async (req, reply) => {
+  app.get<{ Querystring: BrowseDecksFilter; Reply: RawBrowseDecksResult }>('/', async (req, reply) => {
     const {
       countryId,
       spec1Id,
@@ -433,7 +446,7 @@ export async function registerDeckRoutes(app: FastifyInstance) {
   // ── Get decks by author (convenience) ────────────────────────
   app.get<{
     Params: { authorId: string };
-    Reply: PublishedDeckSummary[];
+    Reply: RawPublishedDeckSummary[];
   }>('/author/:authorId', async (req, reply) => {
     const { authorId } = req.params;
 

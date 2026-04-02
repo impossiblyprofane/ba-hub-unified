@@ -4,6 +4,8 @@ import { users } from './users.js';
 export const publishedDecks = pgTable('published_decks', {
   id: uuid('id').primaryKey().defaultRandom(),
   authorId: uuid('author_id').notNull().references(() => users.id),
+  /** Display name chosen by the publisher (not tied to authorId). */
+  publisherName: text('publisher_name').notNull().default(''),
   name: text('name').notNull(),
   description: text('description').notNull().default(''),
   deckCode: text('deck_code').notNull(),

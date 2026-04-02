@@ -1,0 +1,1 @@
+ALTER TABLE "published_decks" ADD COLUMN "publisher_name" text DEFAULT '' NOT NULL;
