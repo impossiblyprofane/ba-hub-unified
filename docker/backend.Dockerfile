@@ -4,7 +4,7 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Copy root workspace manifests first (cache-friendly layer)
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json tsconfig.base.json ./
 COPY shared/package.json ./shared/
 COPY backend/package.json ./backend/
 
