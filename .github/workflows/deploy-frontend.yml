@@ -66,8 +66,9 @@ jobs:
           password: ${{ secrets.SSH_PASSWORD }}
           script: |
             cd /root/ba-hub/${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}/docker
-            docker compose --env-file .env build --no-cache frontend
-            docker compose --env-file .env up -d frontend
+            PROFILE="${{ github.ref == 'refs/heads/main' && '--profile db' || '' }}"
+            docker compose --env-file .env $PROFILE build --no-cache frontend
+            docker compose --env-file .env $PROFILE up -d frontend
             docker image prune -f
 
       - name: Discord — Success
