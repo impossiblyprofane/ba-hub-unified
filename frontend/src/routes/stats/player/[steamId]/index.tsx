@@ -1,4 +1,4 @@
-import { component$, useSignal, useStore, Slot } from '@builder.io/qwik';
+import { component$, useSignal, useStore, Slot, type Signal } from '@builder.io/qwik';
 import { routeLoader$, useLocation } from '@builder.io/qwik-city';
 import type { DocumentHead } from '@builder.io/qwik-city';
 import { useI18n, t, GAME_LOCALES, getGameLocaleValueOrKey } from '~/lib/i18n';
@@ -56,6 +56,7 @@ export const usePlayerProfile = routeLoader$(async (requestEvent) => {
     mostUsedUnits: [],
     topKillerUnits: [],
     topDamageUnits: [],
+    topDamageReceivedUnits: [],
     factionBreakdown: [],
     specUsage: [],
     specCombos: [],
@@ -69,6 +70,7 @@ export const usePlayerProfile = routeLoader$(async (requestEvent) => {
     mostUsedUnits: fightsResult.mostUsedUnits ?? [],
     topKillerUnits: fightsResult.topKillerUnits ?? [],
     topDamageUnits: fightsResult.topDamageUnits ?? [],
+    topDamageReceivedUnits: fightsResult.topDamageReceivedUnits ?? [],
     factionBreakdown: fightsResult.factionBreakdown ?? [],
     specUsage: fightsResult.specUsage ?? [],
     specCombos: fightsResult.specCombos ?? [],
@@ -550,12 +552,12 @@ const FrequentPlayersList = component$<{
 const UnitRankingPanel = component$<{
   units: UnitPerformance[];
   title: string;
-  category: 'count' | 'kills' | 'damage';
+  category: 'count' | 'kills' | 'damage' | 'damageReceived';
   totalGames?: number;
-}>(({ units, title, category, totalGames }) => {
+  expanded: Signal<boolean>;
+}>(({ units, title, category, totalGames, expanded }) => {
   if (units.length === 0) return null;
   const i18n = useI18n();
-  // Toggleable sort mode for kills/damage panels
   const sortMode = useSignal<'total' | 'avg'>('total');
 
   // Re-sort based on current mode
@@ -568,9 +570,15 @@ const UnitRankingPanel = component$<{
     sorted.sort((a, b) =>
       sortMode.value === 'avg' ? b.avgDamage - a.avgDamage : b.totalDamageDealt - a.totalDamageDealt,
     );
+  } else if (category === 'damageReceived') {
+    sorted.sort((a, b) =>
+      sortMode.value === 'avg' ? b.avgDamageReceived - a.avgDamageReceived : b.totalDamageReceived - a.totalDamageReceived,
+    );
   }
 
-  const showToggle = category === 'kills' || category === 'damage';
+  const showToggle = category === 'kills' || category === 'damage' || category === 'damageReceived';
+  const displayCount = expanded.value ? Math.min(sorted.length, 20) : 5;
+  const hasMore = sorted.length > 5;
 
   return (
     <div class="p-0 bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.7)] border border-[rgba(51,51,51,0.15)] h-full flex flex-col">
@@ -607,7 +615,7 @@ const UnitRankingPanel = component$<{
       </div>
       <div class="flex-1 p-3">
         <div class="flex flex-col gap-0">
-          {sorted.slice(0, 5).map((u, i) => {
+          {sorted.slice(0, displayCount).map((u, i) => {
             const resolvedOpts = resolveOptionNames(u.optionNames, i18n.locale);
             const configLabel = resolvedOpts.length > 0
               ? resolvedOpts.join(' + ')
@@ -672,11 +680,32 @@ const UnitRankingPanel = component$<{
                       <span class="text-[var(--text-dim)]">×{u.count}</span>
                     </>
                   )}
+                  {category === 'damageReceived' && (
+                    <>
+                      <span class="text-[var(--red)]">
+                        {sortMode.value === 'avg'
+                          ? Math.round(u.avgDamageReceived)
+                          : u.totalDamageReceived.toLocaleString()}
+                        {sortMode.value === 'avg' ? '/g' : ''} {t(i18n, 'stats.match.damageReceived').toLowerCase()}
+                      </span>
+                      <span class="text-[var(--text-dim)]">×{u.count}</span>
+                    </>
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
+        {hasMore && (
+          <button
+            class="w-full mt-2 py-1.5 text-[9px] font-mono uppercase tracking-[0.2em] text-[var(--text-dim)] hover:text-[var(--accent)] border border-[rgba(51,51,51,0.2)] hover:border-[rgba(51,51,51,0.4)] transition-colors"
+            onClick$={() => { expanded.value = !expanded.value; }}
+          >
+            {expanded.value
+              ? `▲ Show less`
+              : `▼ Show more (${Math.min(sorted.length, 20)})`}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -695,10 +724,15 @@ export default component$(() => {
   const mostUsedUnits = data.value.mostUsedUnits;
   const topKillerUnits = data.value.topKillerUnits;
   const topDamageUnits = data.value.topDamageUnits;
+  const topDamageReceivedUnits = data.value.topDamageReceivedUnits;
   const factionBreakdown = data.value.factionBreakdown;
   const specUsage = data.value.specUsage;
   const specCombos = data.value.specCombos;
   const activeSection = useSignal<'overview' | 'matches'>('overview');
+
+  // Unit panel shared state
+  const unitExpanded = useSignal(false);
+  const factionFilter = useSignal<'all' | 'USA' | 'Russia'>('all');
 
   // Chart overlay toggles
   const chartToggles = useStore({ showKD: false, showDamage: false, showMatchup: false });
@@ -881,6 +915,11 @@ export default component$(() => {
             />
           </div>
 
+          {/* Caveat */}
+          <p class="text-[8px] font-mono text-[var(--text-dim)] opacity-60 tracking-wide">
+            {t(i18n, 'stats.profile.dataCaveat')}
+          </p>
+
           {/* Row 2: ELO Progression chart + Win/Loss doughnut */}
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
             {/* ELO Progression — spans 2 cols */}
@@ -1052,7 +1091,7 @@ export default component$(() => {
               {specUsage.length > 0 && (
                 <Panel title={t(i18n, 'stats.profile.specUsage')} fill>
                   <div class="flex flex-col gap-0.5">
-                    {specUsage.slice(0, 6).map((s, i) => (
+                    {specUsage.map((s, i) => (
                       <div
                         key={`sp-${i}`}
                         class="flex items-center justify-between py-1 border-b border-[rgba(51,51,51,0.1)] last:border-0"
@@ -1067,7 +1106,7 @@ export default component$(() => {
               {specCombos.length > 0 && (
                 <Panel title={t(i18n, 'stats.profile.specCombos')} fill>
                   <div class="flex flex-col gap-0.5">
-                    {specCombos.slice(0, 6).map((c, i) => (
+                    {specCombos.map((c, i) => (
                       <div
                         key={`sc-${i}`}
                         class="flex items-center justify-between py-1 border-b border-[rgba(51,51,51,0.1)] last:border-0"
@@ -1107,26 +1146,68 @@ export default component$(() => {
           )}
 
           {/* Row 5: Unit Rankings */}
-          {(mostUsedUnits.length > 0 || topKillerUnits.length > 0 || topDamageUnits.length > 0) && (
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <UnitRankingPanel
-                units={mostUsedUnits}
-                title={t(i18n, 'stats.profile.mostUsedUnits')}
-                category="count"
-                totalGames={rankedFights.length}
-              />
-              <UnitRankingPanel
-                units={topKillerUnits}
-                title={t(i18n, 'stats.profile.topKillers')}
-                category="kills"
-              />
-              <UnitRankingPanel
-                units={topDamageUnits}
-                title={t(i18n, 'stats.profile.topDamage')}
-                category="damage"
-              />
-            </div>
-          )}
+          {(mostUsedUnits.length > 0 || topKillerUnits.length > 0 || topDamageUnits.length > 0 || topDamageReceivedUnits.length > 0) && (() => {
+            const filterFn = (u: UnitPerformance) =>
+              factionFilter.value === 'all' || u.countryName === factionFilter.value;
+            const fMostUsed = mostUsedUnits.filter(filterFn);
+            const fTopKillers = topKillerUnits.filter(filterFn);
+            const fTopDamage = topDamageUnits.filter(filterFn);
+            const fTopDmgRecv = topDamageReceivedUnits.filter(filterFn);
+            return (
+              <>
+                <div class="flex items-center gap-2">
+                  {(['all', 'USA', 'Russia'] as const).map((f) => {
+                    const labels: Record<string, string> = {
+                      all: t(i18n, 'stats.profile.factionAll'),
+                      USA: t(i18n, 'stats.profile.factionUS'),
+                      Russia: t(i18n, 'stats.profile.factionRU'),
+                    };
+                    return (
+                      <button
+                        key={f}
+                        class={[
+                          'px-2 py-1 text-[9px] font-mono uppercase tracking-[0.2em] border transition-colors',
+                          factionFilter.value === f
+                            ? 'text-[var(--accent)] border-[var(--accent)] bg-[rgba(70,151,195,0.1)]'
+                            : 'text-[var(--text-dim)] border-[rgba(51,51,51,0.3)] hover:text-[var(--text)]',
+                        ].join(' ')}
+                        onClick$={() => { factionFilter.value = f; }}
+                      >
+                        {labels[f]}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                  <UnitRankingPanel
+                    units={fMostUsed}
+                    title={t(i18n, 'stats.profile.mostUsedUnits')}
+                    category="count"
+                    totalGames={rankedFights.length}
+                    expanded={unitExpanded}
+                  />
+                  <UnitRankingPanel
+                    units={fTopKillers}
+                    title={t(i18n, 'stats.profile.topKillers')}
+                    category="kills"
+                    expanded={unitExpanded}
+                  />
+                  <UnitRankingPanel
+                    units={fTopDamage}
+                    title={t(i18n, 'stats.profile.topDamage')}
+                    category="damage"
+                    expanded={unitExpanded}
+                  />
+                  <UnitRankingPanel
+                    units={fTopDmgRecv}
+                    title={t(i18n, 'stats.profile.topDamageReceived')}
+                    category="damageReceived"
+                    expanded={unitExpanded}
+                  />
+                </div>
+              </>
+            );
+          })()}
 
           {/* Map breakdown chart */}
           {stats && stats.mapsPlayCount.length > 0 && (
@@ -1206,6 +1287,9 @@ export default component$(() => {
                       <th class="text-left py-1 border-b border-[rgba(51,51,51,0.3)]">
                         {t(i18n, 'stats.player.matchMap')}
                       </th>
+                      <th class="text-left py-1 border-b border-[rgba(51,51,51,0.3)]">
+                        Deck
+                      </th>
                       <th class="text-center py-1 border-b border-[rgba(51,51,51,0.3)]">
                         {t(i18n, 'stats.profile.matchType')}
                       </th>
@@ -1227,10 +1311,10 @@ export default component$(() => {
                       <th class="text-center py-1 border-b border-[rgba(51,51,51,0.3)]">
                         {t(i18n, 'stats.profile.matchmaking')}
                       </th>
-                      <th class="text-right py-1 border-b border-[rgba(51,51,51,0.3)]">
-                        ELO
+                      <th class="text-left py-1 border-b border-[rgba(51,51,51,0.3)] min-w-[90px]">
+                        Rating
                       </th>
-                      <th class="text-left py-1 border-b border-[rgba(51,51,51,0.3)]">
+                      <th class="text-left py-1 border-b border-[rgba(51,51,51,0.3)] pl-3 whitespace-nowrap">
                         {t(i18n, 'stats.player.matchDate')}
                       </th>
                       <th class="text-left py-1 border-b border-[rgba(51,51,51,0.3)]"></th>
@@ -1270,6 +1354,20 @@ export default component$(() => {
                           <td class="py-1.5 text-[var(--text)]">
                             {fight.mapName ?? `Map ${fight.mapId ?? '?'}`}
                           </td>
+                          <td class="py-1.5">
+                            <div class="flex items-center gap-1.5">
+                              {fight.countryName && (
+                                <span class="text-[9px] font-mono text-[var(--accent)]">
+                                  {fight.countryName === 'USA' ? 'US' : fight.countryName === 'Russia' ? 'RU' : fight.countryName}
+                                </span>
+                              )}
+                              {fight.specNames && fight.specNames.length > 0 && (
+                                <span class="text-[8px] text-[var(--text-dim)] truncate max-w-[120px]">
+                                  {fight.specNames.join(' + ')}
+                                </span>
+                              )}
+                            </div>
+                          </td>
                           <td class="py-1.5 text-center font-mono text-[var(--text-dim)]">
                             {fight.teamSize ?? '-'}
                           </td>
@@ -1299,22 +1397,21 @@ export default component$(() => {
                               <span class="text-[var(--text-dim)]">-</span>
                             )}
                           </td>
-                          <td class="py-1.5 text-right font-mono text-[10px]">
+                          <td class="py-1.5 font-mono text-[10px] min-w-[90px]">
                             {fight.oldRating != null && ratingDelta != null ? (
-                              <span>
+                              <div class="flex items-baseline">
                                 <span class="text-[var(--text-dim)]">{Math.round(fight.oldRating)}</span>
-                                {' '}
                                 <span
                                   class={ratingDelta >= 0 ? 'text-[var(--green)]' : 'text-[var(--red)]'}
                                 >
                                   {ratingDelta >= 0 ? '+' : ''}{ratingDelta.toFixed(0)}
                                 </span>
-                              </span>
+                              </div>
                             ) : (
                               <span class="text-[var(--text-dim)]">-</span>
                             )}
                           </td>
-                          <td class="py-1.5 text-[var(--text-dim)] text-[10px]">
+                          <td class="py-1.5 text text-[var(--text-dim)] text-[10px] whitespace-nowrap pl-3">
                             {formatTimestamp(fight.endTime)}
                           </td>
                           <td class="py-1.5">

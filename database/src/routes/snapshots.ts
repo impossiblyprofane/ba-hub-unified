@@ -6,6 +6,9 @@ import {
   mapStatsSnapshots,
   factionStatsSnapshots,
   unitStatsSnapshots,
+  crawlerFactionSnapshots,
+  specStatsSnapshots,
+  unitPerformanceSnapshots,
 } from '../schema/index.js';
 import { eq, desc, gte, and, sql } from 'drizzle-orm';
 
@@ -44,6 +47,30 @@ interface CreateSnapshotBody {
     totalSupplyConsumed: number;
     timesRefunded: number;
   }>;
+  crawlerFactionStats?: Array<{
+    factionName: string;
+    matchCount: number;
+    winCount: number;
+  }>;
+  specStats?: Array<{
+    specName: string;
+    specId?: number;
+    pickCount: number;
+  }>;
+  unitPerformance?: Array<{
+    configKey: string;
+    unitId?: number;
+    unitName: string;
+    factionName: string;
+    optionIds?: string;
+    eloBracket?: string;
+    deployCount: number;
+    totalKills: number;
+    totalDamageDealt: number;
+    totalDamageReceived: number;
+    totalSupplyConsumed: number;
+    refundCount: number;
+  }>;
 }
 
 // ── Routes ───────────────────────────────────────────────────────
@@ -54,7 +81,10 @@ export async function registerSnapshotRoutes(app: FastifyInstance) {
    * Called by the collection scheduler on the backend.
    */
   app.post<{ Body: CreateSnapshotBody }>('/', async (req, reply) => {
-    const { snapshotType, leaderboard, mapStats, factionStats, unitStats } = req.body;
+    const {
+      snapshotType, leaderboard, mapStats, factionStats, unitStats,
+      crawlerFactionStats, specStats, unitPerformance,
+    } = req.body;
 
     if (!['hourly', 'daily', 'weekly', 'monthly'].includes(snapshotType)) {
       return reply.status(400).send({ error: 'Invalid snapshotType' });
@@ -131,6 +161,54 @@ export async function registerSnapshotRoutes(app: FastifyInstance) {
       );
     }
 
+    if (crawlerFactionStats && crawlerFactionStats.length > 0) {
+      inserts.push(
+        db.insert(crawlerFactionSnapshots).values(
+          crawlerFactionStats.map((entry) => ({
+            snapshotId,
+            factionName: entry.factionName,
+            matchCount: entry.matchCount,
+            winCount: entry.winCount,
+          })),
+        ),
+      );
+    }
+
+    if (specStats && specStats.length > 0) {
+      inserts.push(
+        db.insert(specStatsSnapshots).values(
+          specStats.map((entry) => ({
+            snapshotId,
+            specName: entry.specName,
+            specId: entry.specId,
+            pickCount: entry.pickCount,
+          })),
+        ),
+      );
+    }
+
+    if (unitPerformance && unitPerformance.length > 0) {
+      inserts.push(
+        db.insert(unitPerformanceSnapshots).values(
+          unitPerformance.map((entry) => ({
+            snapshotId,
+            configKey: entry.configKey,
+            unitId: entry.unitId,
+            unitName: entry.unitName,
+            factionName: entry.factionName,
+            optionIds: entry.optionIds ?? '',
+            eloBracket: entry.eloBracket ?? 'unranked',
+            deployCount: entry.deployCount,
+            totalKills: entry.totalKills,
+            totalDamageDealt: entry.totalDamageDealt,
+            totalDamageReceived: entry.totalDamageReceived,
+            totalSupplyConsumed: entry.totalSupplyConsumed,
+            refundCount: entry.refundCount,
+          })),
+        ),
+      );
+    }
+
     await Promise.all(inserts);
 
     return reply.status(201).send({
@@ -140,6 +218,9 @@ export async function registerSnapshotRoutes(app: FastifyInstance) {
       mapStatsCount: mapStats?.length ?? 0,
       factionStatsCount: factionStats?.length ?? 0,
       unitStatsCount: unitStats?.length ?? 0,
+      crawlerFactionStatsCount: crawlerFactionStats?.length ?? 0,
+      specStatsCount: specStats?.length ?? 0,
+      unitPerformanceCount: unitPerformance?.length ?? 0,
     });
   });
 
@@ -275,6 +356,101 @@ export async function registerSnapshotRoutes(app: FastifyInstance) {
         avgDamage: u.timesDeployed > 0 ? u.totalDamageDealt / u.timesDeployed : 0,
       })),
     };
+  });
+
+  /**
+   * GET /api/snapshots/crawler-faction-history?since=ISO
+   * Returns crawler-derived faction win rates over time (from actual ranked matches).
+   */
+  app.get<{
+    Querystring: { since?: string };
+  }>('/crawler-faction-history', async (req) => {
+    const { since } = req.query;
+    const sinceDate = since ? new Date(since) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+    const rows = await db
+      .select({
+        factionName: crawlerFactionSnapshots.factionName,
+        matchCount: crawlerFactionSnapshots.matchCount,
+        winCount: crawlerFactionSnapshots.winCount,
+        snapshotType: statSnapshots.snapshotType,
+        createdAt: statSnapshots.createdAt,
+      })
+      .from(crawlerFactionSnapshots)
+      .innerJoin(statSnapshots, eq(crawlerFactionSnapshots.snapshotId, statSnapshots.id))
+      .where(gte(statSnapshots.createdAt, sinceDate))
+      .orderBy(statSnapshots.createdAt);
+
+    return rows;
+  });
+
+  /**
+   * GET /api/snapshots/spec-history?since=ISO
+   * Returns specialization pick counts over time.
+   */
+  app.get<{
+    Querystring: { since?: string };
+  }>('/spec-history', async (req) => {
+    const { since } = req.query;
+    const sinceDate = since ? new Date(since) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+    const rows = await db
+      .select({
+        specName: specStatsSnapshots.specName,
+        specId: specStatsSnapshots.specId,
+        pickCount: specStatsSnapshots.pickCount,
+        snapshotType: statSnapshots.snapshotType,
+        createdAt: statSnapshots.createdAt,
+      })
+      .from(specStatsSnapshots)
+      .innerJoin(statSnapshots, eq(specStatsSnapshots.snapshotId, statSnapshots.id))
+      .where(gte(statSnapshots.createdAt, sinceDate))
+      .orderBy(statSnapshots.createdAt);
+
+    return rows;
+  });
+
+  /**
+   * GET /api/snapshots/unit-performance?since=ISO&faction=NAME&eloBracket=1500-2000
+   * Returns unit performance snapshot data, optionally filtered.
+   */
+  app.get<{
+    Querystring: { since?: string; faction?: string; eloBracket?: string };
+  }>('/unit-performance', async (req) => {
+    const { since, faction, eloBracket } = req.query;
+    const sinceDate = since ? new Date(since) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+    const conditions = [gte(statSnapshots.createdAt, sinceDate)];
+    if (faction) {
+      conditions.push(eq(unitPerformanceSnapshots.factionName, faction));
+    }
+    if (eloBracket) {
+      conditions.push(eq(unitPerformanceSnapshots.eloBracket, eloBracket));
+    }
+
+    const rows = await db
+      .select({
+        configKey: unitPerformanceSnapshots.configKey,
+        unitId: unitPerformanceSnapshots.unitId,
+        unitName: unitPerformanceSnapshots.unitName,
+        factionName: unitPerformanceSnapshots.factionName,
+        optionIds: unitPerformanceSnapshots.optionIds,
+        eloBracket: unitPerformanceSnapshots.eloBracket,
+        deployCount: unitPerformanceSnapshots.deployCount,
+        totalKills: unitPerformanceSnapshots.totalKills,
+        totalDamageDealt: unitPerformanceSnapshots.totalDamageDealt,
+        totalDamageReceived: unitPerformanceSnapshots.totalDamageReceived,
+        totalSupplyConsumed: unitPerformanceSnapshots.totalSupplyConsumed,
+        refundCount: unitPerformanceSnapshots.refundCount,
+        snapshotType: statSnapshots.snapshotType,
+        createdAt: statSnapshots.createdAt,
+      })
+      .from(unitPerformanceSnapshots)
+      .innerJoin(statSnapshots, eq(unitPerformanceSnapshots.snapshotId, statSnapshots.id))
+      .where(and(...conditions))
+      .orderBy(statSnapshots.createdAt);
+
+    return rows;
   });
 
   /**

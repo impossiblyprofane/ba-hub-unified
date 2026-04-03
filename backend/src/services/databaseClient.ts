@@ -154,6 +154,34 @@ export class DatabaseClient {
   async getUnitRankings(limit?: number): Promise<UnitRankingsResult> {
     return this.request('GET', '/api/snapshots/unit-rankings', undefined, { limit });
   }
+
+  // ── Crawler state ─────────────────────────────────────────
+
+  async getCrawlerState(): Promise<CrawlerStateResult> {
+    return this.request('GET', '/api/crawler/state');
+  }
+
+  // ── Crawler-derived snapshot data (read) ──────────────────
+
+  async getCrawlerFactionHistory(since?: string): Promise<CrawlerFactionHistoryEntry[]> {
+    return this.request('GET', '/api/snapshots/crawler-faction-history', undefined, { since });
+  }
+
+  async getSpecHistory(since?: string): Promise<SpecHistoryEntry[]> {
+    return this.request('GET', '/api/snapshots/spec-history', undefined, { since });
+  }
+
+  async getUnitPerformanceRolling(since?: string, eloBracket?: string, faction?: string, limit?: number): Promise<UnitPerformanceRollingResult> {
+    return this.request('GET', '/api/crawler/matches/unit-performance', undefined, { since, eloBracket, faction, limit });
+  }
+
+  async getSpecCombos(since?: string, limit?: number): Promise<SpecComboResult> {
+    return this.request('GET', '/api/crawler/matches/spec-combos', undefined, { since, limit });
+  }
+
+  async getUnitPerformanceHistory(since?: string, faction?: string, eloBracket?: string): Promise<UnitPerformanceSnapshotEntry[]> {
+    return this.request('GET', '/api/snapshots/unit-performance', undefined, { since, faction, eloBracket });
+  }
 }
 
 // ── Snapshot result types ──────────────────────────────────
@@ -198,4 +226,79 @@ export interface UnitRankingEntry {
 export interface UnitRankingsResult {
   snapshotDate: string | null;
   units: UnitRankingEntry[];
+}
+
+export interface CrawlerStateResult {
+  scanFloor: number;
+  scanCeiling: number;
+  scanPosition: number;
+  initialCollectionDone: boolean;
+  updatedAt: string | null;
+}
+
+export interface CrawlerFactionHistoryEntry {
+  factionName: string;
+  matchCount: number;
+  winCount: number;
+  snapshotType: string;
+  createdAt: string;
+}
+
+export interface SpecHistoryEntry {
+  specName: string;
+  specId: number | null;
+  pickCount: number;
+  snapshotType: string;
+  createdAt: string;
+}
+
+export interface SpecComboEntry {
+  spec1: string;
+  spec2: string;
+  faction: string;
+  pickCount: number;
+}
+
+export interface SpecComboResult {
+  rows: SpecComboEntry[];
+  since: string;
+}
+
+export interface UnitPerformanceEntry {
+  configKey: string;
+  unitId: number | null;
+  unitName: string;
+  factionName: string;
+  optionIds: string;
+  eloBracket: string;
+  deployCount: number;
+  totalKills: number;
+  avgKills: number;
+  totalDamageDealt: number;
+  avgDamage: number;
+  totalDamageReceived: number;
+  totalSupplyConsumed: number;
+  refundCount: number;
+}
+
+export interface UnitPerformanceRollingResult {
+  rows: UnitPerformanceEntry[];
+  since: string;
+}
+
+export interface UnitPerformanceSnapshotEntry {
+  configKey: string;
+  unitId: number | null;
+  unitName: string;
+  factionName: string;
+  optionIds: string;
+  eloBracket: string;
+  deployCount: number;
+  totalKills: number;
+  totalDamageDealt: number;
+  totalDamageReceived: number;
+  totalSupplyConsumed: number;
+  refundCount: number;
+  snapshotType: string;
+  createdAt: string;
 }

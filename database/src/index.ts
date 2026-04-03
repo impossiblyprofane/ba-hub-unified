@@ -10,16 +10,20 @@ async function main() {
   const app = Fastify({ logger: true });
 
   // ── Plugins ──────────────────────────────────────────────────
+  // CORS: allow internal services + admin viewer origins.
+  // DB_ADMIN_ORIGINS can include "null" for file:// protocol access.
+  const adminOrigins = (process.env.DB_ADMIN_ORIGINS ?? '').split(',').map(s => s.trim()).filter(Boolean);
   await app.register(cors, {
     origin: [
       'http://localhost:3000',
       'http://localhost:3001',
+      ...adminOrigins,
     ],
     credentials: true,
   });
 
   await app.register(rateLimit as any, {
-    max: 100,
+    max: 1000,
     timeWindow: '1 minute',
     keyGenerator: (req: any) => {
       // Prefer X-User-Id header for per-user rate limiting,

@@ -53,6 +53,13 @@ export const schema = `
     snapshotMapHistory(since: String): [SnapshotMapEntry!]!
     snapshotFactionHistory(since: String): [SnapshotFactionEntry!]!
     snapshotUnitRankings(limit: Int = 50): SnapshotUnitRankings!
+
+    # ── Crawler-derived snapshot data ────────────────────────
+    crawlerFactionHistory(since: String): [CrawlerFactionEntry!]!
+    snapshotSpecHistory(since: String): [SnapshotSpecEntry!]!
+    unitPerformance(since: String, eloBracket: String, faction: String, limit: Int): [UnitPerformanceEntry!]!
+    specCombos(since: String, limit: Int): [SpecComboEntry!]!
+    crawlerStatus: CrawlerStatus
   }
 
   type Mutation {
@@ -767,6 +774,9 @@ export const schema = `
     totalDamageReceived: Float!
     avgKills: Float!
     avgDamage: Float!
+    avgDamageReceived: Float!
+    countryId: Int
+    countryName: String
   }
 
   type FactionCount {
@@ -793,6 +803,7 @@ export const schema = `
     mostUsedUnits: [UnitPerformance!]!
     topKillerUnits: [UnitPerformance!]!
     topDamageUnits: [UnitPerformance!]!
+    topDamageReceivedUnits: [UnitPerformance!]!
     factionBreakdown: [FactionCount!]!
     specUsage: [SpecCount!]!
     specCombos: [SpecCombo!]!
@@ -818,6 +829,9 @@ export const schema = `
     enemyAvgRating: Int
     objectivesCaptured: Int
     oldRating: Float
+    countryName: String
+    countryFlag: String
+    specNames: [String!]!
   }
 
   type AnalyticsFightData {
@@ -975,6 +989,57 @@ export const schema = `
   type SnapshotUnitRankings {
     snapshotDate: String
     units: [SnapshotUnitEntry!]!
+  }
+
+  # ── Crawler-derived types ──────────────────────────────
+
+  type CrawlerFactionEntry {
+    factionName: String!
+    matchCount: Int!
+    winCount: Int!
+    snapshotType: String!
+    createdAt: String!
+  }
+
+  type SnapshotSpecEntry {
+    specName: String!
+    specId: Int
+    pickCount: Int!
+    snapshotType: String!
+    createdAt: String!
+  }
+
+  type UnitPerformanceEntry {
+    configKey: String!
+    unitId: Int
+    unitName: String!
+    factionName: String!
+    optionIds: String
+    optionNames: [String!]!
+    eloBracket: String!
+    deployCount: Int!
+    totalKills: Int!
+    avgKills: Float!
+    totalDamageDealt: Float!
+    avgDamage: Float!
+    totalDamageReceived: Float!
+    totalSupplyConsumed: Float!
+    refundCount: Int!
+  }
+
+  type SpecComboEntry {
+    spec1: String!
+    spec2: String!
+    faction: String!
+    pickCount: Int!
+  }
+
+  type CrawlerStatus {
+    scanFloor: Int!
+    scanCeiling: Int!
+    scanPosition: Int!
+    initialCollectionDone: Boolean!
+    updatedAt: String
   }
 
   scalar JSON

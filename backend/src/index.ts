@@ -9,6 +9,7 @@ import { buildIndexes } from './data/indexes.js';
 import { DatabaseClient } from './services/databaseClient.js';
 import { StatsClient } from './services/statsClient.js';
 import { StatsCollector } from './services/statsCollector.js';
+import { MatchCrawler } from './services/matchCrawler.js';
 import { encryptDek, decryptDek } from './services/dekEncryption.js';
 import { isrRelayPlugin } from './routes/isrRelay.js';
 import { encryptPayload, decryptPayload, isEncryptionConfigured } from '@ba-hub/shared';
@@ -129,7 +130,12 @@ async function buildServer() {
   await fastify.register(mercurius, {
     schema,
     resolvers,
-    context: () => ({ data: currentData, indexes: currentIndexes, dbClient, statsClient }),
+    context: () => ({
+      data: currentData,
+      indexes: currentIndexes,
+      dbClient,
+      statsClient,
+    }),
     graphiql: true, // GraphiQL interface at /graphiql
     subscription: true, // Enable subscriptions via WebSocket
   });
@@ -174,27 +180,32 @@ async function buildServer() {
     return payload;
   });
 
-  return { fastify, indexes: currentIndexes, statsClient };
+  return { fastify, data: currentData, indexes: currentIndexes, statsClient };
 }
 
 async function start() {
   try {
-    const { fastify, indexes, statsClient } = await buildServer();
-    
+    const { fastify, data, indexes, statsClient } = await buildServer();
+
     await fastify.listen({ port: PORT as number, host: '0.0.0.0' });
-    
+
     console.log(`🚀 Backend server running on http://localhost:${PORT}`);
     console.log(`🎮 GraphiQL: http://localhost:${PORT}/graphiql`);
+
+    // Create match crawler for independent fight data collection
+    const matchCrawler = new MatchCrawler({
+      statsClient,
+      databaseServiceUrl: DATABASE_SERVICE_URL,
+      indexes,
+      data,
+    });
 
     // Start periodic stats collection
     const collector = new StatsCollector({
       statsClient,
       databaseServiceUrl: DATABASE_SERVICE_URL,
       enabled: STATS_COLLECTION_ENABLED,
-      resolveUnitName: (unitId: number) => {
-        const unit = indexes.unitsById.get(unitId);
-        return unit?.Name ?? null;
-      },
+      matchCrawler,
     });
     collector.start();
 

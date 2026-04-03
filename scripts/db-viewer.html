@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BA Hub - Database Viewer</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --bg-raised: #161b22;
+      --bg-hover: #1c2128;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-dim: #8b949e;
+      --accent: #4697c3;
+      --accent-dim: rgba(70,151,195,0.15);
+      --red: #f85149;
+      --green: #3fb950;
+      --mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    /* Layout */
+    .app { display: flex; height: 100vh; }
+    .sidebar {
+      width: 260px;
+      min-width: 260px;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .header h1 {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+    }
+    .header .badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      font-family: var(--mono);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    /* Connect bar */
+    .connect-bar {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .connect-bar label {
+      font-size: 10px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-family: var(--mono);
+    }
+    .connect-bar input, .connect-bar select {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-family: var(--mono);
+      outline: none;
+    }
+    .connect-bar input:focus { border-color: var(--accent); }
+    .connect-bar .row { display: flex; gap: 6px; }
+    .connect-bar .row input { flex: 1; }
+    .btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+      font-family: var(--mono);
+      letter-spacing: 0.05em;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn-sm { padding: 3px 8px; font-size: 10px; }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { background: var(--bg-hover); color: var(--text); }
+    /* Sidebar table list */
+    .table-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+    .table-item {
+      padding: 6px 12px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      border-left: 2px solid transparent;
+    }
+    .table-item:hover { background: var(--bg-hover); }
+    .table-item.active { background: var(--accent-dim); border-left-color: var(--accent); color: var(--accent); }
+    .table-item .count {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-dim);
+    }
+    /* Stats bar */
+    .stats-bar {
+      padding: 8px 12px;
+      border-top: 1px solid var(--border);
+      font-size: 10px;
+      color: var(--text-dim);
+      font-family: var(--mono);
+      display: flex;
+      gap: 12px;
+    }
+    .stats-bar .stat-val { color: var(--accent); }
+    /* Content area */
+    .content { flex: 1; overflow: auto; padding: 0; }
+    .toolbar {
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+    .toolbar .table-name {
+      font-size: 14px;
+      font-weight: 600;
+      font-family: var(--mono);
+    }
+    .toolbar .meta {
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+    /* Data table */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .data-table th {
+      position: sticky;
+      top: 0;
+      background: var(--bg-raised);
+      text-align: left;
+      padding: 8px 10px;
+      font-size: 10px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-family: var(--mono);
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .data-table th:hover { color: var(--accent); }
+    .data-table th.sorted { color: var(--accent); }
+    .data-table td {
+      padding: 6px 10px;
+      border-bottom: 1px solid rgba(48,54,61,0.3);
+      font-family: var(--mono);
+      font-size: 11px;
+      white-space: nowrap;
+      max-width: 300px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .data-table tr:hover td { background: rgba(70,151,195,0.04); }
+    .data-table td.null { color: var(--text-dim); font-style: italic; }
+    .data-table td.bool-true { color: var(--green); }
+    .data-table td.bool-false { color: var(--red); }
+    /* Pagination */
+    .pagination {
+      padding: 8px 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-dim);
+      flex-shrink: 0;
+    }
+    .pagination .page-controls { display: flex; gap: 4px; }
+    /* Query panel */
+    .query-panel {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .query-panel textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 8px;
+      border-radius: 4px;
+      resize: vertical;
+      min-height: 80px;
+      outline: none;
+    }
+    .query-panel textarea:focus { border-color: var(--accent); }
+    .query-actions { display: flex; gap: 8px; align-items: center; }
+    /* Tabs */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .tab {
+      padding: 8px 16px;
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--text-dim);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    /* Status */
+    .status { padding: 20px; text-align: center; color: var(--text-dim); font-size: 13px; }
+    .status.error { color: var(--red); }
+    .connected-indicator { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .connected-indicator.on { background: var(--green); }
+    .connected-indicator.off { background: var(--red); }
+    /* Column info */
+    .col-info {
+      padding: 12px 16px;
+      font-size: 11px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 6px;
+    }
+    .col-card {
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 8px 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .col-card .name { font-family: var(--mono); color: var(--accent); }
+    .col-card .type { font-family: var(--mono); color: var(--text-dim); font-size: 10px; }
+    .col-card .nullable { color: var(--text-dim); font-size: 9px; text-transform: uppercase; }
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <div class="sidebar">
+      <div class="connect-bar">
+        <label>Database Service URL</label>
+        <div class="row">
+          <input id="apiUrl" type="text" value="http://localhost:3002" placeholder="http://host:port">
+        </div>
+        <label>Admin Secret</label>
+        <div class="row">
+          <input id="apiSecret" type="password" placeholder="Bearer token">
+          <button class="btn" onclick="connect()">Connect</button>
+        </div>
+      </div>
+      <div class="table-list" id="tableList">
+        <div class="status">Not connected</div>
+      </div>
+      <div class="stats-bar" id="statsBar" style="display:none">
+        <span>DB: <span class="stat-val" id="dbSize">-</span></span>
+        <span>Conn: <span class="stat-val" id="dbConns">-</span></span>
+      </div>
+    </div>
+    <div class="main">
+      <div class="header">
+        <h1>BA Hub Database Viewer</h1>
+        <span class="badge">read-only</span>
+        <span class="connected-indicator off" id="connIndicator"></span>
+      </div>
+      <div class="tabs">
+        <div class="tab active" data-tab="browse" onclick="switchTab('browse')">Browse</div>
+        <div class="tab" data-tab="query" onclick="switchTab('query')">SQL Query</div>
+        <div class="tab" data-tab="schema" onclick="switchTab('schema')">Schema</div>
+      </div>
+      <!-- Browse tab -->
+      <div id="tab-browse" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+        <div class="toolbar" id="browseToolbar">
+          <span class="table-name" id="currentTable">Select a table</span>
+          <span class="meta" id="currentMeta"></span>
+          <div style="flex:1"></div>
+          <button class="btn btn-sm btn-ghost" onclick="refreshTable()">Refresh</button>
+        </div>
+        <div class="content" id="browseContent">
+          <div class="status">Select a table from the sidebar</div>
+        </div>
+        <div class="pagination" id="pagination" style="display:none">
+          <span id="pageInfo"></span>
+          <div class="page-controls">
+            <button class="btn btn-sm btn-ghost" onclick="prevPage()">Prev</button>
+            <button class="btn btn-sm btn-ghost" onclick="nextPage()">Next</button>
+          </div>
+        </div>
+      </div>
+      <!-- Query tab -->
+      <div id="tab-query" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+        <div class="query-panel">
+          <textarea id="queryInput" placeholder="SELECT * FROM processed_matches LIMIT 20;">SELECT * FROM stat_snapshots ORDER BY created_at DESC LIMIT 20;</textarea>
+          <div class="query-actions">
+            <button class="btn" onclick="runQuery()">Run Query</button>
+            <span class="meta" id="queryMeta"></span>
+          </div>
+        </div>
+        <div class="content" id="queryContent">
+          <div class="status">Write a SELECT query and click Run</div>
+        </div>
+      </div>
+      <!-- Schema tab -->
+      <div id="tab-schema" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+        <div class="toolbar">
+          <span class="table-name" id="schemaTable">Select a table</span>
+        </div>
+        <div class="content" id="schemaContent">
+          <div class="status">Select a table from the sidebar</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let state = {
+      url: '',
+      secret: '',
+      connected: false,
+      tables: [],
+      activeTable: null,
+      activeTab: 'browse',
+      sort: null,
+      order: 'asc',
+      page: 0,
+      pageSize: 50,
+      totalRows: 0,
+    };
+
+    // ── API helpers ─────────────────────────────────────────
+    async function api(path) {
+      const res = await fetch(`${state.url}${path}`, {
+        headers: { 'Authorization': `Bearer ${state.secret}` },
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `HTTP ${res.status}`);
+      }
+      return res.json();
+    }
+
+    // ── Connect ─────────────────────────────────────────────
+    async function connect() {
+      state.url = document.getElementById('apiUrl').value.replace(/\/$/, '');
+      state.secret = document.getElementById('apiSecret').value;
+
+      try {
+        const [tablesData, statsData] = await Promise.all([
+          api('/api/admin/tables'),
+          api('/api/admin/stats'),
+        ]);
+
+        state.connected = true;
+        state.tables = tablesData.tables;
+        document.getElementById('connIndicator').className = 'connected-indicator on';
+        document.getElementById('dbSize').textContent = statsData.databaseSize;
+        document.getElementById('dbConns').textContent = statsData.activeConnections;
+        document.getElementById('statsBar').style.display = 'flex';
+
+        renderTableList();
+      } catch (err) {
+        state.connected = false;
+        document.getElementById('connIndicator').className = 'connected-indicator off';
+        document.getElementById('tableList').innerHTML =
+          `<div class="status error">${err.message}</div>`;
+      }
+    }
+
+    // ── Render table list ───────────────────────────────────
+    function renderTableList() {
+      const list = document.getElementById('tableList');
+      list.innerHTML = state.tables.map(t => `
+        <div class="table-item ${state.activeTable === t.table_name ? 'active' : ''}"
+             onclick="selectTable('${t.table_name}')">
+          <span>${t.table_name}</span>
+          <span class="count">${t.row_count ?? 0}</span>
+        </div>
+      `).join('');
+    }
+
+    // ── Select table ────────────────────────────────────────
+    async function selectTable(name) {
+      state.activeTable = name;
+      state.page = 0;
+      state.sort = null;
+      state.order = 'asc';
+      renderTableList();
+      await loadTableData();
+      await loadSchema();
+    }
+
+    // ── Load table data ─────────────────────────────────────
+    async function loadTableData() {
+      if (!state.activeTable) return;
+
+      const params = new URLSearchParams({
+        limit: String(state.pageSize),
+        offset: String(state.page * state.pageSize),
+      });
+      if (state.sort) {
+        params.set('sort', state.sort);
+        params.set('order', state.order);
+      }
+
+      try {
+        const data = await api(`/api/admin/table/${state.activeTable}/rows?${params}`);
+        state.totalRows = data.total;
+
+        document.getElementById('currentTable').textContent = state.activeTable;
+        document.getElementById('currentMeta').textContent = `${data.total} rows`;
+
+        renderDataTable(data.rows, 'browseContent');
+        renderPagination();
+      } catch (err) {
+        document.getElementById('browseContent').innerHTML =
+          `<div class="status error">${err.message}</div>`;
+      }
+    }
+
+    // ── Render data table ───────────────────────────────────
+    function renderDataTable(rows, containerId) {
+      const container = document.getElementById(containerId);
+      if (!rows || rows.length === 0) {
+        container.innerHTML = '<div class="status">No rows</div>';
+        return;
+      }
+
+      const cols = Object.keys(rows[0]);
+      const ths = cols.map(col => {
+        const isSorted = state.sort === col;
+        const arrow = isSorted ? (state.order === 'asc' ? ' \u25B2' : ' \u25BC') : '';
+        return `<th class="${isSorted ? 'sorted' : ''}"
+                    onclick="sortBy('${col}')">${col}${arrow}</th>`;
+      }).join('');
+
+      const trs = rows.map(row => {
+        const tds = cols.map(col => {
+          const val = row[col];
+          if (val === null || val === undefined) return '<td class="null">null</td>';
+          if (val === true) return '<td class="bool-true">true</td>';
+          if (val === false) return '<td class="bool-false">false</td>';
+          const str = typeof val === 'object' ? JSON.stringify(val) : String(val);
+          const escaped = str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          return `<td title="${escaped}">${escaped}</td>`;
+        }).join('');
+        return `<tr>${tds}</tr>`;
+      }).join('');
+
+      container.innerHTML = `<table class="data-table"><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table>`;
+    }
+
+    // ── Sort ─────────────────────────────────────────────────
+    function sortBy(col) {
+      if (state.sort === col) {
+        state.order = state.order === 'asc' ? 'desc' : 'asc';
+      } else {
+        state.sort = col;
+        state.order = 'asc';
+      }
+      state.page = 0;
+      loadTableData();
+    }
+
+    // ── Pagination ──────────────────────────────────────────
+    function renderPagination() {
+      const totalPages = Math.ceil(state.totalRows / state.pageSize);
+      const pag = document.getElementById('pagination');
+      pag.style.display = totalPages > 1 ? 'flex' : 'none';
+      document.getElementById('pageInfo').textContent =
+        `Page ${state.page + 1} of ${totalPages} (${state.totalRows} rows)`;
+    }
+
+    function prevPage() {
+      if (state.page > 0) { state.page--; loadTableData(); }
+    }
+    function nextPage() {
+      const totalPages = Math.ceil(state.totalRows / state.pageSize);
+      if (state.page < totalPages - 1) { state.page++; loadTableData(); }
+    }
+    function refreshTable() { loadTableData(); }
+
+    // ── Schema ──────────────────────────────────────────────
+    async function loadSchema() {
+      if (!state.activeTable) return;
+      try {
+        const data = await api(`/api/admin/table/${state.activeTable}`);
+        document.getElementById('schemaTable').textContent = `${data.name} (${data.rowCount} rows)`;
+
+        let html = '<div class="col-info">';
+        html += data.columns.map(c => `
+          <div class="col-card">
+            <div>
+              <span class="name">${c.column_name}</span>
+              <span class="nullable">${c.is_nullable === 'YES' ? ' nullable' : ''}</span>
+            </div>
+            <span class="type">${c.data_type}${c.character_maximum_length ? `(${c.character_maximum_length})` : ''}</span>
+          </div>
+        `).join('');
+        html += '</div>';
+
+        if (data.indexes.length > 0) {
+          html += '<div style="padding:16px"><h3 style="font-size:11px;color:var(--text-dim);margin-bottom:8px;font-family:var(--mono);text-transform:uppercase;letter-spacing:0.1em">Indexes</h3>';
+          html += data.indexes.map(i => `
+            <div style="font-family:var(--mono);font-size:11px;padding:4px 0;color:var(--text-dim)">
+              <span style="color:var(--accent)">${i.indexname}</span>
+            </div>
+          `).join('');
+          html += '</div>';
+        }
+
+        document.getElementById('schemaContent').innerHTML = html;
+      } catch (err) {
+        document.getElementById('schemaContent').innerHTML =
+          `<div class="status error">${err.message}</div>`;
+      }
+    }
+
+    // ── SQL Query ───────────────────────────────────────────
+    async function runQuery() {
+      const q = document.getElementById('queryInput').value.trim();
+      if (!q) return;
+
+      const meta = document.getElementById('queryMeta');
+      meta.textContent = 'Running...';
+
+      try {
+        const start = performance.now();
+        const data = await api(`/api/admin/query?q=${encodeURIComponent(q)}`);
+        const elapsed = (performance.now() - start).toFixed(0);
+
+        meta.textContent = `${data.count} rows in ${elapsed}ms`;
+        // Don't use sort state for query results
+        const savedSort = state.sort;
+        state.sort = null;
+        renderDataTable(data.rows, 'queryContent');
+        state.sort = savedSort;
+      } catch (err) {
+        meta.textContent = '';
+        document.getElementById('queryContent').innerHTML =
+          `<div class="status error">${err.message}</div>`;
+      }
+    }
+
+    // ── Tabs ────────────────────────────────────────────────
+    function switchTab(tab) {
+      state.activeTab = tab;
+      document.querySelectorAll('.tab').forEach(t =>
+        t.classList.toggle('active', t.dataset.tab === tab));
+      ['browse', 'query', 'schema'].forEach(t => {
+        const el = document.getElementById(`tab-${t}`);
+        el.style.display = t === tab ? 'flex' : 'none';
+      });
+    }
+
+    // ── Keyboard shortcut ───────────────────────────────────
+    document.getElementById('queryInput').addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        runQuery();
+      }
+    });
+
+    // Auto-connect with URL params
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('url')) document.getElementById('apiUrl').value = params.get('url');
+    if (params.get('secret')) {
+      document.getElementById('apiSecret').value = params.get('secret');
+      connect();
+    }
+  </script>
+</body>
+</html>

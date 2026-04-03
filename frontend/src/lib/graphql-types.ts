@@ -342,6 +342,9 @@ export type AnalyticsRecentFight = {
   enemyAvgRating: number | null;
   objectivesCaptured: number | null;
   oldRating: number | null;
+  countryName: string | null;
+  countryFlag: string | null;
+  specNames: string[];
 };
 
 export type FrequentPlayer = {
@@ -365,6 +368,9 @@ export type UnitPerformance = {
   totalDamageReceived: number;
   avgKills: number;
   avgDamage: number;
+  avgDamageReceived: number;
+  countryId: number | null;
+  countryName: string | null;
 };
 
 export type FactionCount = {
@@ -391,6 +397,7 @@ export type AnalyticsRecentFightsResult = {
   mostUsedUnits: UnitPerformance[];
   topKillerUnits: UnitPerformance[];
   topDamageUnits: UnitPerformance[];
+  topDamageReceivedUnits: UnitPerformance[];
   factionBreakdown: FactionCount[];
   specUsage: SpecCount[];
   specCombos: SpecCombo[];
@@ -536,6 +543,54 @@ export type SnapshotFactionHistoryData = {
 
 export type SnapshotUnitRankingsData = {
   snapshotUnitRankings: SnapshotUnitRankings;
+};
+
+// ── Crawler-derived snapshot types ──────────────────────────
+
+export type CrawlerFactionEntry = {
+  factionName: string;
+  matchCount: number;
+  winCount: number;
+  snapshotType: string;
+  createdAt: string;
+};
+
+export type SnapshotSpecEntry = {
+  specName: string;
+  specId: number | null;
+  pickCount: number;
+  snapshotType: string;
+  createdAt: string;
+};
+
+export type UnitPerformanceEntry = {
+  configKey: string;
+  unitId: number | null;
+  unitName: string;
+  factionName: string;
+  optionIds: string | null;
+  optionNames: string[];
+  eloBracket: string;
+  deployCount: number;
+  totalKills: number;
+  avgKills: number;
+  totalDamageDealt: number;
+  avgDamage: number;
+  totalDamageReceived: number;
+  totalSupplyConsumed: number;
+  refundCount: number;
+};
+
+export type CrawlerFactionHistoryData = {
+  crawlerFactionHistory: CrawlerFactionEntry[];
+};
+
+export type SnapshotSpecHistoryData = {
+  snapshotSpecHistory: SnapshotSpecEntry[];
+};
+
+export type UnitPerformanceData = {
+  unitPerformance: UnitPerformanceEntry[];
 };
 
 /* ═══════════════════════════════════════════════════════════════════

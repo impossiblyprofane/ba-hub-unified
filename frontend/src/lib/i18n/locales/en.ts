@@ -725,6 +725,11 @@ const en: TranslationDict = {
   'stats.profile.mostUsedUnits': 'Most Used Units',
   'stats.profile.topKillers': 'Top Killers',
   'stats.profile.topDamage': 'Top Damage',
+  'stats.profile.topDamageReceived': 'Most Targeted',
+  'stats.profile.factionAll': 'All',
+  'stats.profile.factionUS': 'US',
+  'stats.profile.factionRU': 'RU',
+  'stats.profile.dataCaveat': 'Recent performance data is derived from the last 30 days of game data and may not be fully accurate.',
   'stats.profile.unitDeployed': 'Deployed',
   'stats.profile.unitAvgKills': 'Avg Kills',
   'stats.profile.unitAvgDmg': 'Avg Dmg',
@@ -763,6 +768,20 @@ const en: TranslationDict = {
   'stats.topUnits.deployed': 'Times Deployed',
   'stats.topUnits.avgKills': 'Avg Kills',
   'stats.topUnits.avgDamage': 'Avg Damage',
+
+  // -- Crawler-derived stats --
+  'stats.crawlerFactionWinRates.title': 'Faction Win Rates (Ranked)',
+  'stats.crawlerFactionWinRates.subtitle': 'Win rate trends from recent ranked matches.',
+  'stats.crawlerFactionWinRates.comingSoon': 'Match data is being collected. Win rate trends will appear here as data accumulates.',
+  'stats.specPopularity.title': 'Specialization Popularity (Ranked)',
+  'stats.specPopularity.subtitle': 'Pick frequency trends from recent ranked matches.',
+  'stats.specPopularity.comingSoon': 'Match data is being collected. Specialization trends will appear here as data accumulates.',
+  'stats.unitPopularity.title': 'Unit Popularity',
+  'stats.unitPopularity.subtitle': 'Most deployed units from recent ranked matches.',
+  'stats.unitPopularity.comingSoon': 'Match data is being collected. Unit popularity will appear here as data accumulates.',
+  'stats.unitPopularity.allFactions': 'All Factions',
+  'stats.unitPopularity.deployed': 'Deployed',
+  'stats.crawler.disclaimer': 'Based on recent game data within the last 30 days. Results are approximate and may not reflect all matches.',
 
   // ── Guides page ──
   'guides.tag': 'Strategic Knowledge',

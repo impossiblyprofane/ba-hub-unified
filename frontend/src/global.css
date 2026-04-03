@@ -431,6 +431,18 @@ html, body {
           drop-shadow(0 0 3px rgba(70, 151, 195, 0.2));
 }
 
+/* Map portrait pan — vertical-dominant slow drift */
+@keyframes map-pan {
+  0%   { transform: translate(0%, 0%); }
+  25%  { transform: translate(-2%, -14%); }
+  50%  { transform: translate(1%, -20%); }
+  75%  { transform: translate(-1%, -6%); }
+  100% { transform: translate(0%, 0%); }
+}
+.map-pan-anim {
+  animation: map-pan 30s ease-in-out infinite;
+}
+
 /* Unit viewer portrait scaling + radial vignette */
 .unit-portrait-bg {
   background-size: contain, 100% 100%;

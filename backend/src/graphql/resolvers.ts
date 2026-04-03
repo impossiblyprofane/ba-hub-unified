@@ -963,6 +963,8 @@ export const resolvers = {
         const fightIds = await statsClient.getRecentFightIds(user.id);
         const targetIds = fightIds.slice(0, 100);
 
+        // Report max fight ID to crawler for passive watermark updates
+
         // Track teammate/opponent frequency across all fights
         const teammateMap = new Map<number, { name: string; count: number; wins: number; losses: number }>();
         const opponentMap = new Map<number, { name: string; count: number; wins: number; losses: number }>();
@@ -976,6 +978,7 @@ export const resolvers = {
           totalKills: number;
           totalDamageDealt: number;
           totalDamageReceived: number;
+          countryId: number | null;
         };
         const unitMap = new Map<string, UnitAgg>();
 
@@ -1078,6 +1081,11 @@ export const resolvers = {
                   ? Math.round(enemyRatings.reduce((s, r) => s + r, 0) / enemyRatings.length)
                   : null;
 
+                // Per-fight country + spec detection
+                let fightCountryName: string | null = null;
+                let fightCountryFlag: string | null = null;
+                let fightSpecNames: string[] = [];
+
                 // Aggregate unit performance + faction detection (ranked only)
                 if (isRanked && player) {
                   // Determine faction from majority country of deployed units
@@ -1104,6 +1112,7 @@ export const resolvers = {
                         totalKills: unit.killedCount ?? 0,
                         totalDamageDealt: unit.totalDamageDealt ?? 0,
                         totalDamageReceived: unit.totalDamageReceived ?? 0,
+                        countryId: unitData?.CountryId ?? null,
                       });
                     }
                   }
@@ -1113,6 +1122,8 @@ export const resolvers = {
                     const country = indexes.countriesById?.get(topCountryId);
                     const factionName = country?.Name ?? `Faction ${topCountryId}`;
                     factionCounts.set(factionName, (factionCounts.get(factionName) ?? 0) + 1);
+                    fightCountryName = factionName;
+                    fightCountryFlag = country?.FlagFileName ?? null;
                   }
 
                   // Infer specs from deployed units: count which specs each unit belongs to
@@ -1133,6 +1144,10 @@ export const resolvers = {
                   for (const specId of topSpecs) {
                     specCounts.set(specId, (specCounts.get(specId) ?? 0) + 1);
                   }
+                  fightSpecNames = topSpecs.map((id) => {
+                    const spec = indexes.specializationsById.get(id);
+                    return spec?.Name || spec?.UIName || `Spec ${id}`;
+                  });
                   if (topSpecs.length === 2) {
                     const comboKey = topSpecs.sort((a, b) => a - b).join(':');
                     const existing = specComboCounts.get(comboKey);
@@ -1168,6 +1183,9 @@ export const resolvers = {
                   enemyAvgRating,
                   objectivesCaptured: player?.objectivesCaptured ?? null,
                   oldRating: player?.oldRating ?? null,
+                  countryName: fightCountryName,
+                  countryFlag: fightCountryFlag,
+                  specNames: fightSpecNames,
                 };
               } catch {
                 return null;
@@ -1226,6 +1244,9 @@ export const resolvers = {
             totalDamageReceived: Math.round(agg.totalDamageReceived),
             avgKills: agg.count > 0 ? Math.round((agg.totalKills / agg.count) * 100) / 100 : 0,
             avgDamage: agg.count > 0 ? Math.round((agg.totalDamageDealt / agg.count) * 100) / 100 : 0,
+            avgDamageReceived: agg.count > 0 ? Math.round((agg.totalDamageReceived / agg.count) * 100) / 100 : 0,
+            countryId: agg.countryId,
+            countryName: agg.countryId != null ? (indexes.countriesById?.get(agg.countryId)?.Name ?? null) : null,
           };
         };
 
@@ -1240,6 +1261,10 @@ export const resolvers = {
           .map(resolveUnitPerf);
         const topDamageUnits = [...allUnits]
           .sort((a, b) => b.totalDamageDealt - a.totalDamageDealt)
+          .slice(0, 10)
+          .map(resolveUnitPerf);
+        const topDamageReceivedUnits = [...allUnits]
+          .sort((a, b) => b.totalDamageReceived - a.totalDamageReceived)
           .slice(0, 10)
           .map(resolveUnitPerf);
 
@@ -1277,6 +1302,7 @@ export const resolvers = {
           mostUsedUnits,
           topKillerUnits,
           topDamageUnits,
+          topDamageReceivedUnits,
           factionBreakdown,
           specUsage,
           specCombos,
@@ -1481,6 +1507,78 @@ export const resolvers = {
         return await dbClient.getUnitRankings(args.limit);
       } catch {
         return { snapshotDate: null, units: [] };
+      }
+    },
+
+    // ── Crawler-derived snapshot queries ─────────────────────
+
+    crawlerFactionHistory: async (_: unknown, args: { since?: string }, ctx: any) => {
+      const { dbClient } = ctx as GraphQLContext;
+      try {
+        return await dbClient.getCrawlerFactionHistory(args.since);
+      } catch {
+        return [];
+      }
+    },
+
+    snapshotSpecHistory: async (_: unknown, args: { since?: string }, ctx: any) => {
+      const { dbClient } = ctx as GraphQLContext;
+      try {
+        return await dbClient.getSpecHistory(args.since);
+      } catch {
+        return [];
+      }
+    },
+
+    unitPerformance: async (
+      _: unknown,
+      args: { since?: string; eloBracket?: string; faction?: string; limit?: number },
+      ctx: any,
+    ) => {
+      const { dbClient, indexes } = ctx as GraphQLContext;
+      try {
+        const result = await dbClient.getUnitPerformanceRolling(
+          args.since, args.eloBracket, args.faction, args.limit,
+        );
+        // Resolve option IDs to display names
+        return result.rows.map((row: any) => {
+          if (row.optionIds && typeof row.optionIds === 'string') {
+            const ids = row.optionIds.split(',').map((s: string) => parseInt(s.trim(), 10)).filter((n: number) => !isNaN(n));
+            const names = ids
+              .map((id: number) => {
+                const opt = indexes.optionsById.get(id);
+                return opt?.UIName || opt?.Name || null;
+              })
+              .filter((n: string | null): n is string => n != null);
+            return { ...row, optionNames: names };
+          }
+          return { ...row, optionNames: [] };
+        });
+      } catch {
+        return [];
+      }
+    },
+
+    specCombos: async (
+      _: unknown,
+      args: { since?: string; limit?: number },
+      ctx: any,
+    ) => {
+      const { dbClient } = ctx as GraphQLContext;
+      try {
+        const result = await dbClient.getSpecCombos(args.since, args.limit);
+        return result.rows;
+      } catch {
+        return [];
+      }
+    },
+
+    crawlerStatus: async (_: unknown, _args: unknown, ctx: any) => {
+      const { dbClient } = ctx as GraphQLContext;
+      try {
+        return await dbClient.getCrawlerState();
+      } catch {
+        return null;
       }
     },
   },

@@ -472,20 +472,29 @@ export default component$(() => {
         </button>
       )}
 
-      {/* Match header + team panels with map background */}
+      {/* Match header with map portrait background */}
       {(() => {
         const mapImg = getMapBackgroundByName(f.mapName);
         return (
-          <div class="mb-3 relative overflow-hidden">
-            {mapImg && (
-              <div
-                class="absolute inset-0 bg-cover bg-center opacity-[0.12] pointer-events-none"
-                style={{ backgroundImage: `url(${mapImg})` }}
-              />
-            )}
-            <div class="relative">
-              {/* Match header */}
-              <div class="p-4 mb-3">
+          <>
+            <div class="mb-4 relative overflow-hidden border border-[rgba(51,51,51,0.15)]">
+              {mapImg && (
+                <>
+                  <div class="absolute inset-[-15%] pointer-events-none map-pan-anim">
+                    <img
+                      src={mapImg}
+                      alt={f.mapName ?? ''}
+                      class="w-full h-full object-cover opacity-[0.55]"
+                      width={848}
+                      height={480}
+                    />
+                  </div>
+                  <div class="absolute inset-0 bg-gradient-to-b from-[rgba(26,26,26,0.15)] via-[rgba(26,26,26,0.45)] to-[rgba(26,26,26,0.95)] pointer-events-none" />
+                  <div class="absolute inset-0 bg-gradient-to-r from-[rgba(26,26,26,0.5)] to-transparent pointer-events-none" />
+                </>
+              )}
+              {!mapImg && <div class="absolute inset-0 bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.7)]" />}
+              <div class="relative z-10 p-6 py-8">
                 <p class="text-[var(--accent)] text-xs font-mono tracking-[0.3em] uppercase mb-2">
                   {t(i18n, 'stats.match.title')}
                 </p>
@@ -512,9 +521,10 @@ export default component$(() => {
                   <span>{formatTimestamp(f.endTime)}</span>
                 </div>
               </div>
+            </div>
 
-              {/* Team panels */}
-              <div class="flex flex-col gap-3">
+            {/* Team panels */}
+            <div class="flex flex-col gap-3 mb-3">
         {teamEntries.map(([teamKey, players]) => {
           const isWinner = teamKey === winnerTeam;
           const headerLabel = isWinner ? '★ VICTORY' : '⊘ DEFEAT';
@@ -731,9 +741,8 @@ export default component$(() => {
             </div>
           );
         })}
-              </div>
             </div>
-          </div>
+          </>
         );
       })()}
 
