@@ -106,20 +106,23 @@ const qwikPlugin = fastifyPlugin(
 
     fastify.removeAllContentTypeParsers();
 
-    // Not-found handler uses Qwik City router for SSR
-    fastify.setNotFoundHandler(async (request, response) => {
-      // Check for social media crawlers — serve lightweight metadata HTML
+    // Intercept crawlers BEFORE Qwik SSR — serve lightweight metadata HTML
+    fastify.addHook('onRequest', async (request, reply) => {
+      // Skip static assets
+      if (request.url.startsWith('/build/') || request.url.startsWith('/assets/') || request.url.startsWith('/images/')) return;
+
       const userAgent = request.headers['user-agent'] || '';
-      const isCrawler = /bot|crawler|spider|discord|twitter|facebook|linkedin/i.test(userAgent);
+      const isCrawler = /bot|crawler|spider|discord|twitter|facebook|linkedin|whatsapp|telegram|slack/i.test(userAgent);
 
       if (isCrawler) {
         const meta = await resolveRouteMeta(request.url);
         const fullUrl = `${SITE_URL}${request.url}`;
-        response.type('text/html').send(renderMetaHtml(meta, fullUrl, SITE_URL));
-        return;
+        reply.type('text/html').send(renderMetaHtml(meta, fullUrl, SITE_URL));
       }
+    });
 
-      // Normal users get full Qwik SSR
+    // Not-found handler — Qwik City router for normal SSR
+    fastify.setNotFoundHandler(async (request, response) => {
       await router(request.raw, response.raw, (err) => fastify.log.error(err));
       await notFound(request.raw, response.raw, (err) => fastify.log.error(err));
     });
