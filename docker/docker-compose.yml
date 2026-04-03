@@ -2,6 +2,7 @@ version: '3.8'
 
 # Parameterized for dev/prod deployment. Source .env for environment-specific values.
 # Default values match development. CI/CD generates .env per environment.
+# Deploy: 2026-04-03
 
 services:
   postgres:
