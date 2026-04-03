@@ -1,0 +1,69 @@
+services:
+  database:
+    build:
+      context: ..
+      dockerfile: docker/database.Dockerfile
+    container_name: bahub-dev-database
+    ports:
+      - "3102:3102"
+    environment:
+      - NODE_ENV=production
+      - PORT=3102
+      - DATABASE_URL=postgresql://${PG_USER:-bahub}:${PG_PASSWORD:-bahub_dev}@bahub-prod-postgres:5432/${PG_DB:-bahub}
+    restart: unless-stopped
+    networks:
+      - bahub-shared
+
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/backend.Dockerfile
+    container_name: bahub-dev-backend
+    ports:
+      - "3101:3101"
+    environment:
+      - NODE_ENV=production
+      - PORT=3101
+      - FRONTEND_URL=${FRONTEND_URL}
+      - DATABASE_SERVICE_URL=http://database:3102
+      - STATS_API_URL=https://api.brokenarrowgame.tech
+      - STATS_PARTNER_TOKEN=${STATS_PARTNER_TOKEN:-}
+      - STATS_COLLECTION_ENABLED=false
+      - ENCRYPT_API=${ENCRYPT_API:-false}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
+      - ENCRYPTION_IV=${ENCRYPTION_IV:-}
+    depends_on:
+      - database
+    restart: unless-stopped
+    networks:
+      - bahub-shared
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/frontend.Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL}
+        - VITE_WS_URL=${VITE_WS_URL:-}
+        - VITE_ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
+        - VITE_ENCRYPTION_IV=${ENCRYPTION_IV:-}
+    container_name: bahub-dev-frontend
+    ports:
+      - "3100:3100"
+    environment:
+      - NODE_ENV=production
+      - PORT=3100
+      - SITE_URL=${SITE_URL}
+      - API_URL=http://backend:3101/graphql
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
+      - ENCRYPTION_IV=${ENCRYPTION_IV:-}
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - bahub-shared
+
+networks:
+  bahub-shared:
+    external: true
+    name: bahub-shared
