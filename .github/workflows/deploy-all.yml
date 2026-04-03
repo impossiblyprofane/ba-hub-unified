@@ -42,6 +42,7 @@ jobs:
           VITE_WS_URL=${{ github.ref == 'refs/heads/main' && secrets.PROD_WS_URL || secrets.DEV_WS_URL }}
           SITE_URL=${{ github.ref == 'refs/heads/main' && secrets.PROD_SITE_URL || secrets.DEV_SITE_URL }}
           FRONTEND_URL=${{ github.ref == 'refs/heads/main' && secrets.PROD_FRONTEND_URL || secrets.DEV_FRONTEND_URL }}
+          DATABASE_SERVICE_URL=${{ github.ref == 'refs/heads/main' && 'http://database:3002' || 'http://host.docker.internal:3002' }}
           STATS_API_URL=https://api.brokenarrowgame.tech
           STATS_PARTNER_TOKEN=${{ secrets.STATS_PARTNER_TOKEN }}
           STATS_COLLECTION_ENABLED=${{ github.ref == 'refs/heads/main' && 'true' || 'false' }}
@@ -68,12 +69,13 @@ jobs:
           password: ${{ secrets.SSH_PASSWORD }}
           script: |
             cd /root/ba-hub/${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}/docker
-            echo "🏗️ Building all images..."
-            docker compose --env-file .env build --no-cache
+            PROFILE="${{ github.ref == 'refs/heads/main' && '--profile db' || '' }}"
+            echo "🏗️ Building images... (profile: ${PROFILE:-none})"
+            docker compose --env-file .env $PROFILE build --no-cache
             echo "🛑 Stopping existing containers..."
-            docker compose --env-file .env down
+            docker compose --env-file .env $PROFILE down
             echo "🚀 Starting containers..."
-            docker compose --env-file .env up -d
+            docker compose --env-file .env $PROFILE up -d
             echo "🧹 Pruning unused images..."
             docker image prune -f
             echo "✅ All services deployed!"

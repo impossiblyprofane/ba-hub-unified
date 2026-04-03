@@ -7,6 +7,7 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: ${COMPOSE_PROJECT_NAME:-bahub}-postgres
+    profiles: ["db"]
     ports:
       - "${PORT_POSTGRES:-5432}:5432"
     environment:
@@ -24,6 +25,7 @@ services:
       context: ..
       dockerfile: docker/database.Dockerfile
     container_name: ${COMPOSE_PROJECT_NAME:-bahub}-database
+    profiles: ["db"]
     ports:
       - "${PORT_DATABASE:-3002}:${PORT_DATABASE:-3002}"
     environment:
@@ -47,7 +49,7 @@ services:
       - NODE_ENV=${NODE_ENV:-production}
       - PORT=${PORT_BACKEND:-3001}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
-      - DATABASE_SERVICE_URL=http://database:${PORT_DATABASE:-3002}
+      - DATABASE_SERVICE_URL=${DATABASE_SERVICE_URL:-http://database:${PORT_DATABASE:-3002}}
       - RELOAD_SECRET=${RELOAD_SECRET:-}
       - STATS_API_URL=${STATS_API_URL:-https://api.brokenarrowgame.tech}
       - STATS_PARTNER_TOKEN=${STATS_PARTNER_TOKEN:-}
@@ -55,11 +57,11 @@ services:
       - ENCRYPT_API=${ENCRYPT_API:-false}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
       - ENCRYPTION_IV=${ENCRYPTION_IV:-}
-    depends_on:
-      - database
     restart: unless-stopped
     networks:
       - ba-hub-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   frontend:
     build:
