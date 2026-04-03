@@ -26,7 +26,7 @@ jobs:
 
       - name: Generate .env
         run: |
-          cat > docker/.env << 'EOF'
+          cat > docker/.env <<ENVEOF
           PG_USER=${{ secrets.PG_USER }}
           PG_PASSWORD=${{ secrets.PG_PASSWORD }}
           PG_DB=${{ secrets.PG_DB }}
@@ -38,7 +38,8 @@ jobs:
           ENCRYPT_API=true
           ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}
           ENCRYPTION_IV=${{ secrets.ENCRYPTION_IV }}
-          EOF
+          ENVEOF
+          sed -i 's/^[[:space:]]*//' docker/.env
 
       - name: Transfer to server
         uses: appleboy/scp-action@v0.1.7
@@ -56,13 +57,30 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           password: ${{ secrets.SSH_PASSWORD }}
+          command_timeout: 15m
           script: |
-            cd /root/ba-hub/${{ steps.env.outputs.ENV }}/docker
-            echo "Building (${{ steps.env.outputs.ENV }})..."
-            docker compose -f ${{ steps.env.outputs.COMPOSE_FILE }} --env-file .env build --no-cache
-            echo "Stopping..."
-            docker compose -f ${{ steps.env.outputs.COMPOSE_FILE }} --env-file .env down
-            echo "Starting..."
-            docker compose -f ${{ steps.env.outputs.COMPOSE_FILE }} --env-file .env up -d
+            set -e
+            ENV=${{ steps.env.outputs.ENV }}
+            COMPOSE="docker compose -f ${{ steps.env.outputs.COMPOSE_FILE }} --env-file .env"
+            cd /root/ba-hub/$ENV/docker
+
+            echo "=== Building ($ENV) ==="
+            $COMPOSE build --no-cache
+
+            echo "=== Stopping ==="
+            $COMPOSE down || true
+
+            echo "=== Starting ==="
+            $COMPOSE up -d
+
+            echo "=== Waiting for services ==="
+            sleep 10
+
+            echo "=== Running migrations (prod postgres) ==="
+            for f in /root/ba-hub/prod/database/drizzle/0*.sql; do
+              echo "  $(basename $f)..."
+              docker exec -i bahub-prod-postgres psql -U ${{ secrets.PG_USER }} -d ${{ secrets.PG_DB }} -f - < "$f" 2>&1 | tail -1 || true
+            done
+
             docker image prune -f
-            echo "Done!"
+            echo "=== Deploy complete ($ENV) ==="
