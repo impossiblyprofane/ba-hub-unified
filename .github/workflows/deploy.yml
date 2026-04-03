@@ -57,7 +57,7 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           password: ${{ secrets.SSH_PASSWORD }}
-          command_timeout: 15m
+          command_timeout: 30m
           script: |
             set -e
             ENV=${{ steps.env.outputs.ENV }}
@@ -65,7 +65,7 @@ jobs:
             cd /root/ba-hub/$ENV/docker
 
             echo "=== Building ($ENV) ==="
-            $COMPOSE build --no-cache
+            $COMPOSE build
 
             echo "=== Stopping ==="
             $COMPOSE down || true
