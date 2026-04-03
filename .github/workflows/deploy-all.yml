@@ -44,7 +44,7 @@ jobs:
           FRONTEND_URL=${{ github.ref == 'refs/heads/main' && secrets.PROD_FRONTEND_URL || secrets.DEV_FRONTEND_URL }}
           STATS_API_URL=https://api.brokenarrowgame.tech
           STATS_PARTNER_TOKEN=${{ secrets.STATS_PARTNER_TOKEN }}
-          STATS_COLLECTION_ENABLED=true
+          STATS_COLLECTION_ENABLED=${{ github.ref == 'refs/heads/main' && 'true' || 'false' }}
           ENCRYPT_API=true
           ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}
           ENCRYPTION_IV=${{ secrets.ENCRYPTION_IV }}
