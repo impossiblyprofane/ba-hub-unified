@@ -769,6 +769,17 @@ const en: TranslationDict = {
   'guides.title': 'Guides',
   'guides.subtitle': 'Community guides covering basics to advanced competitive strategies.',
   'guides.comingSoon': 'Guides section is under construction. Check back soon for beginner tutorials, advanced strategies, and competitive tips.',
+  'guides.videoGuides': 'Community Video Guides',
+  'guides.writtenGuides': 'Written Guides',
+  'guides.viewMore': 'View More',
+  'guides.backToGuides': 'Back to Guides',
+  'guides.loadError': 'Failed to load guide content.',
+  'guides.communityTitle': 'Community Operations',
+  'guides.contributorsNeeded': 'Contributors Needed',
+  'guides.availableOf': 'of',
+  'guides.guidesCreated': 'guides created. Help us build the ultimate tactical guide library.',
+  'guides.joinDiscord': 'Join Discord',
+  'guides.submitGuide': 'Submit Guide',
 
   // ── Compare mode ──
   'compare.tag': 'Side by Side',
