@@ -111,11 +111,6 @@ export default component$(() => {
               variant="white"
               glow
             />
-            {/* WIP badge */}
-            <span class="absolute -top-3 -right-10 text-[8px] font-mono font-bold uppercase tracking-wider
-                         px-2 py-0.5 bg-[var(--amber)] text-[var(--bg)]">
-              {t(i18n, 'decks.hub.browse.wip')}
-            </span>
             {/* Soft ring behind icon */}
             <div
               class="absolute inset-0 -m-5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
