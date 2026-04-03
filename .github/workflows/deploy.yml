@@ -64,14 +64,8 @@ jobs:
             COMPOSE="docker compose -f ${{ steps.env.outputs.COMPOSE_FILE }} --env-file .env"
             cd /root/ba-hub/$ENV/docker
 
-            echo "=== Building ($ENV) ==="
-            $COMPOSE build
-
-            echo "=== Stopping ==="
-            $COMPOSE down || true
-
-            echo "=== Starting ==="
-            $COMPOSE up -d
+            echo "=== Building and starting ($ENV) ==="
+            $COMPOSE up -d --build
 
             echo "=== Waiting for services ==="
             sleep 10
