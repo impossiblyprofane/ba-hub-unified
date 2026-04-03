@@ -2,7 +2,7 @@ name: Deploy Database
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main]
     paths:
       - 'database/**'
       - '!database/**/*.test.*'
@@ -65,9 +65,9 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           password: ${{ secrets.SSH_PASSWORD }}
           script: |
-            cd /root/ba-hub/${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}/docker
-            docker compose --env-file .env build --no-cache database
-            docker compose --env-file .env up -d database
+            cd /root/ba-hub/prod/docker
+            docker compose --env-file .env --profile db build --no-cache database
+            docker compose --env-file .env --profile db up -d postgres database
             docker image prune -f
 
       - name: Discord — Success
