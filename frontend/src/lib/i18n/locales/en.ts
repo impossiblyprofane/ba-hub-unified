@@ -49,10 +49,10 @@ const en: TranslationDict = {
   'home.feature.playerStats.tag': 'Live Data',
   'home.feature.playerStats.desc': 'Track competitive performance with live win rates, KDR, and match history.',
   'home.feature.playerStats.cta': 'View Stats',
-  'home.feature.mapStats': 'Map Stats',
-  'home.feature.mapStats.tag': 'Win Rates',
-  'home.feature.mapStats.desc': 'Faction win rates and balance analysis across all ranked maps.',
-  'home.feature.mapStats.cta': 'Analyze',
+  'home.feature.discord': 'Discord',
+  'home.feature.discord.tag': 'Community',
+  'home.feature.discord.desc': 'Join the BA Hub community for strategy discussions, bug reports, and guide contributions.',
+  'home.feature.discord.cta': 'Join Server',
   'home.feature.guides': 'Guides',
   'home.feature.guides.tag': '50+ Articles',
   'home.feature.guides.desc': 'Tactics, unit guides, and strategies contributed by the community.',
@@ -780,6 +780,7 @@ const en: TranslationDict = {
   'guides.guidesCreated': 'guides created. Help us build the ultimate tactical guide library.',
   'guides.joinDiscord': 'Join Discord',
   'guides.submitGuide': 'Submit Guide',
+  'guides.communityDesc': 'Help build the ultimate Broken Arrow guide library. Submit written guides, recommend video creators, or contribute tactical knowledge.',
 
   // ── Compare mode ──
   'compare.tag': 'Side by Side',

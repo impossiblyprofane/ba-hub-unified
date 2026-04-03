@@ -5,7 +5,7 @@ export function renderMetaHtml(meta: PageMeta, url: string, siteUrl: string): st
   const imageMeta = meta.ogImage
     ? `\n  <meta property="og:image" content="${siteUrl}${meta.ogImage}">\n  <meta name="twitter:image" content="${siteUrl}${meta.ogImage}">`
     : '';
-  const twitterCard = meta.ogImage ? 'summary_large_image' : 'summary';
+  const twitterCard = meta.twitterCard ?? (meta.ogImage ? 'summary_large_image' : 'summary');
   return `<!DOCTYPE html>
 <html lang="en">
 <head>

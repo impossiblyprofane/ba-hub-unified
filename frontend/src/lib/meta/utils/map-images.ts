@@ -1,24 +1,29 @@
+/**
+ * Map display name → portrait image path for OG metadata.
+ * Uses the map portrait previews from mapsettings/images/portraits/.
+ * Keys must match MAP_ID_TO_NAME values in backend/src/graphql/resolvers.ts.
+ */
 const MAP_NAME_TO_IMAGE: Record<string, string> = {
-  'Baltiisk':             '/images/maps/Baltiisk_votemap.png',
-  'Coast':                '/images/maps/Coast_votemap.png',
-  'Airport':              '/images/maps/Airport_votemap.png',
-  'River':                '/images/maps/River_votemap.png',
-  'Dam':                  '/images/maps/Dam_votemap.png',
-  'Tallinn Harbour':      '/images/maps/Tallinn.png',
-  'Airbase':              '/images/maps/Airbase_votemap.png',
-  'Frontiers':            '/images/maps/Frontiers_votemap.png',
-  'Central Village':      '/images/maps/Central_village_votemap.png',
-  'Oil refinery':         '/images/maps/OilRefinery_votemap.png',
-  'Suwalki':              '/images/maps/Suwalki_MapPreview_Color.png',
-  'Jelgava':              '/images/maps/Jelgava.png',
-  'Narva':                '/images/maps/Narva.png',
-  'Klaipeda':             '/images/maps/Klaipeda_votemap.png',
-  'Ruda':                 '/images/maps/Ruda_votemap.png',
-  'Parnu':                '/images/maps/Parnu_votemap.png',
-  'Chernyakhovsk':        '/images/maps/Chernyakhovsk_votemap.png',
-  'Ignalina Powerplant':  '/images/maps/Ignalina_Powerplant_votemap.png',
-  'Kaliningrad':          '/images/maps/Kaliningrad_votemap.png',
-  'Kadaga Military Base': '/images/maps/KadagaMilitaryBase_votemap.png',
+  'Baltiisk':             '/images/mapsettings/images/portraits/Map_Baltiysk_Preview.png',
+  'Coast':                '/images/mapsettings/images/portraits/Map_Coast_Preview.png',
+  'Airport':              '/images/mapsettings/images/portraits/Map_Airport_Preview.png',
+  'River':                '/images/mapsettings/images/portraits/Map_River_Preview.png',
+  'Dam':                  '/images/mapsettings/images/portraits/Map_Dam_Preview.png',
+  'Tallinn Harbour':      '/images/mapsettings/images/portraits/Map_Tallin_Preview.png',
+  'Airbase':              '/images/mapsettings/images/portraits/Map_Airbase_Preview.png',
+  'Frontiers':            '/images/mapsettings/images/portraits/Map_Frontiers_Preview.png',
+  'Central Village':      '/images/mapsettings/images/portraits/Map_Village_Preview.png',
+  'Oil refinery':         '/images/mapsettings/images/portraits/Map_OilRefinery_Preview.png',
+  'Suwalki':              '/images/mapsettings/images/portraits/Map_Suwalki_Preview.png',
+  'Jelgava':              '/images/mapsettings/images/portraits/Map_Jelgava_Preview.png',
+  'Narva':                '/images/mapsettings/images/portraits/Map_Narva_Preview.png',
+  'Klaipeda':             '/images/mapsettings/images/portraits/Map_Klaipeda_Preview.png',
+  'Ruda':                 '/images/mapsettings/images/portraits/Map_Ruda_Preview.png',
+  'Parnu':                '/images/mapsettings/images/portraits/Map_Parnu_Preview.png',
+  'Chernyakhovsk':        '/images/mapsettings/images/portraits/Map_Cherniakhovsk_Preview.png',
+  'Ignalina Powerplant':  '/images/mapsettings/images/portraits/Map_Powerplant_Preview.png',
+  'Kaliningrad':          '/images/mapsettings/images/portraits/Map_Kaliningrad_Preview.png',
+  'Kadaga Military Base': '/images/mapsettings/images/portraits/Map_Kadaga_Preview.png',
 };
 
 export function buildMapImageUrl(mapName: string | null): string | null {

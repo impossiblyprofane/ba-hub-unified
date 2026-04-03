@@ -2,7 +2,7 @@ import { component$, useSignal, useVisibleTask$ } from '@builder.io/qwik';
 import { routeLoader$ } from '@builder.io/qwik-city';
 import type { DocumentHead } from '@builder.io/qwik-city';
 import { useI18n, t } from '~/lib/i18n';
-import { getGuideBySlug, getCategoryByGuideSlug } from '~/lib/guides/config';
+import { getGuideBySlug } from '~/lib/guides/config';
 
 /* ─── Route loader ───────────────────────────────────────── */
 
@@ -18,11 +18,11 @@ export const useGuideContent = routeLoader$(async (requestEvent) => {
   try {
     const baseUrl = requestEvent.url.origin;
     const res = await fetch(`${baseUrl}/guides/${guide.filePath}`);
-    if (!res.ok) return { guide, category: getCategoryByGuideSlug(slug) ?? null, content: null };
+    if (!res.ok) return { guide, content: null };
     const content = await res.text();
-    return { guide, category: getCategoryByGuideSlug(slug) ?? null, content };
+    return { guide, content };
   } catch {
-    return { guide, category: getCategoryByGuideSlug(slug) ?? null, content: null };
+    return { guide, content: null };
   }
 });
 
@@ -113,7 +113,6 @@ export default component$(() => {
   const i18n = useI18n();
   const data = useGuideContent();
   const guide = data.value.guide;
-  const category = data.value.category;
   const content = data.value.content;
 
   return (
@@ -129,7 +128,7 @@ export default component$(() => {
       {/* Header */}
       <div class="mb-4">
         <p class="text-[var(--accent)] text-xs font-mono tracking-[0.3em] uppercase mb-2">
-          {category?.title ?? t(i18n, 'guides.title')}
+          {t(i18n, 'guides.title')}
         </p>
         <h1 class="text-2xl font-semibold text-[var(--text)] tracking-tight">
           {guide.title}

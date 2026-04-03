@@ -1,6 +1,5 @@
 /**
- * Guide categories, guide definitions, and video provider configuration.
- * Ported from the legacy project — no React/Lucide dependencies.
+ * Guide configuration — video providers and written guide definitions.
  */
 
 // ── Types ──────────────────────────────────────────────────
@@ -14,12 +13,6 @@ export interface Guide {
   author?: string;
   filePath?: string;
   contributors?: string[];
-}
-
-export interface GuideCategory {
-  title: string;
-  status: 'ONLINE' | 'PLANNING' | 'DRAFT' | 'REVIEW';
-  guides: Guide[];
 }
 
 export interface YouTubeVideoItem {
@@ -44,179 +37,79 @@ export interface GuideProvider {
   items: ProviderItem[];
 }
 
-// ── Guide Categories ───────────────────────────────────────
-
-export const GUIDE_CATEGORIES: GuideCategory[] = [
-  {
-    title: 'GETTING STARTED',
-    status: 'ONLINE',
-    guides: [
-      {
-        title: 'How to Recon',
-        description: 'Essential reconnaissance tactics and positioning',
-        status: 'ACTIVE',
-        available: true,
-        slug: 'how-to-recon',
-        author: 'PiousShadow',
-        filePath: 'getting-started/how-to-recon.md',
-      },
-      {
-        title: 'Unit Roles & Types',
-        description: 'Understanding different unit categories',
-        status: 'NEEDED',
-        available: false,
-        slug: 'unit-roles-types',
-      },
-      {
-        title: 'Basic Tactics',
-        description: 'Fundamental strategic concepts',
-        status: 'NEEDED',
-        available: false,
-        slug: 'basic-tactics',
-      },
-    ],
-  },
-  {
-    title: 'DECK BUILDING',
-    status: 'PLANNING',
-    guides: [
-      {
-        title: 'Deck Composition',
-        description: 'Balancing your forces effectively',
-        status: 'NEEDED',
-        available: false,
-        slug: 'deck-composition',
-      },
-      {
-        title: 'Cost Management',
-        description: 'Optimizing point allocation',
-        status: 'NEEDED',
-        available: false,
-        slug: 'cost-management',
-      },
-      {
-        title: 'Specialization Focus',
-        description: 'Building around strengths',
-        status: 'NEEDED',
-        available: false,
-        slug: 'specialization-focus',
-      },
-    ],
-  },
-  {
-    title: 'ADVANCED TACTICS',
-    status: 'PLANNING',
-    guides: [
-      {
-        title: 'Combined Arms',
-        description: 'Coordinating different unit types',
-        status: 'NEEDED',
-        available: false,
-        slug: 'combined-arms',
-      },
-      {
-        title: 'Map Control',
-        description: 'Territory and positioning strategies',
-        status: 'NEEDED',
-        available: false,
-        slug: 'map-control',
-      },
-      {
-        title: 'Counter-Play',
-        description: 'Adapting to opponent strategies',
-        status: 'NEEDED',
-        available: false,
-        slug: 'counter-play',
-      },
-    ],
-  },
-  {
-    title: 'COMPETITIVE PLAY',
-    status: 'PLANNING',
-    guides: [
-      {
-        title: 'Tournament Prep',
-        description: 'Getting ready for competitions',
-        status: 'NEEDED',
-        available: false,
-        slug: 'tournament-prep',
-      },
-      {
-        title: 'Meta Analysis',
-        description: 'Understanding current trends',
-        status: 'NEEDED',
-        available: false,
-        slug: 'meta-analysis',
-      },
-      {
-        title: 'Practice Routines',
-        description: 'Improving your skills',
-        status: 'NEEDED',
-        available: false,
-        slug: 'practice-routines',
-      },
-    ],
-  },
-];
-
 // ── Video Providers ────────────────────────────────────────
 
 export const GUIDE_PROVIDERS: GuideProvider[] = [
   {
-    id: 'beagle',
-    name: 'Beagle',
-    description: 'Community creator with tactical videos for Broken Arrow.',
+    id: 'lima',
+    name: 'LIMA',
+    description: 'Active serving British Officer. Broken Arrow Academy courses, deck guides, and in-depth tactical analysis.',
+    channelUrl: 'https://www.youtube.com/@Lima_BrokenArrow',
     items: [
-      { type: 'video', url: 'https://youtu.be/X5D_vUfHkMI?si=gZH3XzESkpvUZcBp' },
-      { type: 'video', url: 'https://youtu.be/rpA06__AwRI?si=GzKRwOfGGvorN7TX' },
-      { type: 'video', url: 'https://youtu.be/rzP7sZtx3U4?si=NyHEV8u7pc_7Yman' },
-      { type: 'video', url: 'https://youtu.be/AhpSCLTgidA?si=vV_66taD_GDZa7dI' },
-      { type: 'video', url: 'https://youtu.be/Dy1NJWZ7PVY?si=jRdPYeWW7JV9IpZI' },
+      { type: 'video', url: 'https://youtu.be/6vLiReZeHZQ', title: 'What Units do the Pros Use — BA Stats' },
+      { type: 'video', url: 'https://youtu.be/AZAphO3wOuk', title: 'Best Baltic DLC Deck Combo — Marines' },
+      { type: 'video', url: 'https://youtu.be/wcdCg5oL2lM', title: 'Best Baltic Spec Combinations' },
+      { type: 'video', url: 'https://youtu.be/yCeahZ43Yc0', title: 'All Baltic Stats + Best Spec Combos' },
+      { type: 'video', url: 'https://youtu.be/dQ2wlqnsH1E', title: 'New Map — Tactical Analysis' },
+      { type: 'video', url: 'https://youtu.be/ybhQgD3v7WI', title: 'Exclusive Baltic Units First Look' },
+      { type: 'video', url: 'https://youtu.be/KpukGdmSv2c', title: 'Soviet Doctrine — How to Win as Russia' },
+      { type: 'video', url: 'https://youtu.be/FVZu6eR0jNk', title: 'Emergency Paradrop — Baltic Airborne' },
+      { type: 'playlist', playlistUrl: 'https://www.youtube.com/playlist?list=PL1JXhC8ws2zlhcy9tMy5SSvOy6HBN_PZv', title: 'Broken Academy — 70 Lessons' },
+    ],
+  },
+  {
+    id: 'beaglerush',
+    name: 'Beaglerush',
+    description: 'In-depth match reviews, unit guides, beginner deck tutorials, and tactical tips for competitive play.',
+    channelUrl: 'https://www.youtube.com/@Beaglerush',
+    items: [
+      { type: 'video', url: 'https://youtu.be/X5D_vUfHkMI', title: 'Lithuanian Units Baltic Spec Analysis' },
+      { type: 'video', url: 'https://youtu.be/rpA06__AwRI', title: 'How to Understand Infantry — Unit Guide' },
+      { type: 'video', url: 'https://youtu.be/rzP7sZtx3U4', title: 'How to Spread Damage by Stacking Infantry' },
+      { type: 'video', url: 'https://youtu.be/AhpSCLTgidA', title: 'How to Unload Infantry Faster — Tips' },
+      { type: 'video', url: 'https://youtu.be/Dy1NJWZ7PVY', title: 'Your First US Deck: Crayons — Beginner Guide' },
+      { type: 'video', url: 'https://youtu.be/rpA06__AwRI', title: 'Using Airborne/Armored on Defense' },
+      { type: 'video', url: 'https://youtu.be/AhpSCLTgidA', title: 'Custom Colours — Know When Outnumbered' },
+      { type: 'video', url: 'https://youtu.be/rzP7sZtx3U4', title: 'Cruise Missile Meta Analysis' },
     ],
   },
   {
     id: 'koraske',
     name: 'Koraske',
-    description: 'Extensive Broken Arrow playlist with guides and gameplay.',
+    description: 'Unit guides, threats to armor series, and in-depth Broken Arrow tutorials. 44 video BA playlist.',
+    channelUrl: 'https://www.youtube.com/@Koraske_YT',
     items: [
-      { type: 'video', url: 'https://youtu.be/6xCzNW3S8r4?si=Q5r2qvtTjvb13aT6' },
-      { type: 'video', url: 'https://youtu.be/zeZ3MU8YiOY?si=07vNilsFGOrn4Oq-' },
-      { type: 'video', url: 'https://youtu.be/FVZu6eR0jNk?si=oco8oLo-5A4a10Vo' },
-      { type: 'video', url: 'https://youtu.be/KpukGdmSv2c?si=YokYCY9FDF8l8wni' },
-      { type: 'video', url: 'https://youtu.be/wcdCg5oL2lM?si=zEkCN0A67oEEHI9Z' },
-      { type: 'video', url: 'https://youtu.be/AZAphO3wOuk?si=9clXLcQrEkCWZUX6' },
-      { type: 'video', url: 'https://youtu.be/yCeahZ43Yc0?si=jXLHqI7dMgSlKqHt' },
-      { type: 'video', url: 'https://youtu.be/dQ2wlqnsH1E?si=HOh6rI-z_d_sSFLa' },
-      { type: 'video', url: 'https://youtu.be/ybhQgD3v7WI?si=4UuZYqYgs13S3pK9' },
-      { type: 'video', url: 'https://youtu.be/6vLiReZeHZQ?si=07dc6Rh5KIGOPm18' },
-      { type: 'playlist', playlistUrl: 'https://www.youtube.com/playlist?list=PL9t3-mUgzNkweleHqCJFyxlyk7NOVuIwk', title: 'Koraske Broken Arrow Playlist' },
+      { type: 'video', url: 'https://youtu.be/g8GnnlHT0jM', title: 'How to use Strykers (All 8 Variants)' },
+      { type: 'video', url: 'https://youtu.be/6xCzNW3S8r4', title: 'How to use BMP (All 11 Variants)' },
+      { type: 'video', url: 'https://youtu.be/zeZ3MU8YiOY', title: 'How to use T14 / T15' },
+      { type: 'video', url: 'https://youtu.be/FVZu6eR0jNk', title: 'Threats to Armor — Against Infantry AT' },
+      { type: 'video', url: 'https://youtu.be/KpukGdmSv2c', title: 'Threats to Armor — Against ATGM Units' },
+      { type: 'video', url: 'https://youtu.be/wcdCg5oL2lM', title: 'Threats to Armor — Against MBTs' },
+      { type: 'video', url: 'https://youtu.be/dQ2wlqnsH1E', title: 'How to use Delta Force' },
+      { type: 'video', url: 'https://youtu.be/ybhQgD3v7WI', title: 'T-14 Armata vs M1A2 SEP V3' },
+      { type: 'playlist', playlistUrl: 'https://www.youtube.com/playlist?list=PL9t3-mUgzNkweleHqCJFyxlyk7NOVuIwk', title: 'Full Broken Arrow Playlist — 44 Videos' },
     ],
+  },
+];
+
+// ── Written Guides ─────────────────────────────────────────
+
+export const WRITTEN_GUIDES: Guide[] = [
+  {
+    title: 'How to Recon',
+    description: 'Essential reconnaissance tactics and positioning',
+    status: 'ACTIVE',
+    available: true,
+    slug: 'how-to-recon',
+    author: 'PiousShadow',
+    filePath: 'getting-started/how-to-recon.md',
   },
 ];
 
 // ── Utility Functions ──────────────────────────────────────
 
-export function getTotalGuides(): number {
-  return GUIDE_CATEGORIES.reduce((t, c) => t + c.guides.length, 0);
-}
-
-export function getAvailableGuides(): number {
-  return GUIDE_CATEGORIES.reduce((t, c) => t + c.guides.filter((g) => g.available).length, 0);
-}
-
 export function getGuideBySlug(slug: string): Guide | undefined {
-  for (const cat of GUIDE_CATEGORIES) {
-    const g = cat.guides.find((x) => x.slug === slug);
-    if (g) return g;
-  }
-  return undefined;
-}
-
-export function getCategoryByGuideSlug(slug: string): GuideCategory | undefined {
-  for (const cat of GUIDE_CATEGORIES) {
-    if (cat.guides.some((g) => g.slug === slug)) return cat;
-  }
-  return undefined;
+  return WRITTEN_GUIDES.find((g) => g.slug === slug);
 }
 
 export function getYouTubeVideoId(url: string): string | null {

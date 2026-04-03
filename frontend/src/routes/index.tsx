@@ -17,8 +17,8 @@ const FEATURES: {
   { key: 'decks',       href: '/decks',      icon: encodeIconPath(UtilIconPaths.DECK),               variant: 'white', primary: true },
   { key: 'maps',        href: '/maps',       icon: encodeIconPath(UtilIconPaths.LOCATION_MAP),       variant: 'white', primary: true },
   { key: 'playerStats', href: '/stats',      icon: encodeIconPath(UtilIconPaths.KILL_DEATH_RATIO),   variant: 'white' },
-  { key: 'mapStats',    href: '/stats/maps', icon: encodeIconPath(UtilIconPaths.TASK_MARKER_TASK),    variant: 'white' },
   { key: 'guides',      href: '/guides',     icon: encodeIconPath(UtilIconPaths.LEAST_FAVORITE_SPEC), variant: 'white' },
+  { key: 'discord',     href: 'https://discord.gg/Z8JqbQmssg', icon: encodeIconPath(UtilIconPaths.DISCORD_ICON), variant: 'white' },
 ];
 
 /** Reusable hero nav card — matches /decks hub pattern */
@@ -35,6 +35,7 @@ function HeroCard(props: {
   return (
     <a
       href={props.href}
+      {...(props.href.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer', 'data-native-link': '' } : {})}
       class={`group relative flex flex-col items-center justify-center overflow-hidden
               bg-gradient-to-b from-[rgba(26,26,26,0.3)] to-[rgba(26,26,26,0.8)]
               border border-[rgba(51,51,51,0.15)]
@@ -101,7 +102,7 @@ export default component$(() => {
   const secondary = FEATURES.filter(f => !f.primary);
 
   return (
-    <div class="w-full">
+    <div class="w-full min-h-[calc(100vh-8rem)] flex flex-col justify-center">
       {/* ── Hero banner — compact identity strip ── */}
       <div class="relative mb-px py-5 flex flex-col items-center justify-center border border-[rgba(51,51,51,0.15)] bg-gradient-to-b from-[rgba(26,26,26,0.5)] to-[rgba(26,26,26,0.8)] overflow-hidden">
         {/* Soft background glow */}

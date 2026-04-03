@@ -16,20 +16,36 @@ export async function resolveMatchMeta(fightId: string): Promise<PageMeta> {
   const fight = data?.analyticsFightData;
   if (fight) {
     const mapName = fight.mapName ?? 'Unknown Map';
-    const parts: string[] = [mapName];
     const pc = fight.players.length;
-    if (pc >= 2) parts.push(`${Math.ceil(pc / 2)}v${Math.floor(pc / 2)}`);
-    if (fight.totalPlayTimeSec) parts.push(`${Math.floor(fight.totalPlayTimeSec / 60)}m`);
-    const winners: string[] = [], losers: string[] = [];
+    const teamSize = pc >= 2 ? `${Math.ceil(pc / 2)}v${Math.floor(pc / 2)}` : `${pc}p`;
+    const duration = fight.totalPlayTimeSec ? `${Math.floor(fight.totalPlayTimeSec / 60)}min` : '';
+
+    // Determine winners/losers by rating change
+    const winners: string[] = [];
+    const losers: string[] = [];
     for (const p of fight.players) {
       const name = p.name ?? 'Unknown';
       if (p.oldRating != null && p.newRating != null) {
         (p.newRating >= p.oldRating ? winners : losers).push(name);
       }
     }
-    const fmt = (n: string[]) => n.length > 3 ? `${n.slice(0, 3).join(', ')}, ...` : n.join(', ');
-    if (winners.length && losers.length) parts.push(`Victory: ${fmt(winners)} vs Defeat: ${fmt(losers)}`);
-    return { title: `${mapName} — BA Hub Match Detail`, description: parts.join(' · '), ogImage: buildMapImageUrl(fight.mapName) };
+
+    // Build readable description
+    const header = [teamSize, duration].filter(Boolean).join(' · ');
+    const fmt = (names: string[]) =>
+      names.length > 4 ? `${names.slice(0, 4).join(', ')} +${names.length - 4}` : names.join(', ');
+
+    let desc = header;
+    if (winners.length && losers.length) {
+      desc += ` — Win: ${fmt(winners)} | Loss: ${fmt(losers)}`;
+    }
+
+    return {
+      title: `${mapName} — BA Hub Match`,
+      description: desc,
+      ogImage: buildMapImageUrl(fight.mapName),
+      twitterCard: 'summary',
+    };
   }
   return { title: 'Match Detail - BA Hub', description: 'View detailed match statistics for Broken Arrow.' };
 }

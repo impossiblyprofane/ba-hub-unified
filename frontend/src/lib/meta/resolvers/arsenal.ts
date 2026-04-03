@@ -23,13 +23,12 @@ interface EmbedUnit {
   weapons: Array<{ weapon: { HUDName: string; Name: string }; ammunition: Array<{ ammunition: { GroundRange: number } }> }>;
 }
 
-function buildPortraitUrl(unitData: EmbedUnit): string | null {
-  const raw = unitData.unit.PortraitFileName || unitData.unit.ThumbnailFileName;
+function buildUnitIconUrl(unitData: EmbedUnit): string | null {
+  const raw = unitData.unit.ThumbnailFileName;
   if (!raw) return null;
-  const split = raw.split('\\');
-  const prefix = split.slice(0, -1).join('/').toLowerCase();
-  const fileName = split[split.length - 1].toUpperCase();
-  return `/images/unitportraits/${prefix}/${fileName}_HOVER.png`.split(' ').join('%20');
+  // ThumbnailFileName uses mixed separators — normalize to forward slash, uppercase the filename
+  const normalized = raw.replace(/\\/g, '/').toUpperCase();
+  return `/images/labels/icons/${normalized}.png`.split(' ').join('%20');
 }
 
 function buildUnitDescription(unit: EmbedUnit): string {
@@ -59,7 +58,7 @@ export async function resolveArsenalMeta(unitId: number, optionIds: number[]): P
   const data = await fetchGraphQL<{ unitDetail: EmbedUnit }>(UNIT_EMBED_QUERY, { id: unitId, optionIds: optionIds.length ? optionIds : null });
   const unit = data?.unitDetail;
   if (unit) {
-    return { title: `${unit.displayName} — BA Hub Arsenal`, description: buildUnitDescription(unit), ogImage: buildPortraitUrl(unit) };
+    return { title: `${unit.displayName} — BA Hub Arsenal`, description: buildUnitDescription(unit), ogImage: buildUnitIconUrl(unit), twitterCard: 'summary' };
   }
   return { title: `Unit ${unitId} - BA Hub Arsenal`, description: `Detailed stats for unit ${unitId} in Broken Arrow.` };
 }
