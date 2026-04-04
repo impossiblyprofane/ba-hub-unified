@@ -20,6 +20,7 @@ export function renderMetaHtml(meta: PageMeta, url: string, siteUrl: string): st
   <meta name="twitter:title" content="${meta.title}">
   <meta name="twitter:description" content="${meta.description}">
   <link rel="canonical" href="${url}">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 </head>
 <body>
   <h1>${meta.title}</h1>
