@@ -752,6 +752,19 @@ const en: TranslationDict = {
   'stats.profile.lifetime': 'Lifetime',
   'stats.profile.recent': 'Recent',
 
+  'stats.profile.supplyNet': 'Supply Net',
+  'stats.profile.deck': 'Deck',
+  'stats.profile.rating': 'Rating',
+
+  // Stats: unit tables
+  'stats.unitTable.unit': 'Unit',
+  'stats.unitTable.options': 'Options',
+  'stats.unitTable.faction': 'Faction',
+  'stats.unitTable.elo': 'ELO',
+  'stats.unitTable.refundPct': 'Refund %',
+  'stats.unitTable.allElo': 'All ELO',
+  'stats.unitTable.configs': 'configs',
+
   // Stats: game history (future — periodic snapshots)
   'stats.history.title': 'Game History',
   'stats.history.subtitle': 'Track trends in faction balance, map popularity, and player rankings over time.',

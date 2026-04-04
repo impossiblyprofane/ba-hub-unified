@@ -1071,7 +1071,7 @@ export default component$(() => {
                     <>
                       <div class="border-t border-[rgba(51,51,51,0.2)] my-1" />
                       <StatRow
-                        label="Supply Net"
+                        label={t(i18n, 'stats.profile.supplyNet')}
                         value={
                           (stats.supplyCapturedCount - stats.supplyCapturedByEnemyCount) >= 0
                             ? `+${(stats.supplyCapturedCount - stats.supplyCapturedByEnemyCount).toLocaleString()}`
@@ -1288,7 +1288,7 @@ export default component$(() => {
                         {t(i18n, 'stats.player.matchMap')}
                       </th>
                       <th class="text-left py-1 border-b border-[rgba(51,51,51,0.3)]">
-                        Deck
+                        {t(i18n, 'stats.profile.deck')}
                       </th>
                       <th class="text-center py-1 border-b border-[rgba(51,51,51,0.3)]">
                         {t(i18n, 'stats.profile.matchType')}
@@ -1312,7 +1312,7 @@ export default component$(() => {
                         {t(i18n, 'stats.profile.matchmaking')}
                       </th>
                       <th class="text-left py-1 border-b border-[rgba(51,51,51,0.3)] min-w-[90px]">
-                        Rating
+                        {t(i18n, 'stats.profile.rating')}
                       </th>
                       <th class="text-left py-1 border-b border-[rgba(51,51,51,0.3)] pl-3 whitespace-nowrap">
                         {t(i18n, 'stats.player.matchDate')}

@@ -623,25 +623,25 @@ const UnitPerformanceSection = component$<{
           value={selectedElo.value}
           onChange$={(e) => { selectedElo.value = (e.target as HTMLSelectElement).value; }}
         >
-          <option value="">All ELO</option>
+          <option value="">{t(i18n, 'stats.unitTable.allElo')}</option>
           {eloBrackets.map((b) => <option key={b} value={b}>{b}</option>)}
         </select>
         <span class="text-[9px] text-[var(--text-dim)] font-mono">
-          {sorted.length} configs
+          {sorted.length} {t(i18n, 'stats.unitTable.configs')}
         </span>
       </div>
       <div class="max-h-[500px] overflow-y-auto">
         <table class="w-full text-xs border-collapse">
           <thead class="sticky top-0 bg-[var(--bg)] z-10">
             <tr class="text-[var(--text-dim)] uppercase tracking-[0.2em] text-[8px]">
-              <th class="text-left py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">Unit</th>
-              <th class="text-left py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">Options</th>
-              <th class="text-left py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">Faction</th>
-              <th class="text-left py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">ELO</th>
+              <th class="text-left py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.unitTable.unit')}</th>
+              <th class="text-left py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.unitTable.options')}</th>
+              <th class="text-left py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.unitTable.faction')}</th>
+              <th class="text-left py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.unitTable.elo')}</th>
               <th class="text-right py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.unitPopularity.deployed')}</th>
               <th class="text-right py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.topUnits.avgKills')}</th>
               <th class="text-right py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.topUnits.avgDamage')}</th>
-              <th class="text-right py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">Refund %</th>
+              <th class="text-right py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.unitTable.refundPct')}</th>
             </tr>
           </thead>
           <tbody>
@@ -960,9 +960,9 @@ export default component$(() => {
               <table class="w-full text-xs border-collapse">
                 <thead class="sticky top-0 bg-[var(--bg)] z-10">
                   <tr class="text-[var(--text-dim)] uppercase tracking-[0.2em] text-[8px]">
-                    <th class="text-left py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">Unit</th>
-                    <th class="text-left py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">Options</th>
-                    <th class="text-left py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">Faction</th>
+                    <th class="text-left py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.unitTable.unit')}</th>
+                    <th class="text-left py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.unitTable.options')}</th>
+                    <th class="text-left py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.unitTable.faction')}</th>
                     <th class="text-right py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.topUnits.deployed')}</th>
                     <th class="text-right py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.topUnits.avgKills')}</th>
                     <th class="text-right py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.topUnits.avgDamage')}</th>
