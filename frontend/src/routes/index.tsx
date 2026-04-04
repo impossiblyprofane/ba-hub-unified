@@ -181,7 +181,7 @@ export default component$(() => {
 });
 
 export const head: DocumentHead = {
-  title: 'BA Hub - Broken Arrow Stats Viewer',
+  title: 'BA HUB - Broken Arrow Community Toolkit',
   meta: [
     {
       name: 'description',
@@ -189,7 +189,7 @@ export const head: DocumentHead = {
     },
     {
       property: 'og:title',
-      content: 'BA Hub - Broken Arrow Toolkit',
+      content: 'BA HUB - Broken Arrow Community Toolkit',
     },
     {
       property: 'og:description',

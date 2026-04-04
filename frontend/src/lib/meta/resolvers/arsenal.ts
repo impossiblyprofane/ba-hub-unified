@@ -58,7 +58,7 @@ export async function resolveArsenalMeta(unitId: number, optionIds: number[]): P
   const data = await fetchGraphQL<{ unitDetail: EmbedUnit }>(UNIT_EMBED_QUERY, { id: unitId, optionIds: optionIds.length ? optionIds : null });
   const unit = data?.unitDetail;
   if (unit) {
-    return { title: `${unit.displayName} — BA Hub Arsenal`, description: buildUnitDescription(unit), ogImage: buildUnitIconUrl(unit), twitterCard: 'summary' };
+    return { title: `BA HUB - ${unit.displayName}`, description: buildUnitDescription(unit), ogImage: buildUnitIconUrl(unit), twitterCard: 'summary' };
   }
-  return { title: `Unit ${unitId} - BA Hub Arsenal`, description: `Detailed stats for unit ${unitId} in Broken Arrow.` };
+  return { title: `BA HUB - Unit ${unitId}`, description: `Detailed stats for unit ${unitId} in Broken Arrow.` };
 }

@@ -790,7 +790,7 @@ export const head: DocumentHead = ({ resolveValue }) => {
   const description = descParts.length > 1
     ? descParts.join(' · ')
     : `View detailed match statistics for ${mapName} in Broken Arrow.`;
-  const title = `${mapName} — BA Hub Match Detail`;
+  const title = `BA HUB - Match on ${mapName}`;
 
   return {
     title,

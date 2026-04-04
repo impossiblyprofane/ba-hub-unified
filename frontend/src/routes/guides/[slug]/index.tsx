@@ -159,7 +159,7 @@ export const head: DocumentHead = ({ resolveValue }) => {
   const data = resolveValue(useGuideContent);
   const title = data?.guide?.title ?? 'Guide';
   return {
-    title: `${title} - Guides - BA Hub`,
+    title: `BA HUB - ${title}`,
     meta: [
       {
         name: 'description',

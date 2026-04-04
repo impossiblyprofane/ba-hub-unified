@@ -90,14 +90,14 @@ export async function resolveArsenalMeta(
 
   if (unit) {
     return {
-      title: `${unit.displayName} — BA Hub Arsenal`,
+      title: `BA HUB - ${unit.displayName}`,
       description: buildUnitDescription(unit),
       ogImage: buildPortraitUrl(unit),
     };
   }
 
   return {
-    title: `Unit ${unitId} - BA Hub Arsenal`,
+    title: `BA HUB - Unit ${unitId}`,
     description: `Detailed stats, weapons, modifications, and availability for unit ${unitId} in Broken Arrow.`,
   };
 }

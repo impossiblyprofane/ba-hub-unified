@@ -663,7 +663,7 @@ const SpecDetailCard = component$<SpecDetailCardProps>(({ spec, index }) => {
 /* ------------------------------------------------------------------ */
 
 export const head: DocumentHead = {
-  title: 'New Deck - BA Hub',
+  title: 'BA HUB - New Deck',
   meta: [
     {
       name: 'description',

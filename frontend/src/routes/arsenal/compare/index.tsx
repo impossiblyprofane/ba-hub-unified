@@ -220,7 +220,7 @@ export default component$(() => {
 /* ── Head ────────────────────────────────────────────────────────── */
 
 export const head: DocumentHead = () => ({
-  title: 'Compare Units - BA Hub Arsenal',
+  title: 'BA HUB - Compare Units',
   meta: [
     { name: 'description', content: 'Compare two Broken Arrow units side-by-side with advantage highlighting.' },
   ],

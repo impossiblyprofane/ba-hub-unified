@@ -1071,7 +1071,7 @@ export default component$(() => {
 });
 
 export const head: DocumentHead = {
-  title: 'Statistics - BA Hub',
+  title: 'BA HUB - Statistics',
   meta: [
     {
       name: 'description',

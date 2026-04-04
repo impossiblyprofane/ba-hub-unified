@@ -348,7 +348,7 @@ export default component$(() => {
 });
 
 export const head: DocumentHead = {
-  title: 'Deck Arsenal - BA Hub',
+  title: 'BA HUB - Browse Decks',
   meta: [
     {
       name: 'description',
