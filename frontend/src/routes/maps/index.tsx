@@ -809,7 +809,7 @@ export default component$(() => {
 });
 
 export const head: DocumentHead = {
-  title: 'Maps & Tactics - BA Hub',
+  title: 'BA HUB - Maps',
   meta: [
     {
       name: 'description',

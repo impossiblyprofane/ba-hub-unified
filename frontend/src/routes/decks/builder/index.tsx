@@ -944,7 +944,7 @@ export default component$(() => {
 });
 
 export const head: DocumentHead = {
-  title: 'Deck Builder - BA Hub',
+  title: 'BA HUB - Deck Builder',
   meta: [
     {
       name: 'description',

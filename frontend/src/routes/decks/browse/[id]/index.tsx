@@ -1009,7 +1009,7 @@ export default component$(() => {
 // ── DocumentHead ────────────────────────────────────────────────
 
 export const head: DocumentHead = {
-  title: 'Deck Detail - BA Hub',
+  title: 'BA HUB - Deck Detail',
   meta: [
     {
       name: 'description',

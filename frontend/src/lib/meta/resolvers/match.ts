@@ -41,11 +41,11 @@ export async function resolveMatchMeta(fightId: string): Promise<PageMeta> {
     }
 
     return {
-      title: `${mapName} — BA Hub Match`,
+      title: `BA HUB - Match on ${mapName}`,
       description: desc,
       ogImage: buildMapImageUrl(fight.mapName),
       twitterCard: 'summary',
     };
   }
-  return { title: 'Match Detail - BA Hub', description: 'View detailed match statistics for Broken Arrow.' };
+  return { title: 'BA HUB - Match Detail', description: 'View detailed match statistics for Broken Arrow.' };
 }

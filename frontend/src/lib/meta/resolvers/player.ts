@@ -27,7 +27,7 @@ export async function resolvePlayerMeta(steamId: string): Promise<PageMeta> {
     if (stats?.fightsCount && stats?.winsCount) parts.push(`${Math.round((stats.winsCount / stats.fightsCount) * 100)}% Win Rate`);
     if (stats?.kdRatio) parts.push(`${stats.kdRatio.toFixed(2)} K/D`);
     if (stats?.fightsCount) parts.push(`${stats.fightsCount} Matches`);
-    return { title: `${name} — BA Hub Player Stats`, description: parts.length ? parts.join(' · ') : 'Broken Arrow player statistics.', ogType: 'profile' };
+    return { title: `BA HUB - ${name}`, description: parts.length ? parts.join(' · ') : 'Broken Arrow player statistics.', ogType: 'profile' };
   }
-  return { title: 'Player Profile - BA Hub', description: 'View player statistics, match history, and performance data for Broken Arrow.' };
+  return { title: 'BA HUB - Player Profile', description: 'View player statistics, match history, and performance data for Broken Arrow.' };
 }

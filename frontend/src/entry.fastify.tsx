@@ -69,7 +69,7 @@ async function resolveRouteMeta(path: string): Promise<PageMeta> {
   if (fightMatch) return resolveMatchMeta(fightMatch[1]);
 
   return {
-    title: 'BA Hub - Broken Arrow Stats',
+    title: 'BA HUB - Broken Arrow Community Toolkit',
     description:
       'Lightweight stats viewer for Broken Arrow. Browse units, build decks, explore maps.',
   };

@@ -1455,7 +1455,7 @@ export const head: DocumentHead = ({ resolveValue }) => {
     ? `${name} — ${parts.join(' · ')}`
     : `View ${name}'s Broken Arrow statistics, match history, and performance data.`;
 
-  const title = `${name} — BA Hub Player Stats`;
+  const title = `BA HUB - ${name}`;
 
   return {
     title,

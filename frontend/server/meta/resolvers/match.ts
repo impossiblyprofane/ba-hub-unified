@@ -70,14 +70,14 @@ export async function resolveMatchMeta(fightId: string): Promise<PageMeta> {
   if (fight) {
     const mapName = fight.mapName ?? 'Match';
     return {
-      title: `${mapName} — BA Hub Match Detail`,
+      title: `BA HUB - Match on ${mapName}`,
       description: buildFightDescription(fight),
       ogImage: buildMapImageUrl(fight.mapName),
     };
   }
 
   return {
-    title: 'Match Detail - BA Hub',
+    title: 'BA HUB - Match Detail',
     description: 'View detailed match statistics and player performance for a Broken Arrow match.',
   };
 }

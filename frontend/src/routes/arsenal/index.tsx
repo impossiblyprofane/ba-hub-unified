@@ -771,7 +771,7 @@ export default component$(() => {
 });
 
 export const head: DocumentHead = {
-  title: 'Arsenal Browser - BA Hub',
+  title: 'BA HUB - Arsenal',
   meta: [
     {
       name: 'description',

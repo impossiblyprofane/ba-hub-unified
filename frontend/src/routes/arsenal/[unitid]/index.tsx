@@ -181,7 +181,7 @@ export default component$(() => {
 
 export const head: DocumentHead = ({ params }) => {
   return {
-    title: `Unit ${params.unitid} - BA Hub`,
+    title: `BA HUB - Unit ${params.unitid}`,
     meta: [
       { name: 'description', content: `Unit details and configuration for unit ${params.unitid}` },
     ],
