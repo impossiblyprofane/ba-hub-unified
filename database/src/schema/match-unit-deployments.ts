@@ -12,6 +12,10 @@ import { processedMatches } from './processed-matches.js';
 export const matchUnitDeployments = pgTable('match_unit_deployments', {
   id: uuid('id').primaryKey().defaultRandom(),
   fightId: integer('fight_id').notNull().references(() => processedMatches.fightId, { onDelete: 'cascade' }),
+  /** Steam ID of the deploying player (when available). */
+  steamId: text('steam_id'),
+  /** Internal player ID from external API / S3 fight data. */
+  odId: integer('od_id'),
   unitId: integer('unit_id').notNull(),
   unitName: text('unit_name').notNull(),
   /** Nation/country the unit belongs to (e.g. "Russia", "USA"). */
@@ -36,4 +40,6 @@ export const matchUnitDeployments = pgTable('match_unit_deployments', {
   index('idx_match_unit_deployments_config').on(table.configKey),
   index('idx_match_unit_deployments_elo').on(table.eloBracket),
   index('idx_match_unit_deployments_faction').on(table.factionName),
+  index('idx_match_unit_deployments_steam').on(table.steamId),
+  index('idx_match_unit_deployments_od').on(table.odId),
 ]);

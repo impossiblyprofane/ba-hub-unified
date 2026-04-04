@@ -11,6 +11,6 @@ export async function registerRoutes(app: FastifyInstance) {
   await app.register(registerUserRoutes, { prefix: '/api/users' });
   await app.register(registerDeckRoutes, { prefix: '/api/decks' });
   await app.register(registerSnapshotRoutes, { prefix: '/api/snapshots' });
-  await app.register(registerCrawlerRoutes, { prefix: '/api/crawler' });
+  await app.register(registerCrawlerRoutes, { prefix: '/api/crawler', bodyLimit: 50 * 1024 * 1024 });
   await app.register(registerAdminRoutes, { prefix: '/api/admin' });
 }

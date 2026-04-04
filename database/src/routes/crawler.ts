@@ -8,6 +8,7 @@ import {
   matchUnitDeployments,
 } from '../schema/index.js';
 import { eq, and, gte, lte, inArray, sql } from 'drizzle-orm';
+import { parseSinceToEpochSec } from '../utils.js';
 
 // ── Simple TTL cache ────────────────────────────────────────
 // Caches expensive query results for a configurable duration.
@@ -46,14 +47,25 @@ interface MatchTeamInput {
 
 interface MatchPlayerPickInput {
   steamId?: string;
+  odId?: number;
+  teamId?: number;
   spec1Id?: number;
   spec1Name?: string;
   spec2Id?: number;
   spec2Name?: string;
   factionName: string;
+  oldRating?: number;
+  newRating?: number;
+  destruction?: number;
+  losses?: number;
+  damageDealt?: number;
+  damageReceived?: number;
+  objectivesCaptured?: number;
 }
 
 interface MatchUnitDeployInput {
+  steamId?: string;
+  odId?: number;
   unitId: number;
   unitName: string;
   factionName: string;
@@ -206,11 +218,20 @@ export async function registerCrawlerRoutes(app: FastifyInstance) {
             match.playerPicks.map((p) => ({
               fightId: match.fightId,
               steamId: p.steamId,
+              odId: p.odId,
+              teamId: p.teamId,
               spec1Id: p.spec1Id,
               spec1Name: p.spec1Name,
               spec2Id: p.spec2Id,
               spec2Name: p.spec2Name,
               factionName: p.factionName,
+              oldRating: p.oldRating,
+              newRating: p.newRating,
+              destruction: p.destruction,
+              playerLosses: p.losses,
+              damageDealt: p.damageDealt,
+              damageReceived: p.damageReceived,
+              objectivesCaptured: p.objectivesCaptured,
             })),
           ),
         );
@@ -222,6 +243,8 @@ export async function registerCrawlerRoutes(app: FastifyInstance) {
           db.insert(matchUnitDeployments).values(
             match.unitDeployments.map((u) => ({
               fightId: match.fightId,
+              steamId: u.steamId,
+              odId: u.odId,
               unitId: u.unitId,
               unitName: u.unitName,
               factionName: u.factionName,
@@ -243,6 +266,136 @@ export async function registerCrawlerRoutes(app: FastifyInstance) {
     }
 
     return reply.status(201).send({ inserted, skipped });
+  });
+
+  /**
+   * GET /api/crawler/matches/by-player?steamId=X&odId=Y&limit=100
+   * Returns a player's recent ranked matches with full detail for profile pages.
+   * Looks up by steamId OR odId — at least one must be provided.
+   */
+  app.get<{
+    Querystring: { steamId?: string; odId?: string; limit?: string };
+  }>('/matches/by-player', async (req, reply) => {
+    const { steamId, odId: odIdStr, limit: limitStr } = req.query;
+    const odId = odIdStr ? Number(odIdStr) : undefined;
+
+    if (!steamId && !odId) {
+      return reply.status(400).send({ error: 'steamId or odId is required' });
+    }
+
+    const limit = Math.min(Math.max(Number(limitStr) || 100, 1), 200);
+
+    // Step 1: Find the player's recent ranked matches
+    const playerCondition = steamId && odId
+      ? sql`(${matchPlayerPicks.steamId} = ${steamId} OR ${matchPlayerPicks.odId} = ${odId})`
+      : steamId
+        ? eq(matchPlayerPicks.steamId, steamId)
+        : eq(matchPlayerPicks.odId, odId!);
+
+    const playerMatches = await db
+      .select({
+        fightId: processedMatches.fightId,
+        mapId: processedMatches.mapId,
+        mapName: processedMatches.mapName,
+        isRanked: processedMatches.isRanked,
+        winnerTeam: processedMatches.winnerTeam,
+        playerCount: processedMatches.playerCount,
+        totalPlayTimeSec: processedMatches.totalPlayTimeSec,
+        endTime: processedMatches.endTime,
+        // Player's own data
+        playerTeamId: matchPlayerPicks.teamId,
+        playerFaction: matchPlayerPicks.factionName,
+        spec1Name: matchPlayerPicks.spec1Name,
+        spec1Id: matchPlayerPicks.spec1Id,
+        spec2Name: matchPlayerPicks.spec2Name,
+        spec2Id: matchPlayerPicks.spec2Id,
+        oldRating: matchPlayerPicks.oldRating,
+        newRating: matchPlayerPicks.newRating,
+        destruction: matchPlayerPicks.destruction,
+        playerLosses: matchPlayerPicks.playerLosses,
+        damageDealt: matchPlayerPicks.damageDealt,
+        damageReceived: matchPlayerPicks.damageReceived,
+        objectivesCaptured: matchPlayerPicks.objectivesCaptured,
+      })
+      .from(matchPlayerPicks)
+      .innerJoin(processedMatches, eq(matchPlayerPicks.fightId, processedMatches.fightId))
+      .where(and(playerCondition, eq(processedMatches.isRanked, true)))
+      .orderBy(sql`${processedMatches.endTime} DESC NULLS LAST`)
+      .limit(limit);
+
+    if (playerMatches.length === 0) {
+      return { matches: [], teams: [], units: [], otherPlayers: [] };
+    }
+
+    const fightIds = playerMatches.map((m) => m.fightId);
+
+    // Steps 2-4 in parallel: teams, player's units, other players in same matches
+    const [teams, units, otherPlayers] = await Promise.all([
+      // Team results for all matched fights
+      db
+        .select({
+          fightId: matchTeamResults.fightId,
+          teamId: matchTeamResults.teamId,
+          factionName: matchTeamResults.factionName,
+          isWinner: matchTeamResults.isWinner,
+          avgRating: matchTeamResults.avgRating,
+        })
+        .from(matchTeamResults)
+        .where(inArray(matchTeamResults.fightId, fightIds)),
+
+      // Player's unit deployments in those matches
+      db
+        .select({
+          fightId: matchUnitDeployments.fightId,
+          unitId: matchUnitDeployments.unitId,
+          unitName: matchUnitDeployments.unitName,
+          factionName: matchUnitDeployments.factionName,
+          optionIds: matchUnitDeployments.optionIds,
+          configKey: matchUnitDeployments.configKey,
+          killedCount: matchUnitDeployments.killedCount,
+          totalDamageDealt: matchUnitDeployments.totalDamageDealt,
+          totalDamageReceived: matchUnitDeployments.totalDamageReceived,
+          supplyPointsConsumed: matchUnitDeployments.supplyPointsConsumed,
+          wasRefunded: matchUnitDeployments.wasRefunded,
+        })
+        .from(matchUnitDeployments)
+        .where(
+          and(
+            inArray(matchUnitDeployments.fightId, fightIds),
+            steamId && odId
+              ? sql`(${matchUnitDeployments.steamId} = ${steamId} OR ${matchUnitDeployments.odId} = ${odId})`
+              : steamId
+                ? eq(matchUnitDeployments.steamId, steamId)
+                : eq(matchUnitDeployments.odId, odId!),
+          ),
+        ),
+
+      // Other players in same matches (for teammate/opponent detection)
+      db
+        .select({
+          fightId: matchPlayerPicks.fightId,
+          odId: matchPlayerPicks.odId,
+          steamId: matchPlayerPicks.steamId,
+          teamId: matchPlayerPicks.teamId,
+          factionName: matchPlayerPicks.factionName,
+          spec1Name: matchPlayerPicks.spec1Name,
+          spec2Name: matchPlayerPicks.spec2Name,
+        })
+        .from(matchPlayerPicks)
+        .where(
+          and(
+            inArray(matchPlayerPicks.fightId, fightIds),
+            // Exclude the target player
+            steamId && odId
+              ? sql`NOT (${matchPlayerPicks.steamId} = ${steamId} OR ${matchPlayerPicks.odId} = ${odId})`
+              : steamId
+                ? sql`${matchPlayerPicks.steamId} IS DISTINCT FROM ${steamId}`
+                : sql`${matchPlayerPicks.odId} IS DISTINCT FROM ${odId}`,
+          ),
+        ),
+    ]);
+
+    return { matches: playerMatches, teams, units, otherPlayers };
   });
 
   /**
@@ -398,14 +551,7 @@ export async function registerCrawlerRoutes(app: FastifyInstance) {
     const cacheKey = `unit-perf:${sinceParam}:${elo}:${faction}:${limit}`;
 
     return cached(cacheKey, CACHE_5MIN, async () => {
-    // Parse "30d" style or ISO date — convert to epoch SECONDS to match endTime
-    let sinceSec: number;
-    const daysMatch = sinceParam.match(/^(\d+)d$/);
-    if (daysMatch) {
-      sinceSec = Math.floor((Date.now() - Number(daysMatch[1]) * 24 * 60 * 60 * 1000) / 1000);
-    } else {
-      sinceSec = Math.floor(new Date(sinceParam).getTime() / 1000);
-    }
+    const sinceSec = parseSinceToEpochSec(sinceParam);
 
     const conditions = [
       eq(processedMatches.isRanked, true),
@@ -464,13 +610,7 @@ export async function registerCrawlerRoutes(app: FastifyInstance) {
     const sinceParam = req.query.since ?? '30d';
     const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100);
 
-    let sinceSec: number;
-    const daysMatch = sinceParam.match(/^(\d+)d$/);
-    if (daysMatch) {
-      sinceSec = Math.floor((Date.now() - Number(daysMatch[1]) * 24 * 60 * 60 * 1000) / 1000);
-    } else {
-      sinceSec = Math.floor(new Date(sinceParam).getTime() / 1000);
-    }
+    const sinceSec = parseSinceToEpochSec(sinceParam);
 
     const cacheKey = `spec-combos:${sinceSec}:${limit}`;
 

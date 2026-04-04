@@ -1,34 +1,7 @@
 import type { StatsClient, FightData, FightPlayerData } from './statsClient.js';
 import type { StaticData } from '../data/loader.js';
 import type { StaticIndexes } from '../data/indexes.js';
-
-/**
- * MapId (numeric, from fight JSON) → human-readable map name.
- * Shared constant also used by resolvers.
- */
-export const MAP_ID_TO_NAME: Record<number, string> = {
-  1: 'Test_map',
-  3: 'Baltiisk',
-  4: 'Coast',
-  5: 'Airport',
-  6: 'River',
-  7: 'Dam',
-  8: 'Tallinn Harbour',
-  9: 'Airbase',
-  10: 'Frontiers',
-  11: 'Central Village',
-  12: 'Oil refinery',
-  13: 'Suwalki',
-  14: 'Jelgava',
-  15: 'Narva',
-  16: 'Klaipeda',
-  17: 'Ruda',
-  20: 'Parnu',
-  21: 'Chernyakhovsk',
-  22: 'Ignalina Powerplant',
-  23: 'Kaliningrad',
-  25: 'Kadaga Military Base',
-};
+import { MAP_ID_TO_NAME } from '../data/constants.js';
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -68,13 +41,24 @@ interface MatchInsert {
   }>;
   playerPicks: Array<{
     steamId?: string;
+    odId?: number;
+    teamId?: number;
     spec1Id?: number;
     spec1Name?: string;
     spec2Id?: number;
     spec2Name?: string;
     factionName: string;
+    oldRating?: number;
+    newRating?: number;
+    destruction?: number;
+    losses?: number;
+    damageDealt?: number;
+    damageReceived?: number;
+    objectivesCaptured?: number;
   }>;
   unitDeployments: Array<{
+    steamId?: string;
+    odId?: number;
     unitId: number;
     unitName: string;
     factionName: string;
@@ -193,10 +177,21 @@ export class MatchCrawler {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(matches),
       });
-      if (!res.ok) return 0;
+      if (res.status === 413 && matches.length > 1) {
+        // Body too large — split in half and retry
+        const mid = Math.ceil(matches.length / 2);
+        const a = await this.bulkInsert(matches.slice(0, mid));
+        const b = await this.bulkInsert(matches.slice(mid));
+        return a + b;
+      }
+      if (!res.ok) {
+        console.warn(`[MatchCrawler] bulkInsert failed: ${res.status} (${matches.length} matches)`);
+        return 0;
+      }
       const result = (await res.json()) as { inserted: number; skipped: number };
       return result.inserted ?? 0;
-    } catch {
+    } catch (err) {
+      console.warn(`[MatchCrawler] bulkInsert error:`, err instanceof Error ? err.message : err);
       return 0;
     }
   }
@@ -381,6 +376,11 @@ export class MatchCrawler {
       if (toInsert.length > 0) {
         totalInserted += await this.bulkInsert(toInsert);
       }
+
+      // Small delay between batches
+      if (i + this.batchSize < newIds.length) {
+        await new Promise((r) => setTimeout(r, MatchCrawler.BATCH_DELAY_MS));
+      }
     }
 
     return totalInserted;
@@ -392,13 +392,30 @@ export class MatchCrawler {
     let low = 1;
     let high = maxId;
 
+    // Binary search with error tolerance — a failed fetch counts as "no data"
+    // but we track failures to avoid infinite loops on network issues.
+    let consecutiveFailures = 0;
+    const MAX_BINARY_FAILURES = 10;
+
     while (high - low > 1000) {
+      if (consecutiveFailures >= MAX_BINARY_FAILURES) {
+        console.warn(`[MatchCrawler] Binary search aborted after ${MAX_BINARY_FAILURES} consecutive failures at low=${low} high=${high}`);
+        break;
+      }
       const mid = Math.floor((low + high) / 2);
-      const exists = await this.statsClient.getFightData(String(mid)).catch(() => null);
-      if (exists) {
-        high = mid; // Data exists here, floor might be lower
-      } else {
-        low = mid; // No data here, floor is higher
+      try {
+        const exists = await this.statsClient.getFightData(String(mid));
+        consecutiveFailures = 0;
+        if (exists) {
+          high = mid; // Data exists here, floor might be lower
+        } else {
+          low = mid; // No data here, floor is higher
+        }
+      } catch {
+        consecutiveFailures++;
+        // Treat fetch failure as "no data" — nudge low up
+        low = mid;
+        await new Promise((r) => setTimeout(r, 1000));
       }
     }
 
@@ -407,6 +424,16 @@ export class MatchCrawler {
 
   // ── Range scan chunk ───────────────────────────────────────────
 
+  /**
+   * How often to save scan position (in IDs processed).
+   * Keeps crash-recovery loss to ~SAVE_INTERVAL IDs max.
+   */
+  private static readonly SAVE_INTERVAL = 1000;
+  /** Pause (ms) between concurrent batches to avoid S3 rate-limits. */
+  private static readonly BATCH_DELAY_MS = 50;
+  /** If this many errors accumulate in one sub-chunk without success, pause the chunk. */
+  private static readonly ERROR_BUDGET = 50;
+
   private async rangeScanChunk(state: CrawlerState): Promise<number> {
     const start = state.scanPosition;
     const end = Math.min(start + this.chunkSize, state.scanCeiling);
@@ -414,12 +441,56 @@ export class MatchCrawler {
     console.log(`[MatchCrawler] Range scan: ${start} → ${end} (ceiling=${state.scanCeiling})`);
 
     let totalInserted = 0;
-    let s3Hits = 0;
-    let s3Misses = 0;
-    let unrankedSkips = 0;
+    let totalHits = 0;
+    let totalMisses = 0;
+    let totalErrors = 0;
+
+    // Process in sub-chunks, saving position after each
+    for (let subStart = start; subStart < end; subStart += MatchCrawler.SAVE_INTERVAL) {
+      const subEnd = Math.min(subStart + MatchCrawler.SAVE_INTERVAL, end);
+      const result = await this.scanSubChunk(subStart, subEnd);
+
+      totalInserted += result.inserted;
+      totalHits += result.hits;
+      totalMisses += result.misses;
+      totalErrors += result.errors;
+
+      // Save progress after each sub-chunk — crash-safe
+      await this.updateState({ scanPosition: subEnd });
+
+      // If too many errors in this sub-chunk, stop and let the next cycle retry
+      if (result.errors > MatchCrawler.ERROR_BUDGET) {
+        console.warn(
+          `[MatchCrawler] Error budget exceeded in sub-chunk ${subStart}→${subEnd} ` +
+          `(${result.errors} errors). Pausing scan — will resume next cycle.`,
+        );
+        break;
+      }
+    }
+
+    console.log(
+      `[MatchCrawler] Chunk ${start}→${state.scanPosition ?? end}: ` +
+      `${totalHits} fights found, ${totalInserted} ranked stored, ` +
+      `${totalMisses} empty IDs, ${totalErrors} fetch errors`,
+    );
+
+    return totalInserted;
+  }
+
+  /**
+   * Scan a small range [start, end) of fight IDs, fetching from S3 in concurrent batches.
+   * Returns metrics for the sub-chunk.
+   */
+  private async scanSubChunk(
+    start: number,
+    end: number,
+  ): Promise<{ inserted: number; hits: number; misses: number; errors: number }> {
+    let inserted = 0;
+    let hits = 0;
+    let misses = 0;
+    let errors = 0;
     const toInsert: MatchInsert[] = [];
 
-    // Scan in batches — just fetch from S3, let ON CONFLICT handle dupes
     for (let i = start; i < end; i += this.batchSize) {
       const batch = Array.from(
         { length: Math.min(this.batchSize, end - i) },
@@ -427,41 +498,42 @@ export class MatchCrawler {
       );
 
       const results = await Promise.all(
-        batch.map((id) => this.statsClient.getFightData(String(id)).catch(() => null)),
+        batch.map((id) =>
+          this.statsClient.getFightData(String(id)).catch(() => {
+            errors++;
+            return null;
+          }),
+        ),
       );
 
       for (let j = 0; j < results.length; j++) {
         if (!results[j]) {
-          s3Misses++;
+          misses++;
           continue;
         }
-        s3Hits++;
+        hits++;
         const processed = this.processFight(batch[j], results[j]!);
-        if (processed) {
-          toInsert.push(processed);
-        } else {
-          unrankedSkips++;
-        }
+        if (processed) toInsert.push(processed);
       }
 
-      // Bulk insert periodically (ON CONFLICT DO NOTHING handles dupes)
-      if (toInsert.length >= 50) {
-        totalInserted += await this.bulkInsert(toInsert);
+      // Flush periodically — keep batches small to avoid 413 body-too-large
+      if (toInsert.length >= 10) {
+        inserted += await this.bulkInsert(toInsert);
         toInsert.length = 0;
       }
+
+      // Small delay between batches to stay under rate limits
+      if (MatchCrawler.BATCH_DELAY_MS > 0) {
+        await new Promise((r) => setTimeout(r, MatchCrawler.BATCH_DELAY_MS));
+      }
     }
 
+    // Flush remainder
     if (toInsert.length > 0) {
-      totalInserted += await this.bulkInsert(toInsert);
+      inserted += await this.bulkInsert(toInsert);
     }
 
-    await this.updateState({ scanPosition: end });
-    console.log(
-      `[MatchCrawler] Chunk ${start}→${end}: ` +
-      `${s3Hits} fights found, ${unrankedSkips} unranked skipped, ${totalInserted} ranked stored, ${s3Misses} empty IDs`,
-    );
-
-    return totalInserted;
+    return { inserted, hits, misses, errors };
   }
 
   // ── Fight processing ───────────────────────────────────────────
@@ -536,15 +608,24 @@ export class MatchCrawler {
     // Build player picks
     const playerPicks: MatchInsert['playerPicks'] = [];
     for (const player of fight.players) {
-      const factionName = this.inferPlayerFaction(player);
+      const factionName = this.inferFaction([player]);
       const topSpecs = this.inferPlayerSpecs(player);
       playerPicks.push({
         steamId: player.steamId,
+        odId: player.id || undefined,
+        teamId: player.teamId,
         spec1Id: topSpecs[0]?.id,
         spec1Name: topSpecs[0]?.name,
         spec2Id: topSpecs[1]?.id,
         spec2Name: topSpecs[1]?.name,
         factionName,
+        oldRating: player.oldRating,
+        newRating: player.newRating,
+        destruction: player.destruction,
+        losses: player.losses,
+        damageDealt: player.damageDealt,
+        damageReceived: player.damageReceived,
+        objectivesCaptured: player.objectivesCaptured,
       });
     }
 
@@ -564,6 +645,8 @@ export class MatchCrawler {
         const configKey = `${unit.id}:${optionIdsStr}`;
 
         unitDeployments.push({
+          steamId: player.steamId,
+          odId: player.id || undefined,
           unitId: unit.id,
           unitName,
           factionName,
@@ -595,7 +678,7 @@ export class MatchCrawler {
     };
   }
 
-  /** Determine majority faction for a group of players (team). */
+  /** Determine majority faction from a list of players (team or individual). */
   private inferFaction(players: FightPlayerData[]): string {
     const countryCounts = new Map<number, number>();
     for (const player of players) {
@@ -604,20 +687,6 @@ export class MatchCrawler {
         if (ud?.CountryId) {
           countryCounts.set(ud.CountryId, (countryCounts.get(ud.CountryId) ?? 0) + 1);
         }
-      }
-    }
-    if (countryCounts.size === 0) return 'Unknown';
-    const topCountryId = [...countryCounts.entries()].sort((a, b) => b[1] - a[1])[0][0];
-    return this.indexes.countriesById?.get(topCountryId)?.Name ?? 'Unknown';
-  }
-
-  /** Determine faction for a single player. */
-  private inferPlayerFaction(player: FightPlayerData): string {
-    const countryCounts = new Map<number, number>();
-    for (const unit of player.units) {
-      const ud = this.indexes.unitsById.get(unit.id);
-      if (ud?.CountryId) {
-        countryCounts.set(ud.CountryId, (countryCounts.get(ud.CountryId) ?? 0) + 1);
       }
     }
     if (countryCounts.size === 0) return 'Unknown';

@@ -1,5 +1,5 @@
 import { StatsClient } from './statsClient.js';
-import type { MatchCrawler } from './matchCrawler.js';
+import type { MatchCrawler, CrawlerAggregates } from './matchCrawler.js';
 
 /**
  * Periodic data collection scheduler.
@@ -156,11 +156,7 @@ export class StatsCollector {
     ]);
 
     // Collect crawler aggregates (scanning handled by dedicated fast loop)
-    let crawlerAggregates: {
-      crawlerFactionStats?: Array<{ factionName: string; matchCount: number; winCount: number }>;
-      specStats?: Array<{ specName: string; specId?: number; pickCount: number }>;
-      unitPerformance?: Array<{ configKey: string; unitId?: number; unitName: string; factionName: string; optionIds: string; eloBracket: string; deployCount: number; totalKills: number; totalDamageDealt: number; totalDamageReceived: number; totalSupplyConsumed: number; refundCount: number }>;
-    } = {};
+    let crawlerAggregates: Partial<CrawlerAggregates> = {};
 
     if (this.matchCrawler) {
       try {
@@ -229,11 +225,7 @@ export class StatsCollector {
     ]);
 
     // Collect crawler aggregates (scanning handled by dedicated fast loop)
-    let crawlerAggregates: {
-      crawlerFactionStats?: Array<{ factionName: string; matchCount: number; winCount: number }>;
-      specStats?: Array<{ specName: string; specId?: number; pickCount: number }>;
-      unitPerformance?: Array<{ configKey: string; unitId?: number; unitName: string; factionName: string; optionIds: string; eloBracket: string; deployCount: number; totalKills: number; totalDamageDealt: number; totalDamageReceived: number; totalSupplyConsumed: number; refundCount: number }>;
-    } = {};
+    let crawlerAggregates: Partial<CrawlerAggregates> = {};
 
     if (this.matchCrawler) {
       try {

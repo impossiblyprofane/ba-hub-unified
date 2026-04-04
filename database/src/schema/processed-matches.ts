@@ -15,7 +15,7 @@ export const processedMatches = pgTable('processed_matches', {
   winnerTeam: integer('winner_team'),
   playerCount: integer('player_count').notNull().default(0),
   totalPlayTimeSec: integer('total_play_time_sec'),
-  /** Epoch milliseconds from the S3 fight data. */
+  /** Epoch seconds from the S3 fight data (Unix timestamp). */
   endTime: bigint('end_time', { mode: 'number' }),
   processedAt: timestamp('processed_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [

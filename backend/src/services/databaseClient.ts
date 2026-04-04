@@ -182,6 +182,20 @@ export class DatabaseClient {
   async getUnitPerformanceHistory(since?: string, faction?: string, eloBracket?: string): Promise<UnitPerformanceSnapshotEntry[]> {
     return this.request('GET', '/api/snapshots/unit-performance', undefined, { since, faction, eloBracket });
   }
+
+  // ── Player match history (aggregated from crawled data) ───
+
+  async getPlayerMatchHistory(
+    steamId?: string,
+    odId?: number,
+    limit?: number,
+  ): Promise<PlayerMatchHistoryResult> {
+    return this.request('GET', '/api/crawler/matches/by-player', undefined, {
+      steamId,
+      odId,
+      limit,
+    });
+  }
 }
 
 // ── Snapshot result types ──────────────────────────────────
@@ -301,4 +315,70 @@ export interface UnitPerformanceSnapshotEntry {
   refundCount: number;
   snapshotType: string;
   createdAt: string;
+}
+
+// ── Player match history types ─────────────────────────────
+
+export interface PlayerMatchRow {
+  fightId: number;
+  mapId: number | null;
+  mapName: string | null;
+  isRanked: boolean;
+  winnerTeam: number | null;
+  playerCount: number;
+  totalPlayTimeSec: number | null;
+  endTime: number | null;
+  // Player's own data from match_player_picks
+  playerTeamId: number | null;
+  playerFaction: string;
+  spec1Name: string | null;
+  spec1Id: number | null;
+  spec2Name: string | null;
+  spec2Id: number | null;
+  oldRating: number | null;
+  newRating: number | null;
+  destruction: number | null;
+  playerLosses: number | null;
+  damageDealt: number | null;
+  damageReceived: number | null;
+  objectivesCaptured: number | null;
+}
+
+export interface PlayerMatchTeamRow {
+  fightId: number;
+  teamId: number;
+  factionName: string;
+  isWinner: boolean;
+  avgRating: number | null;
+}
+
+export interface PlayerMatchUnitRow {
+  fightId: number;
+  unitId: number;
+  unitName: string;
+  factionName: string;
+  optionIds: string;
+  configKey: string;
+  killedCount: number;
+  totalDamageDealt: number;
+  totalDamageReceived: number;
+  supplyPointsConsumed: number;
+  wasRefunded: boolean;
+}
+
+export interface PlayerMatchOtherPlayer {
+  fightId: number;
+  odId: number | null;
+  steamId: string | null;
+  teamId: number | null;
+  factionName: string;
+  spec1Name: string | null;
+  spec2Name: string | null;
+}
+
+export interface PlayerMatchHistoryResult {
+  matches: PlayerMatchRow[];
+  teams: PlayerMatchTeamRow[];
+  units: PlayerMatchUnitRow[];
+  otherPlayers: PlayerMatchOtherPlayer[];
 }
