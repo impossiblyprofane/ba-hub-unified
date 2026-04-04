@@ -61,7 +61,7 @@ jobs:
           script: |
             set -e
             ENV=${{ steps.env.outputs.ENV }}
-            COMPOSE="docker compose -f ${{ steps.env.outputs.COMPOSE_FILE }} --env-file .env"
+            COMPOSE="docker compose -p bahub-$ENV -f ${{ steps.env.outputs.COMPOSE_FILE }} --env-file .env"
             cd /root/ba-hub/$ENV/docker
 
             echo "=== Building and starting ($ENV) ==="
