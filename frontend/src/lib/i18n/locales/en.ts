@@ -615,7 +615,7 @@ const en: TranslationDict = {
   'stats.overview.plays': 'plays',
 
   // Stats: map analytics
-  'stats.mapAnalytics.factionBreakdown': 'Faction Win Breakdown',
+  'stats.mapAnalytics.factionBreakdown': 'Map Side Win Rate',
   'stats.mapAnalytics.noData': 'No map analytics data available.',
 
   // Stats: country/faction stats
