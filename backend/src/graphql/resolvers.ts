@@ -878,7 +878,7 @@ export const resolvers = {
       try {
         const entries = await statsClient.getLeaderboard(args.start ?? 0, args.end ?? 100);
 
-        // Batch-resolve user IDs to get names, steamIds, etc.
+        // Batch-resolve user IDs to get names, steamIds, marketIds
         const userIds = entries
           .map(e => e.userId)
           .filter((id): id is number => id != null);
@@ -893,6 +893,23 @@ export const resolvers = {
             if (!entry.steamId && user.steamId) entry.steamId = user.steamId;
             if (entry.level == null && user.level != null) entry.level = user.level;
           }
+
+          // Fetch player stats (KD, win rate) in parallel for entries with marketId
+          const statsPromises = entries.map(async (entry) => {
+            if (entry.userId == null) return;
+            const user = users.get(entry.userId);
+            const marketId = user?.marketId ?? user?.steamId;
+            if (!marketId) return;
+            try {
+              const stats = await statsClient.getPlayerStats(marketId);
+              if (!stats) return;
+              if (stats.kdRatio != null) entry.kdRatio = stats.kdRatio;
+              if (stats.winsCount != null && stats.fightsCount != null && stats.fightsCount > 0) {
+                entry.winRate = stats.winsCount / stats.fightsCount;
+              }
+            } catch { /* non-critical */ }
+          });
+          await Promise.all(statsPromises);
         }
 
         return entries;

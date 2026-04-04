@@ -608,7 +608,7 @@ const en: TranslationDict = {
   // Stats: overview charts
   'stats.overview.mapPlayFrequency': 'Map Play Frequency',
   'stats.overview.specUsage': 'Specialization Usage',
-  'stats.overview.factionWinRates': 'Faction Win Rates',
+  'stats.overview.factionWinRates': 'Map Side Win Rate',
   'stats.overview.factionMatchups': 'Faction Matchups',
   'stats.overview.matchesPlayed': 'Matches Played',
   'stats.overview.winsLabel': 'Wins',

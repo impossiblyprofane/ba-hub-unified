@@ -37,6 +37,22 @@ function resolveUnitOptionNames(rawNames: string[], locale: string): string[] {
     .filter((n) => n !== 'None' && n !== 'Default' && n !== 'Empty');
 }
 
+/* ─── Spec name cleanup ──────────────────────────────────── */
+
+/** Spec names that need display overrides (game data has internal codes) */
+const SPEC_NAME_OVERRIDES: Record<string, string> = {
+  'DLC2 Baltic': 'Baltic Jaegers',
+};
+
+/** Hidden spec IDs (Editor, internal) */
+const HIDDEN_SPEC_NAMES = new Set(['Editor', 'Spec 12', 'Spec_12']);
+
+/** Clean up a spec name for display */
+function resolveSpecName(name: string): string | null {
+  if (HIDDEN_SPEC_NAMES.has(name)) return null;
+  return SPEC_NAME_OVERRIDES[name] ?? name;
+}
+
 /* ─── Faction name formatter ─────────────────────────────── */
 
 /** Format raw faction matchup codes like "Russia_USA" → "Russia vs USA" */
@@ -239,7 +255,8 @@ function buildMapChart(
 function buildSpecChart(
   items: { name: string | null; count: number | null }[],
 ): ChartConfiguration {
-  const filtered = items.filter((i) => i.name && i.count);
+  const filtered = items
+    .filter((i) => i.name && i.count && resolveSpecName(i.name!) !== null);
   const total = filtered.reduce((s, i) => s + (i.count ?? 0), 0);
   const sorted = [...filtered]
     .sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
@@ -247,7 +264,7 @@ function buildSpecChart(
   return {
     type: 'bar',
     data: {
-      labels: sorted.map((i) => i.name!),
+      labels: sorted.map((i) => resolveSpecName(i.name!) ?? i.name!),
       datasets: [
         {
           data: sorted.map((i) => total > 0 ? Math.round(((i.count ?? 0) / total) * 1000) / 10 : 0),
@@ -444,10 +461,10 @@ function buildMapHistoryChart(
   }
 
   const dates = [...dateMap.keys()];
-  // Show top 6 maps by total play count
+  // Show top 10 maps by total play count
   const topMaps = [...mapTotals.entries()]
     .sort(([, a], [, b]) => b - a)
-    .slice(0, 6)
+    .slice(0, 10)
     .map(([name]) => name);
 
   // Convert to percentage of total plays per date
@@ -505,9 +522,18 @@ function buildSpecPopularityChart(
     for (const name of specs.keys()) specNames.add(name);
   }
 
-  const datasets = [...specNames].map((spec, idx) => ({
-    label: spec,
-    data: dates.map((date) => dateMap.get(date)?.get(spec) ?? 0),
+  // Filter out hidden specs and resolve display names
+  const filteredSpecs = [...specNames].filter((name) => resolveSpecName(name) !== null);
+
+  const datasets = filteredSpecs.map((spec, idx) => ({
+    label: resolveSpecName(spec) ?? spec,
+    data: dates.map((date) => {
+      const dayData = dateMap.get(date);
+      if (!dayData) return 0;
+      const total = [...dayData.values()].reduce((s, v) => s + v, 0);
+      const count = dayData.get(spec) ?? 0;
+      return total > 0 ? Math.round((count / total) * 1000) / 10 : 0;
+    }),
     borderColor: CHART_COLORS[idx % CHART_COLORS.length],
     backgroundColor: CHART_COLORS[idx % CHART_COLORS.length],
     fill: false,
@@ -528,7 +554,7 @@ function buildSpecPopularityChart(
         x: { grid: { display: false } },
         y: {
           grid: { color: 'rgba(51,51,51,0.2)' },
-          title: { display: true, text: 'Pick Count', color: 'rgba(192,192,192,0.5)', font: { size: 9 } },
+          title: { display: true, text: 'Pick Rate %', color: 'rgba(192,192,192,0.5)', font: { size: 9 } },
         },
       },
     },
