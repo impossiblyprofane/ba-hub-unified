@@ -178,6 +178,14 @@ export async function registerCrawlerRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: 'Expected non-empty array of matches' });
     }
 
+    // Diagnostic: log received child data counts
+    for (const m of matches) {
+      const units = m.unitDeployments?.length ?? 0;
+      const picks = m.playerPicks?.length ?? 0;
+      const teams = m.teams?.length ?? 0;
+      req.log.info(`[crawler/matches] Received fight=${m.fightId}: ${teams} teams, ${picks} picks, ${units} unitDeploys`);
+    }
+
     let inserted = 0;
     let skipped = 0;
     let errored = 0;

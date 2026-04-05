@@ -153,6 +153,14 @@ export class MatchCrawler {
 
   private async bulkInsert(matches: MatchInsert[]): Promise<number> {
     if (matches.length === 0) return 0;
+    // Diagnostic: log unit deployment counts per match
+    for (const m of matches) {
+      const unitCount = m.unitDeployments?.length ?? 0;
+      const pickCount = m.playerPicks?.length ?? 0;
+      console.log(
+        `[MatchCrawler] bulkInsert fight=${m.fightId}: ${pickCount} picks, ${unitCount} unitDeploys`,
+      );
+    }
     try {
       const res = await fetch(`${this.dbUrl}/api/crawler/matches`, {
         method: 'POST',
@@ -612,14 +620,23 @@ export class MatchCrawler {
     const unitDeployments: MatchInsert['unitDeployments'] = [];
     for (const player of fight.players) {
       const eloBracket = getEloBracket(player.oldRating);
-      for (const unit of player.units) {
+      const playerUnits = Array.isArray(player.units) ? player.units : [];
+      if (playerUnits.length === 0) {
+        // Diagnostic: log when a player has no units (helps debug missing deployments)
+        const rawKeys = player.units === undefined ? 'undefined' : typeof player.units;
+        console.warn(
+          `[MatchCrawler] Fight ${fightId}: player ${player.id} has 0 units ` +
+          `(units field is ${rawKeys}, keys on player: ${Object.keys(player).join(',')})`,
+        );
+      }
+      for (const unit of playerUnits) {
         const unitData = this.indexes.unitsById.get(unit.id);
         const unitName = unitData?.HUDName ?? unitData?.Name ?? `Unit_${unit.id}`;
         const countryId = unitData?.CountryId;
         const country = countryId ? this.indexes.countriesById?.get(countryId) : undefined;
         const factionName = country?.Name ?? 'Unknown';
 
-        const sortedOpts = [...unit.optionIds].sort((a, b) => a - b);
+        const sortedOpts = [...(unit.optionIds ?? [])].sort((a, b) => a - b);
         const optionIdsStr = sortedOpts.join(',');
         const configKey = `${unit.id}:${optionIdsStr}`;
 
@@ -642,6 +659,13 @@ export class MatchCrawler {
       }
     }
 
+    if (unitDeployments.length === 0 && fight.players.length > 0) {
+      console.warn(
+        `[MatchCrawler] Fight ${fightId}: 0 unit deployments from ${fight.players.length} players! ` +
+        `Sample player keys: ${Object.keys(fight.players[0]).join(',')}`,
+      );
+    }
+
     return {
       fightId,
       mapId: fight.mapId,
@@ -662,7 +686,7 @@ export class MatchCrawler {
   private inferFaction(players: StatsFightPlayerData[]): string {
     const countryCounts = new Map<number, number>();
     for (const player of players) {
-      for (const unit of player.units) {
+      for (const unit of (player.units ?? [])) {
         const ud = this.indexes.unitsById.get(unit.id);
         if (ud?.CountryId) {
           countryCounts.set(ud.CountryId, (countryCounts.get(ud.CountryId) ?? 0) + 1);
@@ -678,7 +702,7 @@ export class MatchCrawler {
   private inferPlayerSpecs(player: StatsFightPlayerData): Array<{ id: number; name: string }> {
     const specMap = this.getUnitIdToSpecIds();
     const specScores = new Map<number, number>();
-    for (const unit of player.units) {
+    for (const unit of (player.units ?? [])) {
       const specs = specMap.get(unit.id);
       if (specs) {
         for (const specId of specs) {

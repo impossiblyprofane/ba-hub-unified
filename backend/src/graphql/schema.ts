@@ -202,7 +202,7 @@ export const schema = `
     APSHitboxProportion: Float
     APSQuantity: Int
     APSCooldown: Float
-    APSSupplyCost: Int
+    APSSupplyCost: Float
     APSResupplyTime: Float
     IsDecoy: Boolean
     DecoyFXPreset: String
@@ -210,7 +210,7 @@ export const schema = `
     DecoyAccuracyMultiplier: Float
     DecoyDuration: Float
     DecoyCooldown: Float
-    DecoySupplyCost: Int
+    DecoySupplyCost: Float
     DecoyResupplyTime: Float
   }
 
@@ -227,7 +227,7 @@ export const schema = `
     ModelFileName: String
     HUDMultiplier: Float
     CriticMultiplier: Float
-    SupplyCost: Int
+    SupplyCost: Float
     ResupplyTime: Float
     Damage: Float
     StressDamage: Float
