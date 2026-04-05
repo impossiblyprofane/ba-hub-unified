@@ -8,8 +8,6 @@ import { getStaticRouteMeta } from './meta/static-routes.js';
 import { renderMetaHtml } from './meta/renderer.js';
 import { resolveArsenalMeta } from './meta/resolvers/arsenal.js';
 import { resolveDeckMeta } from './meta/resolvers/deck.js';
-import { resolvePlayerMeta } from './meta/resolvers/player.js';
-import { resolveMatchMeta } from './meta/resolvers/match.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -43,18 +41,6 @@ async function resolveRouteMeta(path: string): Promise<PageMeta> {
   const deckMatch = route.match(/^\/decks\/browse\/([a-f0-9-]{36})$/);
   if (deckMatch) {
     return resolveDeckMeta(deckMatch[1]);
-  }
-
-  // Dynamic route: /stats/player/{steamId}
-  const playerMatch = route.match(/^\/stats\/player\/(\d+)$/);
-  if (playerMatch) {
-    return resolvePlayerMeta(playerMatch[1]);
-  }
-
-  // Dynamic route: /stats/match/{fightId}
-  const fightMatch = route.match(/^\/stats\/match\/([a-zA-Z0-9_-]+)$/);
-  if (fightMatch) {
-    return resolveMatchMeta(fightMatch[1]);
   }
 
   // Fallback

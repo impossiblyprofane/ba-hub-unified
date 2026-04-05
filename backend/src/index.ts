@@ -7,15 +7,12 @@ import { resolvers } from './graphql/resolvers.js';
 import { loadStaticData } from './data/loader.js';
 import { buildIndexes } from './data/indexes.js';
 import { DatabaseClient } from './services/databaseClient.js';
-import { StatsCollector } from './services/statsCollector.js';
-import { MatchCrawler } from './services/matchCrawler.js';
 import { encryptDek, decryptDek } from './services/dekEncryption.js';
 import { isrRelayPlugin } from './routes/isrRelay.js';
 import { encryptPayload, decryptPayload, isEncryptionConfigured } from '@ba-hub/shared';
 
 const PORT = process.env.PORT || 3001;
 const DATABASE_SERVICE_URL = process.env.DATABASE_SERVICE_URL || 'http://localhost:3002';
-const STATS_COLLECTION_ENABLED = process.env.STATS_COLLECTION_ENABLED !== 'false';
 
 async function buildServer() {
   const data = await loadStaticData();
@@ -195,26 +192,8 @@ async function start() {
     console.log(`🚀 Backend server running on http://localhost:${PORT}`);
     console.log(`🎮 GraphiQL: http://localhost:${PORT}/graphiql`);
 
-    // Create match crawler for independent fight data collection
-    const matchCrawler = new MatchCrawler({
-      dbClient,
-      databaseServiceUrl: DATABASE_SERVICE_URL,
-      indexes,
-      data,
-    });
-
-    // Start periodic stats collection
-    const collector = new StatsCollector({
-      dbClient,
-      databaseServiceUrl: DATABASE_SERVICE_URL,
-      enabled: STATS_COLLECTION_ENABLED,
-      matchCrawler,
-    });
-    collector.start();
-
     // Graceful shutdown
     const shutdown = () => {
-      collector.stop();
       fastify.close();
     };
     process.on('SIGINT', shutdown);
