@@ -37,9 +37,16 @@ async function main() {
       return (req.headers['x-user-id'] as string) ?? req.ip;
     },
     allowList: (req: any) => {
-      // Internal backend traffic (from localhost) is trusted — exempt from rate limits.
+      // Internal backend traffic is trusted — exempt from rate limits.
+      // Covers localhost (dev) and Docker bridge network (172.x.x.x in prod).
       const ip: string = req.ip ?? '';
-      return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
+      return (
+        ip === '127.0.0.1' ||
+        ip === '::1' ||
+        ip === '::ffff:127.0.0.1' ||
+        ip.startsWith('172.') ||
+        ip.startsWith('::ffff:172.')
+      );
     },
   });
 
