@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  # Reusable — called by deploy.yml before deploying
+  workflow_call:
+  # Also runs on PRs for early feedback
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: bahub
+          POSTGRES_PASSWORD: bahub_test
+          POSTGRES_DB: bahub_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U bahub"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build shared types
+        run: npm run build -w shared
+
+      - name: Type check
+        run: npm run type-check
+
+      - name: Run tests
+        run: npm run test
+        env:
+          DATABASE_URL: postgresql://bahub:bahub_test@localhost:5432/bahub_test

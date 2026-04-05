@@ -6,7 +6,12 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Run CI checks before deploying
+  ci:
+    uses: ./.github/workflows/ci.yml
+
   deploy:
+    needs: ci
     runs-on: ubuntu-latest
     environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
 
@@ -19,9 +24,13 @@ jobs:
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
             echo "ENV=prod" >> $GITHUB_OUTPUT
             echo "COMPOSE_FILE=docker-compose.prod.yml" >> $GITHUB_OUTPUT
+            echo "DB_CONTAINER=bahub-prod-database" >> $GITHUB_OUTPUT
+            echo "DB_PORT=3002" >> $GITHUB_OUTPUT
           else
             echo "ENV=dev" >> $GITHUB_OUTPUT
             echo "COMPOSE_FILE=docker-compose.dev.yml" >> $GITHUB_OUTPUT
+            echo "DB_CONTAINER=bahub-dev-database" >> $GITHUB_OUTPUT
+            echo "DB_PORT=3102" >> $GITHUB_OUTPUT
           fi
 
       - name: Generate .env
@@ -29,7 +38,7 @@ jobs:
           cat > docker/.env <<ENVEOF
           PG_USER=${{ secrets.PG_USER }}
           PG_PASSWORD=${{ secrets.PG_PASSWORD }}
-          PG_DB=${{ secrets.PG_DB }}
+          PG_DB=${{ github.ref == 'refs/heads/main' && secrets.PG_DB || secrets.PG_DB_DEV || secrets.PG_DB }}
           VITE_API_URL=${{ github.ref == 'refs/heads/main' && secrets.PROD_API_URL || secrets.DEV_API_URL }}
           VITE_WS_URL=${{ github.ref == 'refs/heads/main' && secrets.PROD_WS_URL || secrets.DEV_WS_URL }}
           SITE_URL=${{ github.ref == 'refs/heads/main' && secrets.PROD_SITE_URL || secrets.DEV_SITE_URL }}
@@ -62,18 +71,20 @@ jobs:
             set -e
             ENV=${{ steps.env.outputs.ENV }}
             COMPOSE="docker compose -p bahub-$ENV -f ${{ steps.env.outputs.COMPOSE_FILE }} --env-file .env"
+            DB_CONTAINER=${{ steps.env.outputs.DB_CONTAINER }}
             cd /root/ba-hub/$ENV/docker
 
             echo "=== Building and starting ($ENV) ==="
             $COMPOSE up -d --build
 
-            echo "=== Waiting for services ==="
-            sleep 10
-
-            echo "=== Running migrations (prod postgres) ==="
-            for f in /root/ba-hub/prod/database/drizzle/0*.sql; do
-              echo "  $(basename $f)..."
-              docker exec -i bahub-prod-postgres psql -U ${{ secrets.PG_USER }} -d ${{ secrets.PG_DB }} -f - < "$f" 2>&1 | tail -1 || true
+            echo "=== Waiting for database service to be healthy ==="
+            for i in $(seq 1 30); do
+              if docker exec $DB_CONTAINER wget -qO- http://localhost:${{ steps.env.outputs.DB_PORT }}/health 2>/dev/null | grep -q '"ok"'; then
+                echo "  Database service is healthy."
+                break
+              fi
+              echo "  Waiting... ($i/30)"
+              sleep 2
             done
 
             docker image prune -f

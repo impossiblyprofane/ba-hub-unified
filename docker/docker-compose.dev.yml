@@ -1,4 +1,19 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: bahub-dev-postgres
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: ${PG_USER:-bahub}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-bahub_dev}
+      POSTGRES_DB: ${PG_DB:-bahub_dev}
+    volumes:
+      - pgdata-dev:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - bahub-dev
+
   database:
     build:
       context: ..
@@ -9,10 +24,12 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3102
-      - DATABASE_URL=postgresql://${PG_USER:-bahub}:${PG_PASSWORD:-bahub_dev}@bahub-prod-postgres:5432/${PG_DB:-bahub}
+      - DATABASE_URL=postgresql://${PG_USER:-bahub}:${PG_PASSWORD:-bahub_dev}@postgres:5432/${PG_DB:-bahub_dev}
+    depends_on:
+      - postgres
     restart: unless-stopped
     networks:
-      - bahub-shared
+      - bahub-dev
 
   backend:
     build:
@@ -36,7 +53,7 @@ services:
       - database
     restart: unless-stopped
     networks:
-      - bahub-shared
+      - bahub-dev
 
   frontend:
     build:
@@ -61,9 +78,12 @@ services:
       - backend
     restart: unless-stopped
     networks:
-      - bahub-shared
+      - bahub-dev
+
+volumes:
+  pgdata-dev:
 
 networks:
-  bahub-shared:
-    external: true
-    name: bahub-shared
+  bahub-dev:
+    name: bahub-dev
+    driver: bridge

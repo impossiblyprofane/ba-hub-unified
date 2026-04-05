@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
+import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { registerRoutes } from './routes/index.js';
 import { db, sql } from './db.js';
 import { StatsClient } from './services/statsClient.js';
@@ -9,7 +10,16 @@ import type { RestUserInfo, PlayerStats } from './services/statsClient.js';
 
 const PORT = Number(process.env.PORT ?? 3002);
 
+async function runMigrations() {
+  const migrationsFolder = new URL('../drizzle', import.meta.url).pathname;
+  console.log('Running database migrations...');
+  await migrate(db, { migrationsFolder });
+  console.log('Migrations complete.');
+}
+
 async function main() {
+  // Run pending migrations before starting the server
+  await runMigrations();
   const app = Fastify({
     logger: true,
     bodyLimit: 50 * 1024 * 1024, // 50 MB — crawler batches can be large
