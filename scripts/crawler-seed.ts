@@ -36,15 +36,13 @@
 
 import { loadStaticData } from '../backend/src/data/loader.js';
 import { buildIndexes } from '../backend/src/data/indexes.js';
-import { StatsClient } from '../backend/src/services/statsClient.js';
+import { DatabaseClient } from '../backend/src/services/databaseClient.js';
 import { MatchCrawler } from '../backend/src/services/matchCrawler.js';
 
 const TARGET_ARG = process.argv.find((a) => a.startsWith('--target='));
 const DATABASE_SERVICE_URL = TARGET_ARG
   ? TARGET_ARG.split('=').slice(1).join('=')   // allow URLs with '=' in query strings
   : process.env.DATABASE_SERVICE_URL || 'http://localhost:3002';
-const STATS_API_URL = process.env.STATS_API_URL || 'https://api.brokenarrowgame.tech';
-const STATS_PARTNER_TOKEN = process.env.STATS_PARTNER_TOKEN || '';
 
 const DISCOVER_ONLY = process.argv.includes('--discover-only');
 const CHUNK_SIZE_ARG = process.argv.find((a) => a.startsWith('--chunk-size='));
@@ -56,8 +54,6 @@ async function main() {
   console.log('╚══════════════════════════════════════════════╝');
   console.log();
   console.log(`Database service: ${DATABASE_SERVICE_URL}`);
-  console.log(`Stats API:        ${STATS_API_URL}`);
-  console.log(`Partner token:    ${STATS_PARTNER_TOKEN ? '(set)' : '(not set)'}`);
   console.log(`Chunk size:       ${CHUNK_SIZE}`);
   console.log(`Mode:             ${DISCOVER_ONLY ? 'discover-only' : 'discover + first chunk'}`);
   console.log();
@@ -103,10 +99,10 @@ async function main() {
 
   // ── Step 3: Create crawler and run initial discovery ──────
   console.log('[3/4] Running initial discovery (leaderboard → fight IDs → binary search)...');
-  const statsClient = new StatsClient(STATS_API_URL, STATS_PARTNER_TOKEN || undefined);
+  const dbClient = new DatabaseClient(DATABASE_SERVICE_URL);
 
   const crawler = new MatchCrawler({
-    statsClient,
+    dbClient,
     databaseServiceUrl: DATABASE_SERVICE_URL,
     indexes,
     data,

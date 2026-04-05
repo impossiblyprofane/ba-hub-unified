@@ -103,6 +103,50 @@ npm run db:migrate      # Apply pending migrations
 npm run db:studio       # Open Drizzle Studio GUI
 ```
 
+### Match Crawler
+
+The backend includes an automated match crawler that fetches ranked match data from the game's S3 storage and stores it in PostgreSQL. It runs inside the backend process on an hourly/daily schedule.
+
+**How it works:**
+
+1. **Discovery** — Scans leaderboard players' recent fights to find new match IDs
+2. **Binary search** — Locates the lowest valid fight ID on S3 to set the scan floor
+3. **Range scan** — Processes fight IDs in chunks (default 25,000 per cycle), fetching match data from S3
+4. **Storage** — Sends processed matches to the database service via REST, which stores them across 4 tables: `processed_matches`, `match_team_results`, `match_player_picks`, `match_unit_deployments`
+
+**Pre-seed script** — For initial population (can take a while with ~100k+ matches), use the standalone seed script:
+
+```bash
+# Seed against local database service (default: http://localhost:3002)
+npm run crawler:seed
+
+# Discovery only — set up scan boundaries without processing matches
+npm run crawler:seed:discover
+
+# Against a remote / prod database service
+npx tsx scripts/crawler-seed.ts --target=https://your-db-service.example.com
+
+# With options
+npx tsx scripts/crawler-seed.ts --target=https://db.example.com --discover-only --chunk-size=2000
+```
+
+| Flag | Description |
+|------|-------------|
+| `--target=URL` | Database service URL (overrides `DATABASE_SERVICE_URL` env var) |
+| `--discover-only` | Run discovery + boundary setup, skip range scanning |
+| `--chunk-size=N` | IDs per chunk (default: 5000) |
+
+**Environment variables:**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DATABASE_SERVICE_URL` | `http://localhost:3002` | Target database service (overridden by `--target`) |
+| `STATS_API_URL` | `https://api.brokenarrowgame.tech` | Game stats API |
+| `STATS_PARTNER_TOKEN` | *(empty)* | Partner auth token for the game API |
+| `STATS_COLLECTION_ENABLED` | `true` | Set `false` to disable the backend's automatic crawler loop |
+
+After seeding, the backend's normal crawler loop continues from where the seed left off.
+
 ## Security Model
 
 The platform uses a **bearer-secret** ownership model for deck publishing — no login system, no passwords.

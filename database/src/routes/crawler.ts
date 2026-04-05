@@ -6,8 +6,9 @@ import {
   matchTeamResults,
   matchPlayerPicks,
   matchUnitDeployments,
+  fightData,
 } from '../schema/index.js';
-import { eq, and, gte, lte, inArray, sql } from 'drizzle-orm';
+import { eq, and, gte, inArray, sql } from 'drizzle-orm';
 import { parseSinceToEpochSec } from '../utils.js';
 
 // ── Simple TTL cache ────────────────────────────────────────
@@ -27,6 +28,13 @@ function cached<T>(key: string, ttlMs: number, fn: () => Promise<T>): Promise<T>
 }
 
 const CACHE_5MIN = 5 * 60 * 1000;
+
+/** Parse an elo bracket string like "2000-2500" into min/max for SQL range filtering. */
+function parseEloBracket(bracket: string): { min: number; max: number } | null {
+  const m = bracket.match(/^(\d+)-(\d+)$/);
+  if (!m) return null;
+  return { min: parseInt(m[1], 10), max: parseInt(m[2], 10) };
+}
 const CACHE_15MIN = 15 * 60 * 1000;
 
 // ── Types ────────────────────────────────────────────────────────
@@ -92,6 +100,8 @@ interface MatchInsert {
   teams?: MatchTeamInput[];
   playerPicks?: MatchPlayerPickInput[];
   unitDeployments?: MatchUnitDeployInput[];
+  /** Raw S3 FightData JSON blob — stored in fight_data table. */
+  rawFightData?: unknown;
 }
 
 // ── Routes ───────────────────────────────────────────────────────
@@ -162,7 +172,7 @@ export async function registerCrawlerRoutes(app: FastifyInstance) {
    * POST /api/crawler/matches — bulk insert processed matches with child data.
    * Uses ON CONFLICT DO NOTHING on fightId for idempotency.
    */
-  app.post<{ Body: MatchInsert[] }>('/matches', async (req, reply) => {
+  app.post<{ Body: MatchInsert[] }>('/matches', { bodyLimit: 50 * 1024 * 1024 }, async (req, reply) => {
     const matches = req.body;
     if (!Array.isArray(matches) || matches.length === 0) {
       return reply.status(400).send({ error: 'Expected non-empty array of matches' });
@@ -170,8 +180,10 @@ export async function registerCrawlerRoutes(app: FastifyInstance) {
 
     let inserted = 0;
     let skipped = 0;
+    let errored = 0;
 
     for (const match of matches) {
+      try {
       // Try to insert the parent match row
       const result = await db
         .insert(processedMatches)
@@ -263,9 +275,28 @@ export async function registerCrawlerRoutes(app: FastifyInstance) {
       }
 
       await Promise.all(childInserts);
+
+      // Store raw fight JSON blob (if provided) — idempotent via ON CONFLICT DO NOTHING
+      if (match.rawFightData) {
+        try {
+          await db.insert(fightData).values({
+            fightId: match.fightId,
+            data: match.rawFightData,
+            endTime: match.endTime,
+          }).onConflictDoNothing({ target: fightData.fightId });
+        } catch { /* non-critical — blob may already exist from write-through */ }
+      }
+      } catch (err) {
+        errored++;
+        req.log.error({ fightId: match.fightId, err }, 'Failed to insert match');
+        // Clean up partial parent row if child inserts failed
+        try {
+          await db.delete(processedMatches).where(eq(processedMatches.fightId, match.fightId));
+        } catch { /* ignore cleanup failure */ }
+      }
     }
 
-    return reply.status(201).send({ inserted, skipped });
+    return reply.status(201).send({ inserted, skipped, errored });
   });
 
   /**
@@ -430,114 +461,6 @@ export async function registerCrawlerRoutes(app: FastifyInstance) {
   });
 
   /**
-   * GET /api/crawler/matches/aggregates?since=ISO&until=ISO
-   * Computes faction/spec/map/unit aggregates from ranked matches in the time window.
-   */
-  app.get<{
-    Querystring: { since: string; until?: string };
-  }>('/matches/aggregates', async (req, reply) => {
-    const since = req.query.since;
-    if (!since) {
-      return reply.status(400).send({ error: 'since query parameter is required' });
-    }
-
-    // endTime is stored in epoch SECONDS (from S3), convert to match
-    const sinceSec = Math.floor(new Date(since).getTime() / 1000);
-    const untilSec = req.query.until
-      ? Math.floor(new Date(req.query.until).getTime() / 1000)
-      : Math.floor(Date.now() / 1000);
-
-    // Only aggregate ranked matches within the time window
-    const rankedFilter = and(
-      eq(processedMatches.isRanked, true),
-      gte(processedMatches.endTime, sinceSec),
-      lte(processedMatches.endTime, untilSec),
-    );
-
-    // Faction win rates — exclude mirror matches (both teams same faction)
-    const factionWinRates = await db.execute(sql`
-      SELECT
-        t.faction_name AS "factionName",
-        count(*)::int AS "matchCount",
-        sum(case when t.is_winner then 1 else 0 end)::int AS "winCount"
-      FROM match_team_results t
-      JOIN processed_matches m ON t.fight_id = m.fight_id
-      WHERE m.is_ranked = true
-        AND m.end_time >= ${sinceSec}
-        AND m.end_time <= ${untilSec}
-        AND t.fight_id NOT IN (
-          SELECT a.fight_id
-          FROM match_team_results a
-          JOIN match_team_results b ON a.fight_id = b.fight_id AND a.team_id < b.team_id
-          WHERE a.faction_name = b.faction_name
-        )
-      GROUP BY t.faction_name
-    `);
-
-    // Spec popularity (count spec1 and spec2 separately)
-    const specPopularity = await db
-      .select({
-        specName: sql<string>`spec_name`,
-        specId: sql<number>`spec_id`,
-        pickCount: sql<number>`count(*)::int`,
-      })
-      .from(
-        sql`(
-          SELECT ${matchPlayerPicks.spec1Name} as spec_name, ${matchPlayerPicks.spec1Id} as spec_id, ${matchPlayerPicks.fightId} as fight_id
-          FROM ${matchPlayerPicks}
-          WHERE ${matchPlayerPicks.spec1Name} IS NOT NULL
-          UNION ALL
-          SELECT ${matchPlayerPicks.spec2Name} as spec_name, ${matchPlayerPicks.spec2Id} as spec_id, ${matchPlayerPicks.fightId} as fight_id
-          FROM ${matchPlayerPicks}
-          WHERE ${matchPlayerPicks.spec2Name} IS NOT NULL
-        ) as specs`,
-      )
-      .innerJoin(processedMatches, sql`specs.fight_id = ${processedMatches.fightId}`)
-      .where(rankedFilter)
-      .groupBy(sql`spec_name, spec_id`);
-
-    // Map popularity
-    const mapPopularity = await db
-      .select({
-        mapName: processedMatches.mapName,
-        playCount: sql<number>`count(*)::int`,
-      })
-      .from(processedMatches)
-      .where(and(rankedFilter, sql`${processedMatches.mapName} IS NOT NULL`))
-      .groupBy(processedMatches.mapName);
-
-    // Unit performance per config + ELO bracket
-    const unitPerformance = await db
-      .select({
-        configKey: matchUnitDeployments.configKey,
-        unitId: matchUnitDeployments.unitId,
-        unitName: matchUnitDeployments.unitName,
-        factionName: matchUnitDeployments.factionName,
-        optionIds: matchUnitDeployments.optionIds,
-        eloBracket: matchUnitDeployments.eloBracket,
-        deployCount: sql<number>`count(*)::int`,
-        totalKills: sql<number>`sum(${matchUnitDeployments.killedCount})::int`,
-        totalDamageDealt: sql<number>`sum(${matchUnitDeployments.totalDamageDealt})::float`,
-        totalDamageReceived: sql<number>`sum(${matchUnitDeployments.totalDamageReceived})::float`,
-        totalSupplyConsumed: sql<number>`sum(${matchUnitDeployments.supplyPointsConsumed})::float`,
-        refundCount: sql<number>`sum(case when ${matchUnitDeployments.wasRefunded} then 1 else 0 end)::int`,
-      })
-      .from(matchUnitDeployments)
-      .innerJoin(processedMatches, eq(matchUnitDeployments.fightId, processedMatches.fightId))
-      .where(rankedFilter)
-      .groupBy(
-        matchUnitDeployments.configKey,
-        matchUnitDeployments.unitId,
-        matchUnitDeployments.unitName,
-        matchUnitDeployments.factionName,
-        matchUnitDeployments.optionIds,
-        matchUnitDeployments.eloBracket,
-      );
-
-    return { factionWinRates, specPopularity, mapPopularity, unitPerformance };
-  });
-
-  /**
    * GET /api/crawler/matches/unit-performance?since=30d&eloBracket=...&faction=...&limit=100
    * Rolling query against raw match data — no snapshots involved.
    */
@@ -565,34 +488,43 @@ export async function registerCrawlerRoutes(app: FastifyInstance) {
       conditions.push(eq(matchUnitDeployments.factionName, faction));
     }
 
+    // Only include eloBracket in SELECT/GROUP BY when filtering by a specific bracket.
+    // When "All Elo", aggregate across all brackets so the same unit+options config
+    // appears as a single row instead of one row per bracket.
+    const selectFields: Record<string, any> = {
+      configKey: matchUnitDeployments.configKey,
+      unitId: matchUnitDeployments.unitId,
+      unitName: matchUnitDeployments.unitName,
+      factionName: matchUnitDeployments.factionName,
+      optionIds: matchUnitDeployments.optionIds,
+      deployCount: sql<number>`count(*)::int`,
+      totalKills: sql<number>`sum(${matchUnitDeployments.killedCount})::int`,
+      avgKills: sql<number>`round(avg(${matchUnitDeployments.killedCount})::numeric, 2)::float`,
+      totalDamageDealt: sql<number>`sum(${matchUnitDeployments.totalDamageDealt})::float`,
+      avgDamage: sql<number>`round(avg(${matchUnitDeployments.totalDamageDealt})::numeric, 0)::float`,
+      totalDamageReceived: sql<number>`sum(${matchUnitDeployments.totalDamageReceived})::float`,
+      totalSupplyConsumed: sql<number>`sum(${matchUnitDeployments.supplyPointsConsumed})::float`,
+      refundCount: sql<number>`sum(case when ${matchUnitDeployments.wasRefunded} then 1 else 0 end)::int`,
+    };
+
+    if (elo) {
+      selectFields.eloBracket = matchUnitDeployments.eloBracket;
+    }
+
+    const baseGroupBy = [
+      matchUnitDeployments.configKey,
+      matchUnitDeployments.unitId,
+      matchUnitDeployments.unitName,
+      matchUnitDeployments.factionName,
+      matchUnitDeployments.optionIds,
+    ] as const;
+
     const rows = await db
-      .select({
-        configKey: matchUnitDeployments.configKey,
-        unitId: matchUnitDeployments.unitId,
-        unitName: matchUnitDeployments.unitName,
-        factionName: matchUnitDeployments.factionName,
-        optionIds: matchUnitDeployments.optionIds,
-        eloBracket: matchUnitDeployments.eloBracket,
-        deployCount: sql<number>`count(*)::int`,
-        totalKills: sql<number>`sum(${matchUnitDeployments.killedCount})::int`,
-        avgKills: sql<number>`round(avg(${matchUnitDeployments.killedCount})::numeric, 2)::float`,
-        totalDamageDealt: sql<number>`sum(${matchUnitDeployments.totalDamageDealt})::float`,
-        avgDamage: sql<number>`round(avg(${matchUnitDeployments.totalDamageDealt})::numeric, 0)::float`,
-        totalDamageReceived: sql<number>`sum(${matchUnitDeployments.totalDamageReceived})::float`,
-        totalSupplyConsumed: sql<number>`sum(${matchUnitDeployments.supplyPointsConsumed})::float`,
-        refundCount: sql<number>`sum(case when ${matchUnitDeployments.wasRefunded} then 1 else 0 end)::int`,
-      })
+      .select(selectFields)
       .from(matchUnitDeployments)
       .innerJoin(processedMatches, eq(matchUnitDeployments.fightId, processedMatches.fightId))
       .where(and(...conditions))
-      .groupBy(
-        matchUnitDeployments.configKey,
-        matchUnitDeployments.unitId,
-        matchUnitDeployments.unitName,
-        matchUnitDeployments.factionName,
-        matchUnitDeployments.optionIds,
-        matchUnitDeployments.eloBracket,
-      )
+      .groupBy(...baseGroupBy, ...(elo ? [matchUnitDeployments.eloBracket] : []))
       .orderBy(sql`count(*) DESC`)
       .limit(limit);
 
@@ -638,6 +570,145 @@ export async function registerCrawlerRoutes(app: FastifyInstance) {
   });
 
   /**
+   * GET /api/crawler/matches/faction-stats?since=30d&eloBracket=2000-2500
+   * Rolling faction win rates from ranked matches (excludes mirror matchups).
+   * Optional eloBracket filters by team average rating range.
+   */
+  app.get<{
+    Querystring: { since?: string; eloBracket?: string };
+  }>('/matches/faction-stats', async (req) => {
+    const sinceParam = req.query.since ?? '30d';
+    const elo = req.query.eloBracket ?? '';
+    const cacheKey = `faction-stats:${sinceParam}:${elo}`;
+
+    return cached(cacheKey, CACHE_5MIN, async () => {
+      const sinceSec = parseSinceToEpochSec(sinceParam);
+      const eloRange = elo ? parseEloBracket(elo) : null;
+
+      const eloFilter = eloRange
+        ? sql`AND t.avg_rating >= ${eloRange.min} AND t.avg_rating < ${eloRange.max}`
+        : sql``;
+
+      const rows = await db.execute(sql`
+        SELECT
+          t.faction_name AS "factionName",
+          count(*)::int AS "matchCount",
+          sum(case when t.is_winner then 1 else 0 end)::int AS "winCount"
+        FROM match_team_results t
+        JOIN processed_matches m ON t.fight_id = m.fight_id
+        WHERE m.is_ranked = true
+          AND m.end_time >= ${sinceSec}
+          ${eloFilter}
+          AND t.fight_id NOT IN (
+            SELECT a.fight_id
+            FROM match_team_results a
+            JOIN match_team_results b ON a.fight_id = b.fight_id AND a.team_id < b.team_id
+            WHERE a.faction_name = b.faction_name
+          )
+        GROUP BY t.faction_name
+      `);
+
+      return { rows, since: new Date(sinceSec * 1000).toISOString() };
+    });
+  });
+
+  /**
+   * GET /api/crawler/matches/map-stats?since=30d&eloBracket=2000-2500
+   * Rolling map play counts from ranked matches.
+   * Optional eloBracket filters to matches where any player is in the rating range.
+   */
+  app.get<{
+    Querystring: { since?: string; eloBracket?: string };
+  }>('/matches/map-stats', async (req) => {
+    const sinceParam = req.query.since ?? '30d';
+    const elo = req.query.eloBracket ?? '';
+    const cacheKey = `map-stats:${sinceParam}:${elo}`;
+
+    return cached(cacheKey, CACHE_5MIN, async () => {
+      const sinceSec = parseSinceToEpochSec(sinceParam);
+      const eloRange = elo ? parseEloBracket(elo) : null;
+
+      const conditions = [
+        eq(processedMatches.isRanked, true),
+        gte(processedMatches.endTime, sinceSec),
+        sql`${processedMatches.mapName} IS NOT NULL`,
+      ];
+
+      // Filter to matches where at least one player is in the elo range
+      if (eloRange) {
+        conditions.push(
+          sql`${processedMatches.fightId} IN (
+            SELECT fight_id FROM match_player_picks
+            WHERE old_rating >= ${eloRange.min} AND old_rating < ${eloRange.max}
+          )`,
+        );
+      }
+
+      const rows = await db
+        .select({
+          mapName: processedMatches.mapName,
+          playCount: sql<number>`count(*)::int`,
+        })
+        .from(processedMatches)
+        .where(and(...conditions))
+        .groupBy(processedMatches.mapName);
+
+      return { rows, since: new Date(sinceSec * 1000).toISOString() };
+    });
+  });
+
+  /**
+   * GET /api/crawler/matches/spec-stats?since=30d&eloBracket=2000-2500
+   * Rolling specialization pick counts from ranked matches.
+   * Optional eloBracket filters by the picking player's rating.
+   */
+  app.get<{
+    Querystring: { since?: string; eloBracket?: string };
+  }>('/matches/spec-stats', async (req) => {
+    const sinceParam = req.query.since ?? '30d';
+    const elo = req.query.eloBracket ?? '';
+    const cacheKey = `spec-stats:${sinceParam}:${elo}`;
+
+    return cached(cacheKey, CACHE_5MIN, async () => {
+      const sinceSec = parseSinceToEpochSec(sinceParam);
+      const eloRange = elo ? parseEloBracket(elo) : null;
+
+      const eloFilter = eloRange
+        ? sql`AND old_rating >= ${eloRange.min} AND old_rating < ${eloRange.max}`
+        : sql``;
+
+      const rows = await db
+        .select({
+          specName: sql<string>`spec_name`,
+          specId: sql<number>`spec_id`,
+          factionName: sql<string>`faction_name`,
+          pickCount: sql<number>`count(*)::int`,
+        })
+        .from(
+          sql`(
+            SELECT ${matchPlayerPicks.spec1Name} as spec_name, ${matchPlayerPicks.spec1Id} as spec_id, ${matchPlayerPicks.factionName} as faction_name, ${matchPlayerPicks.fightId} as fight_id
+            FROM ${matchPlayerPicks}
+            WHERE ${matchPlayerPicks.spec1Name} IS NOT NULL ${eloFilter}
+            UNION ALL
+            SELECT ${matchPlayerPicks.spec2Name} as spec_name, ${matchPlayerPicks.spec2Id} as spec_id, ${matchPlayerPicks.factionName} as faction_name, ${matchPlayerPicks.fightId} as fight_id
+            FROM ${matchPlayerPicks}
+            WHERE ${matchPlayerPicks.spec2Name} IS NOT NULL ${eloFilter}
+          ) as specs`,
+        )
+        .innerJoin(processedMatches, sql`specs.fight_id = ${processedMatches.fightId}`)
+        .where(
+          and(
+            eq(processedMatches.isRanked, true),
+            gte(processedMatches.endTime, sinceSec),
+          ),
+        )
+        .groupBy(sql`spec_name, spec_id, faction_name`);
+
+      return { rows, since: new Date(sinceSec * 1000).toISOString() };
+    });
+  });
+
+  /**
    * DELETE /api/crawler/matches/unranked
    * Removes all unranked matches (and cascades to child tables).
    */
@@ -660,6 +731,18 @@ export async function registerCrawlerRoutes(app: FastifyInstance) {
     const days = Math.max(Number(req.query.olderThanDays) ?? 30, 0); // 0 = delete all
     const cutoffSec = Math.floor((Date.now() - days * 24 * 60 * 60 * 1000) / 1000);
 
+    // Prune fight_data blobs (standalone table, no FK cascade)
+    const blobResult = await db
+      .delete(fightData)
+      .where(
+        and(
+          sql`${fightData.endTime} IS NOT NULL`,
+          sql`${fightData.endTime} < ${cutoffSec}`,
+        ),
+      )
+      .returning({ fightId: fightData.fightId });
+
+    // Prune processed_matches (cascades to child tables)
     const result = await db
       .delete(processedMatches)
       .where(
@@ -670,6 +753,6 @@ export async function registerCrawlerRoutes(app: FastifyInstance) {
       )
       .returning({ fightId: processedMatches.fightId });
 
-    return { pruned: result.length, cutoffDays: days };
+    return { pruned: result.length, blobsPruned: blobResult.length, cutoffDays: days };
   });
 }

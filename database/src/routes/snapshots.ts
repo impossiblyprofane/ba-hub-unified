@@ -3,14 +3,8 @@ import { db } from '../db.js';
 import {
   statSnapshots,
   leaderboardSnapshots,
-  mapStatsSnapshots,
-  factionStatsSnapshots,
-  unitStatsSnapshots,
-  crawlerFactionSnapshots,
-  specStatsSnapshots,
-  unitPerformanceSnapshots,
 } from '../schema/index.js';
-import { eq, desc, gte, and, sql } from 'drizzle-orm';
+import { eq, gte, and, sql } from 'drizzle-orm';
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -29,62 +23,17 @@ interface CreateSnapshotBody {
     winRate?: number;
     kdRatio?: number;
   }>;
-  mapStats?: Array<{
-    mapName: string;
-    playCount: number;
-  }>;
-  factionStats?: Array<{
-    factionName: string;
-    matchCount: number;
-    winCount: number;
-  }>;
-  unitStats?: Array<{
-    unitName: string;
-    timesDeployed: number;
-    totalKills: number;
-    totalDamageDealt: number;
-    totalDamageReceived: number;
-    totalSupplyConsumed: number;
-    timesRefunded: number;
-  }>;
-  crawlerFactionStats?: Array<{
-    factionName: string;
-    matchCount: number;
-    winCount: number;
-  }>;
-  specStats?: Array<{
-    specName: string;
-    specId?: number;
-    pickCount: number;
-  }>;
-  unitPerformance?: Array<{
-    configKey: string;
-    unitId?: number;
-    unitName: string;
-    factionName: string;
-    optionIds?: string;
-    eloBracket?: string;
-    deployCount: number;
-    totalKills: number;
-    totalDamageDealt: number;
-    totalDamageReceived: number;
-    totalSupplyConsumed: number;
-    refundCount: number;
-  }>;
 }
 
 // ── Routes ───────────────────────────────────────────────────────
 
 export async function registerSnapshotRoutes(app: FastifyInstance) {
   /**
-   * POST /api/snapshots — create a new snapshot with all associated data
+   * POST /api/snapshots — create a new snapshot with leaderboard data.
    * Called by the collection scheduler on the backend.
    */
   app.post<{ Body: CreateSnapshotBody }>('/', async (req, reply) => {
-    const {
-      snapshotType, leaderboard, mapStats, factionStats, unitStats,
-      crawlerFactionStats, specStats, unitPerformance,
-    } = req.body;
+    const { snapshotType, leaderboard } = req.body;
 
     if (!['hourly', 'daily', 'weekly', 'monthly'].includes(snapshotType)) {
       return reply.status(400).send({ error: 'Invalid snapshotType' });
@@ -97,130 +46,27 @@ export async function registerSnapshotRoutes(app: FastifyInstance) {
 
     const snapshotId = snapshot.id;
 
-    // Insert child data in parallel
-    const inserts: Promise<unknown>[] = [];
-
     if (leaderboard && leaderboard.length > 0) {
-      inserts.push(
-        db.insert(leaderboardSnapshots).values(
-          leaderboard.map((entry) => ({
-            snapshotId,
-            rank: entry.rank,
-            userId: entry.userId,
-            steamId: entry.steamId,
-            name: entry.name,
-            rating: entry.rating,
-            elo: entry.elo,
-            level: entry.level,
-            winRate: entry.winRate,
-            kdRatio: entry.kdRatio,
-          })),
-        ),
+      await db.insert(leaderboardSnapshots).values(
+        leaderboard.map((entry) => ({
+          snapshotId,
+          rank: entry.rank,
+          userId: entry.userId,
+          steamId: entry.steamId,
+          name: entry.name,
+          rating: entry.rating,
+          elo: entry.elo,
+          level: entry.level,
+          winRate: entry.winRate,
+          kdRatio: entry.kdRatio,
+        })),
       );
     }
-
-    if (mapStats && mapStats.length > 0) {
-      inserts.push(
-        db.insert(mapStatsSnapshots).values(
-          mapStats.map((entry) => ({
-            snapshotId,
-            mapName: entry.mapName,
-            playCount: entry.playCount,
-          })),
-        ),
-      );
-    }
-
-    if (factionStats && factionStats.length > 0) {
-      inserts.push(
-        db.insert(factionStatsSnapshots).values(
-          factionStats.map((entry) => ({
-            snapshotId,
-            factionName: entry.factionName,
-            matchCount: entry.matchCount,
-            winCount: entry.winCount,
-          })),
-        ),
-      );
-    }
-
-    if (unitStats && unitStats.length > 0) {
-      inserts.push(
-        db.insert(unitStatsSnapshots).values(
-          unitStats.map((entry) => ({
-            snapshotId,
-            unitName: entry.unitName,
-            timesDeployed: entry.timesDeployed,
-            totalKills: entry.totalKills,
-            totalDamageDealt: entry.totalDamageDealt,
-            totalDamageReceived: entry.totalDamageReceived,
-            totalSupplyConsumed: entry.totalSupplyConsumed,
-            timesRefunded: entry.timesRefunded,
-          })),
-        ),
-      );
-    }
-
-    if (crawlerFactionStats && crawlerFactionStats.length > 0) {
-      inserts.push(
-        db.insert(crawlerFactionSnapshots).values(
-          crawlerFactionStats.map((entry) => ({
-            snapshotId,
-            factionName: entry.factionName,
-            matchCount: entry.matchCount,
-            winCount: entry.winCount,
-          })),
-        ),
-      );
-    }
-
-    if (specStats && specStats.length > 0) {
-      inserts.push(
-        db.insert(specStatsSnapshots).values(
-          specStats.map((entry) => ({
-            snapshotId,
-            specName: entry.specName,
-            specId: entry.specId,
-            pickCount: entry.pickCount,
-          })),
-        ),
-      );
-    }
-
-    if (unitPerformance && unitPerformance.length > 0) {
-      inserts.push(
-        db.insert(unitPerformanceSnapshots).values(
-          unitPerformance.map((entry) => ({
-            snapshotId,
-            configKey: entry.configKey,
-            unitId: entry.unitId,
-            unitName: entry.unitName,
-            factionName: entry.factionName,
-            optionIds: entry.optionIds ?? '',
-            eloBracket: entry.eloBracket ?? 'unranked',
-            deployCount: entry.deployCount,
-            totalKills: entry.totalKills,
-            totalDamageDealt: entry.totalDamageDealt,
-            totalDamageReceived: entry.totalDamageReceived,
-            totalSupplyConsumed: entry.totalSupplyConsumed,
-            refundCount: entry.refundCount,
-          })),
-        ),
-      );
-    }
-
-    await Promise.all(inserts);
 
     return reply.status(201).send({
       id: snapshotId,
       snapshotType,
       leaderboardCount: leaderboard?.length ?? 0,
-      mapStatsCount: mapStats?.length ?? 0,
-      factionStatsCount: factionStats?.length ?? 0,
-      unitStatsCount: unitStats?.length ?? 0,
-      crawlerFactionStatsCount: crawlerFactionStats?.length ?? 0,
-      specStatsCount: specStats?.length ?? 0,
-      unitPerformanceCount: unitPerformance?.length ?? 0,
     });
   });
 
@@ -262,198 +108,6 @@ export async function registerSnapshotRoutes(app: FastifyInstance) {
   });
 
   /**
-   * GET /api/snapshots/map-history?since=ISO
-   * Returns map play-count trends over time.
-   */
-  app.get<{
-    Querystring: { since?: string };
-  }>('/map-history', async (req) => {
-    const { since } = req.query;
-    const sinceDate = since ? new Date(since) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-
-    const rows = await db
-      .select({
-        mapName: mapStatsSnapshots.mapName,
-        playCount: mapStatsSnapshots.playCount,
-        snapshotType: statSnapshots.snapshotType,
-        createdAt: statSnapshots.createdAt,
-      })
-      .from(mapStatsSnapshots)
-      .innerJoin(statSnapshots, eq(mapStatsSnapshots.snapshotId, statSnapshots.id))
-      .where(gte(statSnapshots.createdAt, sinceDate))
-      .orderBy(statSnapshots.createdAt);
-
-    return rows;
-  });
-
-  /**
-   * GET /api/snapshots/faction-history?since=ISO
-   * Returns faction match/win counts over time.
-   */
-  app.get<{
-    Querystring: { since?: string };
-  }>('/faction-history', async (req) => {
-    const { since } = req.query;
-    const sinceDate = since ? new Date(since) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-
-    const rows = await db
-      .select({
-        factionName: factionStatsSnapshots.factionName,
-        matchCount: factionStatsSnapshots.matchCount,
-        winCount: factionStatsSnapshots.winCount,
-        snapshotType: statSnapshots.snapshotType,
-        createdAt: statSnapshots.createdAt,
-      })
-      .from(factionStatsSnapshots)
-      .innerJoin(statSnapshots, eq(factionStatsSnapshots.snapshotId, statSnapshots.id))
-      .where(gte(statSnapshots.createdAt, sinceDate))
-      .orderBy(statSnapshots.createdAt);
-
-    return rows;
-  });
-
-  /**
-   * GET /api/snapshots/unit-rankings?limit=50
-   * Returns latest unit performance rankings (from the most recent snapshot).
-   */
-  app.get<{
-    Querystring: { limit?: string };
-  }>('/unit-rankings', async (req) => {
-    const limit = Math.min(Number(req.query.limit) || 50, 200);
-
-    // Find the most recent snapshot that has unit data
-    const latestSnapshot = await db
-      .select({ id: statSnapshots.id, createdAt: statSnapshots.createdAt })
-      .from(statSnapshots)
-      .innerJoin(unitStatsSnapshots, eq(unitStatsSnapshots.snapshotId, statSnapshots.id))
-      .orderBy(desc(statSnapshots.createdAt))
-      .limit(1);
-
-    if (latestSnapshot.length === 0) {
-      return { snapshotDate: null, units: [] };
-    }
-
-    const snapshotId = latestSnapshot[0].id;
-
-    const units = await db
-      .select()
-      .from(unitStatsSnapshots)
-      .where(eq(unitStatsSnapshots.snapshotId, snapshotId))
-      .orderBy(desc(unitStatsSnapshots.totalDamageDealt))
-      .limit(limit);
-
-    return {
-      snapshotDate: latestSnapshot[0].createdAt,
-      units: units.map((u) => ({
-        unitName: u.unitName,
-        timesDeployed: u.timesDeployed,
-        totalKills: u.totalKills,
-        totalDamageDealt: u.totalDamageDealt,
-        totalDamageReceived: u.totalDamageReceived,
-        totalSupplyConsumed: u.totalSupplyConsumed,
-        timesRefunded: u.timesRefunded,
-        avgKills: u.timesDeployed > 0 ? u.totalKills / u.timesDeployed : 0,
-        avgDamage: u.timesDeployed > 0 ? u.totalDamageDealt / u.timesDeployed : 0,
-      })),
-    };
-  });
-
-  /**
-   * GET /api/snapshots/crawler-faction-history?since=ISO
-   * Returns crawler-derived faction win rates over time (from actual ranked matches).
-   */
-  app.get<{
-    Querystring: { since?: string };
-  }>('/crawler-faction-history', async (req) => {
-    const { since } = req.query;
-    const sinceDate = since ? new Date(since) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-
-    const rows = await db
-      .select({
-        factionName: crawlerFactionSnapshots.factionName,
-        matchCount: crawlerFactionSnapshots.matchCount,
-        winCount: crawlerFactionSnapshots.winCount,
-        snapshotType: statSnapshots.snapshotType,
-        createdAt: statSnapshots.createdAt,
-      })
-      .from(crawlerFactionSnapshots)
-      .innerJoin(statSnapshots, eq(crawlerFactionSnapshots.snapshotId, statSnapshots.id))
-      .where(gte(statSnapshots.createdAt, sinceDate))
-      .orderBy(statSnapshots.createdAt);
-
-    return rows;
-  });
-
-  /**
-   * GET /api/snapshots/spec-history?since=ISO
-   * Returns specialization pick counts over time.
-   */
-  app.get<{
-    Querystring: { since?: string };
-  }>('/spec-history', async (req) => {
-    const { since } = req.query;
-    const sinceDate = since ? new Date(since) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-
-    const rows = await db
-      .select({
-        specName: specStatsSnapshots.specName,
-        specId: specStatsSnapshots.specId,
-        pickCount: specStatsSnapshots.pickCount,
-        snapshotType: statSnapshots.snapshotType,
-        createdAt: statSnapshots.createdAt,
-      })
-      .from(specStatsSnapshots)
-      .innerJoin(statSnapshots, eq(specStatsSnapshots.snapshotId, statSnapshots.id))
-      .where(gte(statSnapshots.createdAt, sinceDate))
-      .orderBy(statSnapshots.createdAt);
-
-    return rows;
-  });
-
-  /**
-   * GET /api/snapshots/unit-performance?since=ISO&faction=NAME&eloBracket=1500-2000
-   * Returns unit performance snapshot data, optionally filtered.
-   */
-  app.get<{
-    Querystring: { since?: string; faction?: string; eloBracket?: string };
-  }>('/unit-performance', async (req) => {
-    const { since, faction, eloBracket } = req.query;
-    const sinceDate = since ? new Date(since) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-
-    const conditions = [gte(statSnapshots.createdAt, sinceDate)];
-    if (faction) {
-      conditions.push(eq(unitPerformanceSnapshots.factionName, faction));
-    }
-    if (eloBracket) {
-      conditions.push(eq(unitPerformanceSnapshots.eloBracket, eloBracket));
-    }
-
-    const rows = await db
-      .select({
-        configKey: unitPerformanceSnapshots.configKey,
-        unitId: unitPerformanceSnapshots.unitId,
-        unitName: unitPerformanceSnapshots.unitName,
-        factionName: unitPerformanceSnapshots.factionName,
-        optionIds: unitPerformanceSnapshots.optionIds,
-        eloBracket: unitPerformanceSnapshots.eloBracket,
-        deployCount: unitPerformanceSnapshots.deployCount,
-        totalKills: unitPerformanceSnapshots.totalKills,
-        totalDamageDealt: unitPerformanceSnapshots.totalDamageDealt,
-        totalDamageReceived: unitPerformanceSnapshots.totalDamageReceived,
-        totalSupplyConsumed: unitPerformanceSnapshots.totalSupplyConsumed,
-        refundCount: unitPerformanceSnapshots.refundCount,
-        snapshotType: statSnapshots.snapshotType,
-        createdAt: statSnapshots.createdAt,
-      })
-      .from(unitPerformanceSnapshots)
-      .innerJoin(statSnapshots, eq(unitPerformanceSnapshots.snapshotId, statSnapshots.id))
-      .where(and(...conditions))
-      .orderBy(statSnapshots.createdAt);
-
-    return rows;
-  });
-
-  /**
    * DELETE /api/snapshots/prune — remove old snapshots based on retention policy.
    * Retention: hourly > 48h deleted, daily > 14d deleted, weekly > 60d deleted.
    * Monthly is kept indefinitely.
@@ -462,9 +116,9 @@ export async function registerSnapshotRoutes(app: FastifyInstance) {
     const now = Date.now();
 
     const cutoffs: { type: SnapshotType; maxAge: number }[] = [
-      { type: 'hourly', maxAge: 48 * 60 * 60 * 1000 },  // 48 hours
-      { type: 'daily', maxAge: 14 * 24 * 60 * 60 * 1000 },  // 14 days
-      { type: 'weekly', maxAge: 60 * 24 * 60 * 60 * 1000 }, // 60 days
+      { type: 'hourly', maxAge: 48 * 60 * 60 * 1000 },      // 48 hours
+      { type: 'daily', maxAge: 14 * 24 * 60 * 60 * 1000 },   // 14 days
+      { type: 'weekly', maxAge: 60 * 24 * 60 * 60 * 1000 },  // 60 days
     ];
 
     let totalDeleted = 0;
@@ -479,7 +133,6 @@ export async function registerSnapshotRoutes(app: FastifyInstance) {
             sql`${statSnapshots.createdAt} < ${cutoff}`,
           ),
         );
-      // Cascade delete handles child rows automatically
       totalDeleted++;
     }
 

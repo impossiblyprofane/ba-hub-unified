@@ -1,3 +1,11 @@
+// ── External Game API Client ─────────────────────────────────────
+// Single source of truth for all communication with the Broken Arrow
+// external stats API (api.brokenarrowgame.tech) and S3 fight data.
+// This used to live in backend/ — now the database service owns
+// all external API access.
+
+// ── Types ────────────────────────────────────────────────────────
+
 type StatItem = {
   id?: number;
   name?: string;
@@ -26,7 +34,7 @@ type LeaderboardEntry = {
   kdRatio?: number;
 };
 
-type PlayerStats = {
+export type PlayerStats = {
   marketId: string;
   name?: string;
   level?: number;
@@ -42,61 +50,6 @@ type PlayerStats = {
   supplyCapturedCount?: number;
   supplyCapturedByEnemyCount?: number;
   mapsPlayCount: StatItem[];
-};
-
-const toNumber = (value: unknown): number | undefined => {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string') {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return undefined;
-};
-
-const toString = (value: unknown): string | undefined =>
-  typeof value === 'string' && value.length > 0 ? value : undefined;
-
-const normalizeStatItem = (value: unknown): StatItem | null => {
-  if (!value || typeof value !== 'object') return null;
-  const item = value as Record<string, unknown>;
-  const count = toNumber(item.count);
-  return {
-    id: toNumber(item.id),
-    name: toString(item.name),
-    count,
-  };
-};
-
-const normalizeStatItems = (value: unknown): StatItem[] => {
-  if (!Array.isArray(value)) return [];
-  return value
-    .map(normalizeStatItem)
-    .filter((item): item is StatItem => item !== null);
-};
-
-/**
- * Unwrap { value: [...] } or { data: [...] } wrappers returned by various
- * analytics endpoints, then normalize to StatItem[].
- */
-const unwrapStatItems = (payload: unknown): StatItem[] => {
-  if (Array.isArray(payload)) return normalizeStatItems(payload);
-  if (payload && typeof payload === 'object') {
-    const obj = payload as Record<string, unknown>;
-    if (Array.isArray(obj.value)) return normalizeStatItems(obj.value);
-    if (Array.isArray(obj.data)) return normalizeStatItems(obj.data);
-  }
-  return [];
-};
-
-/** Unwrap { value: [...] } or return raw array. */
-const unwrapArray = (payload: unknown): unknown[] => {
-  if (Array.isArray(payload)) return payload;
-  if (payload && typeof payload === 'object') {
-    const obj = payload as Record<string, unknown>;
-    if (Array.isArray(obj.value)) return obj.value;
-    if (Array.isArray(obj.data)) return obj.data;
-  }
-  return [];
 };
 
 type CountryStats = {
@@ -163,6 +116,65 @@ type RestUserInfo = {
   ratedGames?: number;
 };
 
+// ── Helpers ──────────────────────────────────────────────────────
+
+const toNumber = (value: unknown): number | undefined => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
+};
+
+const toString = (value: unknown): string | undefined =>
+  typeof value === 'string' && value.length > 0 ? value : undefined;
+
+const normalizeStatItem = (value: unknown): StatItem | null => {
+  if (!value || typeof value !== 'object') return null;
+  const item = value as Record<string, unknown>;
+  const count = toNumber(item.count);
+  return {
+    id: toNumber(item.id),
+    name: toString(item.name),
+    count,
+  };
+};
+
+const normalizeStatItems = (value: unknown): StatItem[] => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map(normalizeStatItem)
+    .filter((item): item is StatItem => item !== null);
+};
+
+/**
+ * Unwrap { value: [...] } or { data: [...] } wrappers returned by various
+ * analytics endpoints, then normalize to StatItem[].
+ */
+const unwrapStatItems = (payload: unknown): StatItem[] => {
+  if (Array.isArray(payload)) return normalizeStatItems(payload);
+  if (payload && typeof payload === 'object') {
+    const obj = payload as Record<string, unknown>;
+    if (Array.isArray(obj.value)) return normalizeStatItems(obj.value);
+    if (Array.isArray(obj.data)) return normalizeStatItems(obj.data);
+  }
+  return [];
+};
+
+/** Unwrap { value: [...] } or return raw array. */
+const unwrapArray = (payload: unknown): unknown[] => {
+  if (Array.isArray(payload)) return payload;
+  if (payload && typeof payload === 'object') {
+    const obj = payload as Record<string, unknown>;
+    if (Array.isArray(obj.value)) return obj.value;
+    if (Array.isArray(obj.data)) return obj.data;
+  }
+  return [];
+};
+
+// ── StatsClient ──────────────────────────────────────────────────
+
 export class StatsClient {
   private readonly headers: Record<string, string>;
 
@@ -178,9 +190,6 @@ export class StatsClient {
 
   /**
    * Fetch JSON from the external API with timeout and retry on 429/5xx.
-   * @param url Full URL to fetch
-   * @param timeoutMs Request timeout in milliseconds (default 10000)
-   * @param maxRetries Max retry attempts for rate limits / server errors (default 2)
    */
   private async fetchWithRetry(
     url: string,
@@ -201,20 +210,18 @@ export class StatsClient {
 
         clearTimeout(timer);
 
-        // Success or client error (4xx except 429) — don't retry
         if (response.ok || (response.status >= 400 && response.status < 500 && response.status !== 429)) {
           return response;
         }
 
-        // Rate limited (429) or server error (5xx) — retry with backoff
         if (attempt < maxRetries) {
-          const delay = (attempt + 1) * 2000; // 2s, 4s
+          const delay = (attempt + 1) * 2000;
           console.warn(`[StatsClient] ${response.status} for ${url}, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
           await new Promise((r) => setTimeout(r, delay));
           continue;
         }
 
-        return response; // Final attempt, return whatever we got
+        return response;
       } catch (err) {
         clearTimeout(timer);
         lastError = err;
@@ -254,12 +261,13 @@ export class StatsClient {
       : new Error('Stats API request failed with unknown error');
   }
 
+  // ── Public methods ───────────────────────────────────────────
+
   async getMapRatings(): Promise<StatItem[]> {
     const payload = await this.fetchWithFallback([
       '/statistic/mapsrating',
       '/statistic/mapdata',
     ]);
-
     return unwrapStatItems(payload);
   }
 
@@ -268,7 +276,6 @@ export class StatsClient {
       '/statistic/matches/specs',
       '/statistic/specs',
     ]);
-
     return unwrapStatItems(payload);
   }
 
@@ -312,7 +319,6 @@ export class StatsClient {
       `/statistic/getRatingLeaderboard?limit=${count}&offset=${safeStart}`,
     ]);
 
-    // topshort wraps in { value: [...], Count: N }
     const entries = unwrapArray(payload);
 
     return entries.map((entry, index): LeaderboardEntry => {
@@ -336,14 +342,11 @@ export class StatsClient {
 
   /**
    * Batch-resolve user IDs to user info objects.
-   * Uses GET /user?ids=1,2,3 — returns { value: [...], Count }.
    */
   async getUsersByIds(ids: number[]): Promise<Map<number, RestUserInfo>> {
     const result = new Map<number, RestUserInfo>();
     if (ids.length === 0) return result;
 
-    // External API rejects large batch requests (403 over ~20 IDs).
-    // Chunk into batches of 20 and resolve in parallel.
     const BATCH_SIZE = 20;
     const chunks: number[][] = [];
     for (let i = 0; i < ids.length; i += BATCH_SIZE) {
@@ -377,7 +380,7 @@ export class StatsClient {
           const payload = await this.fetchJson(`/user?ids=${idsParam}`);
           parseEntries(payload);
         } catch {
-          // Non-critical — leaderboard still works without names for this chunk
+          // Non-critical
         }
       })
     );
@@ -427,9 +430,6 @@ export class StatsClient {
 
   /**
    * Look up a single user by internal ID, Steam ID, or market ID.
-   * GET /user/{id}  — internal ID
-   * GET /user/{steamId}?steam=true
-   * GET /user/{marketId}?market=true
    */
   async getUserById(
     id: string | number,
@@ -462,7 +462,6 @@ export class StatsClient {
 
   /**
    * Country-level match & win counts.
-   * GET /statistic/matches/countries
    */
   async getCountryStats(): Promise<CountryStats> {
     const payload = await this.fetchWithFallback([
@@ -483,7 +482,6 @@ export class StatsClient {
 
   /**
    * Get recent fight IDs for a user.
-   * GET /user/{userId}/last_fights → string[]
    */
   async getRecentFightIds(userId: number): Promise<string[]> {
     const payload = await this.fetchJson(`/user/${userId}/last_fights`);
@@ -493,17 +491,15 @@ export class StatsClient {
 
   /**
    * Fetch fight (match) data from S3.
-   * https://s3.brokenarrowgame.tech/fights/fight_{id}.json
    */
   async getFightData(fightId: string): Promise<FightData | null> {
     const S3_BASE = 'https://s3.brokenarrowgame.tech';
     try {
       const url = `${S3_BASE}/fights/fight_${encodeURIComponent(fightId)}.json`;
-      const response = await this.fetchWithRetry(url, 5_000, 1); // 5s timeout, 1 retry
+      const response = await this.fetchWithRetry(url, 5_000, 1);
       if (!response.ok) return null;
       const raw = (await response.json()) as Record<string, unknown>;
 
-      // Parse players from Data dict
       const dataObj = (raw.Data ?? raw.data) as Record<string, unknown> | undefined;
       const players: FightPlayerData[] = [];
 
@@ -512,7 +508,6 @@ export class StatsClient {
           if (!value || typeof value !== 'object') continue;
           const p = value as Record<string, unknown>;
 
-          // Parse units
           const unitDataObj = p.UnitData as Record<string, unknown> | undefined;
           const units: FightUnitData[] = [];
           if (unitDataObj && typeof unitDataObj === 'object') {
@@ -578,7 +573,6 @@ export type {
   MapTeamSide,
   MapTeamSides,
   LeaderboardEntry,
-  PlayerStats,
   RestUserInfo,
   CountryStats,
   FightData,

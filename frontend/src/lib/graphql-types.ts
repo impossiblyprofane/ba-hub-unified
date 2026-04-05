@@ -289,9 +289,6 @@ export type AnalyticsPlayerStats = {
 };
 
 export type StatsOverviewData = {
-  analyticsMapRatings: AnalyticsStatItem[];
-  analyticsMapTeamSides: AnalyticsMapTeamSides;
-  analyticsSpecUsage: AnalyticsStatItem[];
   analyticsLeaderboard: AnalyticsLeaderboardEntry[];
 };
 
@@ -345,6 +342,7 @@ export type AnalyticsRecentFight = {
   countryName: string | null;
   countryFlag: string | null;
   specNames: string[];
+  specIcons: string[];
 };
 
 export type FrequentPlayer = {
@@ -497,70 +495,57 @@ export type SnapshotLeaderboardEntry = {
   createdAt: string;
 };
 
-export type SnapshotMapEntry = {
-  mapName: string;
-  playCount: number;
-  snapshotType: string;
-  createdAt: string;
-};
+// ── Rolling aggregation types ───────────────────────────────
 
-export type SnapshotFactionEntry = {
+export type RollingFactionStatsRow = {
   factionName: string;
   matchCount: number;
   winCount: number;
-  snapshotType: string;
-  createdAt: string;
 };
 
-export type SnapshotUnitEntry = {
-  unitName: string;
-  timesDeployed: number;
-  totalKills: number;
-  totalDamageDealt: number;
-  totalDamageReceived: number;
-  totalSupplyConsumed: number;
-  timesRefunded: number;
-  avgKills: number;
-  avgDamage: number;
+export type RollingFactionStats = {
+  rows: RollingFactionStatsRow[];
+  since: string;
 };
 
-export type SnapshotUnitRankings = {
-  snapshotDate: string | null;
-  units: SnapshotUnitEntry[];
+export type RollingMapStatsRow = {
+  mapName: string;
+  playCount: number;
+};
+
+export type RollingMapStats = {
+  rows: RollingMapStatsRow[];
+  since: string;
+};
+
+export type RollingSpecStatsRow = {
+  specName: string;
+  specId: number | null;
+  factionName: string;
+  pickCount: number;
+};
+
+export type RollingSpecStats = {
+  rows: RollingSpecStatsRow[];
+  since: string;
 };
 
 export type SnapshotLeaderboardHistoryData = {
   snapshotLeaderboardHistory: SnapshotLeaderboardEntry[];
 };
 
-export type SnapshotMapHistoryData = {
-  snapshotMapHistory: SnapshotMapEntry[];
+// ── Rolling aggregation response types ──────────────────────
+
+export type RollingFactionStatsData = {
+  rollingFactionStats: RollingFactionStats;
 };
 
-export type SnapshotFactionHistoryData = {
-  snapshotFactionHistory: SnapshotFactionEntry[];
+export type RollingMapStatsData = {
+  rollingMapStats: RollingMapStats;
 };
 
-export type SnapshotUnitRankingsData = {
-  snapshotUnitRankings: SnapshotUnitRankings;
-};
-
-// ── Crawler-derived snapshot types ──────────────────────────
-
-export type CrawlerFactionEntry = {
-  factionName: string;
-  matchCount: number;
-  winCount: number;
-  snapshotType: string;
-  createdAt: string;
-};
-
-export type SnapshotSpecEntry = {
-  specName: string;
-  specId: number | null;
-  pickCount: number;
-  snapshotType: string;
-  createdAt: string;
+export type RollingSpecStatsData = {
+  rollingSpecStats: RollingSpecStats;
 };
 
 export type UnitPerformanceEntry = {
@@ -570,7 +555,7 @@ export type UnitPerformanceEntry = {
   factionName: string;
   optionIds: string | null;
   optionNames: string[];
-  eloBracket: string;
+  eloBracket: string | null;
   deployCount: number;
   totalKills: number;
   avgKills: number;
@@ -579,14 +564,6 @@ export type UnitPerformanceEntry = {
   totalDamageReceived: number;
   totalSupplyConsumed: number;
   refundCount: number;
-};
-
-export type CrawlerFactionHistoryData = {
-  crawlerFactionHistory: CrawlerFactionEntry[];
-};
-
-export type SnapshotSpecHistoryData = {
-  snapshotSpecHistory: SnapshotSpecEntry[];
 };
 
 export type UnitPerformanceData = {

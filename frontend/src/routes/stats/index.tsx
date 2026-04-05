@@ -1,24 +1,21 @@
-import { $, component$, useSignal, Slot } from '@builder.io/qwik';
-import { routeLoader$ } from '@builder.io/qwik-city';
+import { $, component$, useSignal, useResource$, Resource, Slot } from '@builder.io/qwik';
 import type { DocumentHead } from '@builder.io/qwik-city';
 import { useI18n, t, GAME_LOCALES, getGameLocaleValueOrKey } from '~/lib/i18n';
 import type {
   StatsOverviewData,
-  AnalyticsCountryStats,
   AnalyticsUserInfo,
-  SnapshotFactionEntry,
-  SnapshotMapEntry,
-  CrawlerFactionEntry,
-  SnapshotSpecEntry,
+  AnalyticsLeaderboardEntry,
+  RollingFactionStatsRow,
+  RollingMapStatsRow,
+  RollingSpecStatsRow,
   UnitPerformanceEntry,
 } from '~/lib/graphql-types';
 import {
   STATS_OVERVIEW_QUERY,
   STATS_USER_LOOKUP_QUERY,
-  SNAPSHOT_FACTION_HISTORY_QUERY,
-  SNAPSHOT_MAP_HISTORY_QUERY,
-  CRAWLER_FACTION_HISTORY_QUERY,
-  SNAPSHOT_SPEC_HISTORY_QUERY,
+  ROLLING_FACTION_STATS_QUERY,
+  ROLLING_MAP_STATS_QUERY,
+  ROLLING_SPEC_STATS_QUERY,
   UNIT_PERFORMANCE_QUERY,
 } from '~/lib/queries/stats';
 import { ChartCanvas } from '~/components/stats/ChartCanvas';
@@ -55,127 +52,98 @@ function resolveSpecName(name: string): string | null {
 
 /* ─── Faction name formatter ─────────────────────────────── */
 
-/** Format raw faction matchup codes like "Russia_USA" → "Russia vs USA" */
-function formatFactionName(name: string): string {
-  if (name.includes('_')) {
-    return name.split('_').join(' vs ');
-  }
-  return name;
-}
-
 /* ─── Route loader: SSR overview + full 100 leaderboard ───── */
 
-type OverviewPayload = StatsOverviewData & {
-  analyticsCountryStats: AnalyticsCountryStats;
-};
+/* ─── Skeleton primitives ─────────────────────────────────── */
 
-export const useStatsOverview = routeLoader$(async () => {
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
+/** A single pulsing bar — width and height via class or inline style */
+const SkeletonBar = component$<{ class?: string; style?: Record<string, string> }>(
+  (props) => (
+    <div
+      class={['bg-[rgba(51,51,51,0.25)] animate-pulse rounded-sm', props.class ?? ''].join(' ')}
+      style={props.style}
+    />
+  ),
+);
 
-  const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+/** Skeleton for the leaderboard table (10 rows) */
+const LeaderboardSkeleton = component$(() => {
+  return (
+    <div class="p-0 bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.7)] border border-[rgba(51,51,51,0.15)]">
+      <p class="font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] text-[10px] px-3 py-2 border-b border-[rgba(51,51,51,0.3)]">
+        <SkeletonBar class="h-3 w-32 inline-block" />
+      </p>
+      <div class="p-3">
+        {/* header row */}
+        <div class="flex gap-2 mb-3">
+          <SkeletonBar class="h-2 w-8" />
+          <SkeletonBar class="h-2 flex-1" />
+          <SkeletonBar class="h-2 w-12" />
+          <SkeletonBar class="h-2 w-10" />
+          <SkeletonBar class="h-2 w-10" />
+          <SkeletonBar class="h-2 w-14" />
+        </div>
+        {/* 10 placeholder rows */}
+        {Array.from({ length: 10 }).map((_, i) => (
+          <div key={i} class="flex gap-2 py-2 border-b border-[rgba(51,51,51,0.1)]">
+            <SkeletonBar class="h-3 w-6" />
+            <SkeletonBar class="h-3 flex-1" style={{ maxWidth: `${160 + (i % 3) * 40}px` }} />
+            <SkeletonBar class="h-3 w-10" />
+            <SkeletonBar class="h-3 w-8" />
+            <SkeletonBar class="h-3 w-8" />
+            <SkeletonBar class="h-3 w-12" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+});
 
-  // Fetch main overview + snapshot data + crawler data in parallel
-  const [
-    overviewRes, factionHistoryRes, mapHistoryRes,
-    crawlerFactionRes, specHistoryRes, unitPerformanceRes,
-  ] = await Promise.all([
-    fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ query: STATS_OVERVIEW_QUERY }),
-    }),
-    fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        query: SNAPSHOT_FACTION_HISTORY_QUERY,
-        variables: { since: since30d },
-      }),
-    }).catch(() => null),
-    fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        query: SNAPSHOT_MAP_HISTORY_QUERY,
-        variables: { since: since30d },
-      }),
-    }).catch(() => null),
-    fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        query: CRAWLER_FACTION_HISTORY_QUERY,
-        variables: { since: since30d },
-      }),
-    }).catch(() => null),
-    fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        query: SNAPSHOT_SPEC_HISTORY_QUERY,
-        variables: { since: since30d },
-      }),
-    }).catch(() => null),
-    fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        query: UNIT_PERFORMANCE_QUERY,
-        variables: { since: '30d', limit: 100 },
-      }),
-    }).catch(() => null),
-  ]);
+/** Skeleton for a chart panel */
+const ChartSkeleton = component$<{ height?: number }>(({ height }) => {
+  return (
+    <div class="p-0 bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.7)] border border-[rgba(51,51,51,0.15)]">
+      <p class="font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] text-[10px] px-3 py-2 border-b border-[rgba(51,51,51,0.3)]">
+        <SkeletonBar class="h-3 w-28 inline-block" />
+      </p>
+      <div class="p-3">
+        <div
+          class="flex items-end justify-between gap-1"
+          style={{ height: `${height ?? 300}px` }}
+        >
+          {Array.from({ length: 8 }).map((_, i) => (
+            <SkeletonBar
+              key={i}
+              class="flex-1 rounded-t-sm"
+              style={{ height: `${30 + ((i * 37) % 70)}%` }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+});
 
-  if (!overviewRes.ok) {
-    throw new Error(`Failed to load stats overview: ${overviewRes.status}`);
-  }
-
-  const overviewPayload = (await overviewRes.json()) as {
-    data?: OverviewPayload;
-    errors?: Array<{ message: string }>;
-  };
-
-  if (!overviewPayload.data) {
-    const msg = overviewPayload.errors?.map((e) => e.message).join(', ') || 'Unknown error';
-    throw new Error(`Failed to load stats overview: ${msg}`);
-  }
-
-  // Parse snapshot data (graceful — empty arrays if unavailable)
-  let factionHistory: SnapshotFactionEntry[] = [];
-  let mapHistory: SnapshotMapEntry[] = [];
-  let crawlerFactionHistory: CrawlerFactionEntry[] = [];
-  let specHistory: SnapshotSpecEntry[] = [];
-  let unitPerformance: UnitPerformanceEntry[] = [];
-
-  if (factionHistoryRes?.ok) {
-    const d = (await factionHistoryRes.json()) as { data?: { snapshotFactionHistory: SnapshotFactionEntry[] } };
-    factionHistory = d.data?.snapshotFactionHistory ?? [];
-  }
-  if (mapHistoryRes?.ok) {
-    const d = (await mapHistoryRes.json()) as { data?: { snapshotMapHistory: SnapshotMapEntry[] } };
-    mapHistory = d.data?.snapshotMapHistory ?? [];
-  }
-  if (crawlerFactionRes?.ok) {
-    const d = (await crawlerFactionRes.json()) as { data?: { crawlerFactionHistory: CrawlerFactionEntry[] } };
-    crawlerFactionHistory = d.data?.crawlerFactionHistory ?? [];
-  }
-  if (specHistoryRes?.ok) {
-    const d = (await specHistoryRes.json()) as { data?: { snapshotSpecHistory: SnapshotSpecEntry[] } };
-    specHistory = d.data?.snapshotSpecHistory ?? [];
-  }
-  if (unitPerformanceRes?.ok) {
-    const d = (await unitPerformanceRes.json()) as { data?: { unitPerformance: UnitPerformanceEntry[] } };
-    unitPerformance = d.data?.unitPerformance ?? [];
-  }
-
-  return {
-    ...overviewPayload.data,
-    factionHistory,
-    mapHistory,
-    crawlerFactionHistory,
-    specHistory,
-    unitPerformance,
-  };
+/** Skeleton for the unit performance table */
+const UnitTableSkeleton = component$(() => {
+  return (
+    <div class="p-0 bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.7)] border border-[rgba(51,51,51,0.15)]">
+      <p class="font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] text-[10px] px-3 py-2 border-b border-[rgba(51,51,51,0.3)]">
+        <SkeletonBar class="h-3 w-36 inline-block" />
+      </p>
+      <div class="p-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} class="flex gap-3 py-2 border-b border-[rgba(51,51,51,0.1)]">
+            <SkeletonBar class="h-4 w-4 rounded" />
+            <SkeletonBar class="h-4 flex-1" style={{ maxWidth: `${120 + (i % 4) * 30}px` }} />
+            <SkeletonBar class="h-4 w-16" />
+            <SkeletonBar class="h-4 w-12" />
+            <SkeletonBar class="h-4 w-12" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 });
 
 /* ─── Chart config builders ──────────────────────────────── */
@@ -217,22 +185,67 @@ const CHART_COLORS = [
   'rgba(195, 70, 150, 0.7)',
 ];
 
-function buildMapChart(
-  items: { name: string | null; count: number | null }[],
+/* ─── Rolling aggregate chart builders ────────────────────── */
+
+function buildRollingFactionChart(
+  rows: RollingFactionStatsRow[],
 ): ChartConfiguration {
-  const filtered = items.filter((i) => i.name && i.count);
-  const total = filtered.reduce((s, i) => s + (i.count ?? 0), 0);
-  const sorted = [...filtered]
-    .sort((a, b) => (b.count ?? 0) - (a.count ?? 0))
-    .slice(0, 15);
+  // Filter out "Unknown" faction and show win rates as a horizontal bar chart
+  const sorted = [...rows]
+    .filter((r) => r.factionName !== 'Unknown')
+    .sort((a, b) => b.matchCount - a.matchCount);
 
   return {
     type: 'bar',
     data: {
-      labels: sorted.map((i) => resolveMapName(i.name!)),
+      labels: sorted.map((r) => r.factionName),
       datasets: [
         {
-          data: sorted.map((i) => total > 0 ? Math.round(((i.count ?? 0) / total) * 1000) / 10 : 0),
+          label: 'Win Rate %',
+          data: sorted.map((r) =>
+            r.matchCount > 0 ? Math.round((r.winCount / r.matchCount) * 1000) / 10 : 0,
+          ),
+          backgroundColor: sorted.map((r) =>
+            r.factionName.startsWith('Russia') ? CHART_COLORS[1] : CHART_COLORS[0],
+          ),
+          borderWidth: 0,
+        },
+      ],
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          grid: { color: 'rgba(51,51,51,0.2)' },
+          ticks: { font: { size: 9 } },
+          title: { display: true, text: 'Win Rate %', color: 'rgba(192,192,192,0.5)', font: { size: 9 } },
+          min: 0,
+          max: 100,
+        },
+        y: { grid: { display: false } },
+      },
+    },
+  };
+}
+
+function buildRollingMapChart(
+  rows: RollingMapStatsRow[],
+): ChartConfiguration {
+  const total = rows.reduce((s, r) => s + r.playCount, 0);
+  const sorted = [...rows].sort((a, b) => b.playCount - a.playCount).slice(0, 15);
+
+  return {
+    type: 'bar',
+    data: {
+      labels: sorted.map((r) => resolveMapName(r.mapName)),
+      datasets: [
+        {
+          data: sorted.map((r) =>
+            total > 0 ? Math.round((r.playCount / total) * 1000) / 10 : 0,
+          ),
           backgroundColor: ACCENT,
           borderColor: ACCENT_BORDER,
           borderWidth: 1,
@@ -252,313 +265,97 @@ function buildMapChart(
   };
 }
 
-function buildSpecChart(
-  items: { name: string | null; count: number | null }[],
+function buildRollingSpecChart(
+  rows: RollingSpecStatsRow[],
 ): ChartConfiguration {
-  const filtered = items
-    .filter((i) => i.name && i.count && resolveSpecName(i.name!) !== null);
-  const total = filtered.reduce((s, i) => s + (i.count ?? 0), 0);
-  const sorted = [...filtered]
-    .sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
+  // Filter hidden specs and "Unknown" faction, then compute % within each faction
+  const filtered = rows.filter(
+    (r) => resolveSpecName(r.specName) !== null && r.factionName !== 'Unknown',
+  );
+
+  // Get faction totals for percentage calculation
+  const factionTotals = new Map<string, number>();
+  for (const r of filtered) {
+    factionTotals.set(r.factionName, (factionTotals.get(r.factionName) ?? 0) + r.pickCount);
+  }
+
+  // Build per-spec aggregation and determine primary faction
+  const specAgg = new Map<string, { faction: string; picks: number }>();
+  for (const r of filtered) {
+    const existing = specAgg.get(r.specName);
+    const newPicks = (existing?.picks ?? 0) + r.pickCount;
+    // Primary faction = whichever has more picks (specs are faction-exclusive in practice)
+    const faction = !existing || r.pickCount > (existing.picks - (existing.picks - r.pickCount))
+      ? r.factionName
+      : existing.faction;
+    specAgg.set(r.specName, { faction, picks: newPicks });
+  }
+
+  // Faction color mapping
+  const factionColors: Record<string, string> = {
+    Russia: CHART_COLORS[1],  // red
+    USA: CHART_COLORS[0],     // blue
+  };
+
+  // Fixed faction order: Russia first, then USA
+  const factionOrder = ['Russia', 'USA'];
+  const factions = [...factionTotals.keys()].sort((a, b) => {
+    const ai = factionOrder.indexOf(a);
+    const bi = factionOrder.indexOf(b);
+    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+  });
+
+  // Group specs by faction, sorted by % within faction (descending)
+  const orderedSpecs: string[] = [];
+  for (const faction of factions) {
+    const factionSpecs = [...specAgg.entries()]
+      .filter(([, agg]) => agg.faction === faction)
+      .sort((a, b) => {
+        const total = factionTotals.get(faction) ?? 1;
+        return (b[1].picks / total) - (a[1].picks / total);
+      })
+      .map(([spec]) => spec);
+    orderedSpecs.push(...factionSpecs);
+  }
+
+  // Single dataset with per-bar coloring (each spec belongs to one faction)
+  const data = orderedSpecs.map((spec) => {
+    const agg = specAgg.get(spec)!;
+    const total = factionTotals.get(agg.faction) ?? 1;
+    return Math.round((agg.picks / total) * 1000) / 10;
+  });
+
+  const colors = orderedSpecs.map((spec) => {
+    const faction = specAgg.get(spec)!.faction;
+    return factionColors[faction] ?? CHART_COLORS[2];
+  });
 
   return {
     type: 'bar',
     data: {
-      labels: sorted.map((i) => resolveSpecName(i.name!) ?? i.name!),
-      datasets: [
-        {
-          data: sorted.map((i) => total > 0 ? Math.round(((i.count ?? 0) / total) * 1000) / 10 : 0),
-          backgroundColor: sorted.map((_, idx) => CHART_COLORS[idx % CHART_COLORS.length]),
-          borderWidth: 0,
-        },
-      ],
+      labels: orderedSpecs.map((n) => resolveSpecName(n) ?? n),
+      datasets: [{
+        data,
+        backgroundColor: colors,
+        borderWidth: 0,
+      }],
     },
     options: {
       indexAxis: 'y',
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: {
+        legend: { display: false },
+      },
       scales: {
-        x: { grid: { color: 'rgba(51,51,51,0.2)' } },
+        x: {
+          grid: { color: 'rgba(51,51,51,0.2)' },
+          title: { display: true, text: '% of faction picks', color: 'rgba(192,192,192,0.5)', font: { size: 9 } },
+        },
         y: { grid: { display: false } },
       },
     },
   };
-}
-
-/**
- * Faction win rate doughnut — Russia vs USA from the Russia_USA matchup.
- * Russia_USA.winCount = Russia wins, remainder = USA wins.
- */
-function buildFactionWinRateChart(
-  stats: AnalyticsCountryStats,
-): ChartConfiguration {
-  // Find the Russia_USA entry — its winCount is Russia's wins, matchCount is total RU vs US games
-  const ruVsUs = stats.winsCount.find((w) => w.name === 'Russia_USA');
-  const totalRuUs = stats.matchesCount.find((m) => m.name === 'Russia_USA');
-
-  const russiaWins = ruVsUs?.count ?? 0;
-  const totalMatches = totalRuUs?.count ?? 0;
-  const usaWins = totalMatches - russiaWins;
-
-  return {
-    type: 'doughnut',
-    data: {
-      labels: ['Russia', 'USA'],
-      datasets: [
-        {
-          data: [russiaWins, usaWins],
-          backgroundColor: [CHART_COLORS[1], CHART_COLORS[0]], // Red for Russia, Blue for USA
-          borderColor: 'rgba(26,26,26,0.8)',
-          borderWidth: 2,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'right',
-          labels: { padding: 12, usePointStyle: true, pointStyleWidth: 8 },
-        },
-      },
-    },
-  };
-}
-
-function buildMapTeamSidesChart(
-  data: { map: string | null; winData: { name: string | null; count: number | null }[] }[],
-): ChartConfiguration {
-  const maps = data.filter((d) => d.map).slice(0, 10);
-
-  const factionSet = new Set<string>();
-  for (const m of maps) {
-    for (const w of m.winData) {
-      if (w.name) factionSet.add(w.name);
-    }
-  }
-  const factions = [...factionSet];
-
-  const datasets = factions.map((faction, idx) => ({
-    label: formatFactionName(faction),
-    data: maps.map((m) => {
-      const match = m.winData.find((w) => w.name === faction);
-      return match?.count ?? 0;
-    }),
-    backgroundColor: CHART_COLORS[idx % CHART_COLORS.length],
-    borderWidth: 0,
-  }));
-
-  return {
-    type: 'bar',
-    data: {
-      labels: maps.map((m) => resolveMapName(m.map!)),
-      datasets,
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          labels: { usePointStyle: true, pointStyleWidth: 8 },
-        },
-      },
-      scales: {
-        x: { stacked: true, grid: { display: false } },
-        y: { stacked: true, grid: { color: 'rgba(51,51,51,0.2)' } },
-      },
-    },
-  };
-}
-
-/* ─── Snapshot history chart builders ────────────────────── */
-
-function buildFactionHistoryChart(
-  entries: SnapshotFactionEntry[],
-): ChartConfiguration {
-  // Only use Russia_USA (Russia wins vs USA) — ignore mirror matches
-  // (Russia_Russia, USA_USA, Random_Random).
-  // Russia win rate = Russia_USA.winCount / Russia_USA.matchCount
-  // USA win rate = (Russia_USA.matchCount - Russia_USA.winCount) / Russia_USA.matchCount
-  const dateMap = new Map<string, { matchCount: number; russiaWins: number }>();
-
-  for (const e of entries) {
-    if (e.factionName !== 'Russia_USA') continue; // Only the RU vs US matchup
-    const dateKey = new Date(e.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-    const existing = dateMap.get(dateKey) ?? { matchCount: 0, russiaWins: 0 };
-    existing.matchCount += e.matchCount;
-    existing.russiaWins += e.winCount;
-    dateMap.set(dateKey, existing);
-  }
-
-  const dates = [...dateMap.keys()];
-
-  return {
-    type: 'line',
-    data: {
-      labels: dates,
-      datasets: [
-        {
-          label: 'Russia',
-          data: dates.map((date) => {
-            const d = dateMap.get(date);
-            if (!d || d.matchCount === 0) return null;
-            return Math.round((d.russiaWins / d.matchCount) * 100);
-          }),
-          borderColor: CHART_COLORS[1], // Red for Russia
-          backgroundColor: CHART_COLORS[1],
-          fill: false,
-          tension: 0.3,
-          pointRadius: 2,
-        },
-        {
-          label: 'USA',
-          data: dates.map((date) => {
-            const d = dateMap.get(date);
-            if (!d || d.matchCount === 0) return null;
-            return 100 - Math.round((d.russiaWins / d.matchCount) * 100);
-          }),
-          borderColor: CHART_COLORS[0], // Blue for USA
-          backgroundColor: CHART_COLORS[0],
-          fill: false,
-          tension: 0.3,
-          pointRadius: 2,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { labels: { usePointStyle: true, pointStyleWidth: 8 } },
-      },
-      scales: {
-        x: { grid: { display: false } },
-        y: {
-          grid: { color: 'rgba(51,51,51,0.2)' },
-          title: { display: true, text: 'Win Rate %', color: 'rgba(192,192,192,0.5)', font: { size: 9 } },
-          min: 30,
-          max: 70,
-        },
-      },
-    },
-  } as ChartConfiguration;
-}
-
-function buildMapHistoryChart(
-  entries: SnapshotMapEntry[],
-): ChartConfiguration {
-  // Group by date, show play count trends for top maps
-  const dateMap = new Map<string, Map<string, number>>();
-  const mapTotals = new Map<string, number>();
-
-  for (const e of entries) {
-    const dateKey = new Date(e.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-    if (!dateMap.has(dateKey)) dateMap.set(dateKey, new Map());
-    dateMap.get(dateKey)!.set(e.mapName, (dateMap.get(dateKey)!.get(e.mapName) ?? 0) + e.playCount);
-    mapTotals.set(e.mapName, (mapTotals.get(e.mapName) ?? 0) + e.playCount);
-  }
-
-  const dates = [...dateMap.keys()];
-  // Show top 10 maps by total play count
-  const topMaps = [...mapTotals.entries()]
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 10)
-    .map(([name]) => name);
-
-  // Convert to percentage of total plays per date
-  const datasets = topMaps.map((mapName, idx) => ({
-    label: resolveMapName(mapName),
-    data: dates.map((date) => {
-      const dayData = dateMap.get(date);
-      if (!dayData) return 0;
-      const total = [...dayData.values()].reduce((s, v) => s + v, 0);
-      const mapCount = dayData.get(mapName) ?? 0;
-      return total > 0 ? Math.round((mapCount / total) * 100) : 0;
-    }),
-    borderColor: CHART_COLORS[idx % CHART_COLORS.length],
-    backgroundColor: CHART_COLORS[idx % CHART_COLORS.length],
-    fill: false,
-    tension: 0.3,
-    pointRadius: 2,
-  }));
-
-  return {
-    type: 'line',
-    data: { labels: dates, datasets },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { labels: { usePointStyle: true, pointStyleWidth: 8 } },
-      },
-      scales: {
-        x: { grid: { display: false } },
-        y: {
-          grid: { color: 'rgba(51,51,51,0.2)' },
-          title: { display: true, text: 'Play Rate %', color: 'rgba(192,192,192,0.5)', font: { size: 9 } },
-        },
-      },
-    },
-  } as ChartConfiguration;
-}
-
-/* ─── Crawler-derived chart builders ────────────────────── */
-
-function buildSpecPopularityChart(
-  entries: SnapshotSpecEntry[],
-): ChartConfiguration {
-  const dateMap = new Map<string, Map<string, number>>();
-  for (const e of entries) {
-    const dateKey = new Date(e.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-    if (!dateMap.has(dateKey)) dateMap.set(dateKey, new Map());
-    dateMap.get(dateKey)!.set(e.specName, (dateMap.get(dateKey)!.get(e.specName) ?? 0) + e.pickCount);
-  }
-
-  const dates = [...dateMap.keys()];
-  const specNames = new Set<string>();
-  for (const specs of dateMap.values()) {
-    for (const name of specs.keys()) specNames.add(name);
-  }
-
-  // Filter out hidden specs and resolve display names
-  const filteredSpecs = [...specNames].filter((name) => resolveSpecName(name) !== null);
-
-  const datasets = filteredSpecs.map((spec, idx) => ({
-    label: resolveSpecName(spec) ?? spec,
-    data: dates.map((date) => {
-      const dayData = dateMap.get(date);
-      if (!dayData) return 0;
-      const total = [...dayData.values()].reduce((s, v) => s + v, 0);
-      const count = dayData.get(spec) ?? 0;
-      return total > 0 ? Math.round((count / total) * 1000) / 10 : 0;
-    }),
-    borderColor: CHART_COLORS[idx % CHART_COLORS.length],
-    backgroundColor: CHART_COLORS[idx % CHART_COLORS.length],
-    fill: false,
-    tension: 0.3,
-    pointRadius: 2,
-  }));
-
-  return {
-    type: 'line',
-    data: { labels: dates, datasets },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { labels: { usePointStyle: true, pointStyleWidth: 8 } },
-      },
-      scales: {
-        x: { grid: { display: false } },
-        y: {
-          grid: { color: 'rgba(51,51,51,0.2)' },
-          title: { display: true, text: 'Pick Rate %', color: 'rgba(192,192,192,0.5)', font: { size: 9 } },
-        },
-      },
-    },
-  } as ChartConfiguration;
 }
 
 /* ─── Panel wrapper ──────────────────────────────────────── */
@@ -583,29 +380,175 @@ const Panel = component$<{ title: string; class?: string; fill?: boolean }>(
   },
 );
 
-/* ─── Unit performance table with filters ────────────────── */
+/* ─── Known ELO brackets (500-wide buckets from matchCrawler) ─ */
 
-const UnitPerformanceSection = component$<{
+const ELO_BRACKETS = [
+  '0-500',
+  '500-1000',
+  '1000-1500',
+  '1500-2000',
+  '2000-2500',
+  '2500-3000',
+  '3000-3500',
+  '3500-4000',
+];
+
+/* ─── Top performing units with filters ───────────────────── */
+
+const TopPerformingUnitsSection = component$<{
   entries: UnitPerformanceEntry[];
-}>(({ entries }) => {
+  since: string;
+}>(({ entries, since }) => {
   const i18n = useI18n();
   const selectedFaction = useSignal('');
   const selectedElo = useSignal('');
 
   const factionNames = [...new Set(entries.map((e) => e.factionName))].filter(n => n !== 'Unknown').sort();
-  const eloBrackets = [...new Set(entries.map((e) => e.eloBracket))].sort((a, b) => {
-    const aNum = parseInt(a) || 0;
-    const bNum = parseInt(b) || 0;
-    return aNum - bNum;
+
+  const eloResource = useResource$<UnitPerformanceEntry[]>(async ({ track }) => {
+    const elo = track(() => selectedElo.value);
+    const sinceVal = track(() => since);
+    if (!elo && sinceVal === '30d') return entries;
+
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
+    const res = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        query: UNIT_PERFORMANCE_QUERY,
+        variables: { since: sinceVal, eloBracket: elo || undefined, limit: 200 },
+      }),
+    });
+    if (!res.ok) return [];
+    const payload = (await res.json()) as { data?: { unitPerformance: UnitPerformanceEntry[] } };
+    return payload.data?.unitPerformance ?? [];
   });
 
-  const filtered = entries.filter((e) => {
-    if (selectedFaction.value && e.factionName !== selectedFaction.value) return false;
-    if (selectedElo.value && e.eloBracket !== selectedElo.value) return false;
-    return true;
-  });
+  return (
+    <Panel title={t(i18n, 'stats.topUnits.title')}>
+      <div class="flex items-center gap-2 mb-3 px-3 pt-2 flex-wrap">
+        <select
+          class="bg-[rgba(26,26,26,0.6)] border border-[var(--border)] rounded px-2 py-1 text-xs text-[var(--text)] font-mono"
+          value={selectedFaction.value}
+          onChange$={(e) => { selectedFaction.value = (e.target as HTMLSelectElement).value; }}
+        >
+          <option value="">{t(i18n, 'stats.unitPopularity.allFactions')}</option>
+          {factionNames.map((f) => <option key={f} value={f}>{f}</option>)}
+        </select>
+        <select
+          class="bg-[rgba(26,26,26,0.6)] border border-[var(--border)] rounded px-2 py-1 text-xs text-[var(--text)] font-mono"
+          value={selectedElo.value}
+          onChange$={(e) => { selectedElo.value = (e.target as HTMLSelectElement).value; }}
+        >
+          <option value="">{t(i18n, 'stats.unitTable.allElo')}</option>
+          {ELO_BRACKETS.map((b) => <option key={b} value={b}>{b}</option>)}
+        </select>
+      </div>
+      <Resource
+        value={eloResource}
+        onPending={() => (
+          <div class="py-6 text-center">
+            <p class="text-xs text-[var(--text-dim)] animate-pulse">{t(i18n, 'stats.loading')}</p>
+          </div>
+        )}
+        onResolved={(data) => {
+          const filtered = data.filter((e) => {
+            if (selectedFaction.value && e.factionName !== selectedFaction.value) return false;
+            return true;
+          });
+          const sorted = [...filtered]
+            .sort((a, b) => b.totalDamageDealt - a.totalDamageDealt)
+            .slice(0, 50);
+          const showEloCol = !!selectedElo.value;
+          return (
+            <>
+              <div class="px-3 mb-2">
+                <span class="text-[9px] text-[var(--text-dim)] font-mono">
+                  {sorted.length} {t(i18n, 'stats.unitTable.configs')}
+                </span>
+              </div>
+              <div class="max-h-[500px] overflow-y-auto">
+                <table class="w-full text-xs border-collapse">
+                  <thead class="sticky top-0 bg-[var(--bg)] z-10">
+                    <tr class="text-[var(--text-dim)] uppercase tracking-[0.2em] text-[8px]">
+                      <th class="text-left py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.unitTable.unit')}</th>
+                      <th class="text-left py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.unitTable.options')}</th>
+                      <th class="text-left py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.unitTable.faction')}</th>
+                      {showEloCol && <th class="text-left py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.unitTable.elo')}</th>}
+                      <th class="text-right py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.topUnits.deployed')}</th>
+                      <th class="text-right py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.topUnits.avgKills')}</th>
+                      <th class="text-right py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.topUnits.avgDamage')}</th>
+                      <th class="text-right py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.match.damageDealt')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sorted.map((u, idx) => {
+                      const opts = resolveUnitOptionNames(u.optionNames ?? [], i18n.locale);
+                      return (
+                        <tr
+                          key={`top-${u.configKey}-${u.eloBracket ?? 'all'}-${idx}`}
+                          class="border-b border-[rgba(51,51,51,0.15)] hover:bg-[rgba(70,151,195,0.05)]"
+                        >
+                          <td class="py-1.5 px-2">
+                            <a href={`/arsenal/${u.unitId}`} class="text-[var(--accent)] hover:underline">
+                              {u.unitName}
+                            </a>
+                          </td>
+                          <td class="py-1.5 px-2 text-[var(--text-dim)] text-[10px]">
+                            {opts.length > 0 ? opts.join(' + ') : '-'}
+                          </td>
+                          <td class="py-1.5 px-2 text-[var(--text-dim)]">{u.factionName}</td>
+                          {showEloCol && <td class="py-1.5 px-2 text-[var(--text-dim)] font-mono text-[10px]">{u.eloBracket}</td>}
+                          <td class="py-1.5 px-2 text-[var(--text)] font-mono text-right">{u.deployCount}</td>
+                          <td class="py-1.5 px-2 text-[var(--text)] font-mono text-right">{u.avgKills.toFixed(1)}</td>
+                          <td class="py-1.5 px-2 text-[var(--text)] font-mono text-right">{Math.round(u.avgDamage)}</td>
+                          <td class="py-1.5 px-2 text-[var(--text-dim)] font-mono text-right">{Math.round(u.totalDamageDealt).toLocaleString()}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          );
+        }}
+      />
+    </Panel>
+  );
+});
 
-  const sorted = [...filtered].sort((a, b) => b.deployCount - a.deployCount);
+/* ─── Unit performance table with filters ────────────────── */
+
+const UnitPerformanceSection = component$<{
+  entries: UnitPerformanceEntry[];
+  since: string;
+}>(({ entries, since }) => {
+  const i18n = useI18n();
+  const selectedFaction = useSignal('');
+  const selectedElo = useSignal('');
+
+  const factionNames = [...new Set(entries.map((e) => e.factionName))].filter(n => n !== 'Unknown').sort();
+
+  // When an ELO bracket is selected or time range changed, re-fetch from server.
+  // When "All Elo" (empty string) and default 30d range, use the initial SSR data.
+  const eloResource = useResource$<UnitPerformanceEntry[]>(async ({ track }) => {
+    const elo = track(() => selectedElo.value);
+    const sinceVal = track(() => since);
+    if (!elo && sinceVal === '30d') return entries; // "All" + default → use pre-loaded data
+
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
+    const res = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        query: UNIT_PERFORMANCE_QUERY,
+        variables: { since: sinceVal, eloBracket: elo || undefined, limit: 200 },
+      }),
+    });
+    if (!res.ok) return [];
+    const payload = (await res.json()) as { data?: { unitPerformance: UnitPerformanceEntry[] } };
+    return payload.data?.unitPerformance ?? [];
+  });
 
   return (
     <Panel title={t(i18n, 'stats.unitPopularity.title')}>
@@ -624,55 +567,77 @@ const UnitPerformanceSection = component$<{
           onChange$={(e) => { selectedElo.value = (e.target as HTMLSelectElement).value; }}
         >
           <option value="">{t(i18n, 'stats.unitTable.allElo')}</option>
-          {eloBrackets.map((b) => <option key={b} value={b}>{b}</option>)}
+          {ELO_BRACKETS.map((b) => <option key={b} value={b}>{b}</option>)}
         </select>
-        <span class="text-[9px] text-[var(--text-dim)] font-mono">
-          {sorted.length} {t(i18n, 'stats.unitTable.configs')}
-        </span>
       </div>
-      <div class="max-h-[500px] overflow-y-auto">
-        <table class="w-full text-xs border-collapse">
-          <thead class="sticky top-0 bg-[var(--bg)] z-10">
-            <tr class="text-[var(--text-dim)] uppercase tracking-[0.2em] text-[8px]">
-              <th class="text-left py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.unitTable.unit')}</th>
-              <th class="text-left py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.unitTable.options')}</th>
-              <th class="text-left py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.unitTable.faction')}</th>
-              <th class="text-left py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.unitTable.elo')}</th>
-              <th class="text-right py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.unitPopularity.deployed')}</th>
-              <th class="text-right py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.topUnits.avgKills')}</th>
-              <th class="text-right py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.topUnits.avgDamage')}</th>
-              <th class="text-right py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.unitTable.refundPct')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((u, idx) => {
-              const refundPct = u.deployCount > 0 ? ((u.refundCount / u.deployCount) * 100).toFixed(1) : '0.0';
-              const opts = resolveUnitOptionNames(u.optionNames ?? [], i18n.locale);
-              return (
-                <tr
-                  key={`${u.configKey}-${u.eloBracket}-${idx}`}
-                  class="border-b border-[rgba(51,51,51,0.15)] hover:bg-[rgba(70,151,195,0.05)]"
-                >
-                  <td class="py-1.5 px-2">
-                    <a href={`/arsenal/${u.unitId}`} class="text-[var(--accent)] hover:underline">
-                      {u.unitName}
-                    </a>
-                  </td>
-                  <td class="py-1.5 px-2 text-[var(--text-dim)] text-[10px]">
-                    {opts.length > 0 ? opts.join(' + ') : '-'}
-                  </td>
-                  <td class="py-1.5 px-2 text-[var(--text-dim)]">{u.factionName}</td>
-                  <td class="py-1.5 px-2 text-[var(--text-dim)] font-mono text-[10px]">{u.eloBracket}</td>
-                  <td class="py-1.5 px-2 text-[var(--text)] font-mono text-right">{u.deployCount}</td>
-                  <td class="py-1.5 px-2 text-[var(--text)] font-mono text-right">{u.avgKills.toFixed(1)}</td>
-                  <td class="py-1.5 px-2 text-[var(--text)] font-mono text-right">{Math.round(u.avgDamage)}</td>
-                  <td class="py-1.5 px-2 text-[var(--text-dim)] font-mono text-right">{refundPct}%</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <Resource
+        value={eloResource}
+        onPending={() => (
+          <div class="py-6 text-center">
+            <p class="text-xs text-[var(--text-dim)] animate-pulse">{t(i18n, 'stats.loading')}</p>
+          </div>
+        )}
+        onResolved={(data) => {
+          const filtered = data.filter((e) => {
+            if (selectedFaction.value && e.factionName !== selectedFaction.value) return false;
+            return true;
+          });
+          const sorted = [...filtered].sort((a, b) => b.deployCount - a.deployCount);
+          const showEloCol = !!selectedElo.value;
+          return (
+            <>
+              <div class="px-3 mb-2">
+                <span class="text-[9px] text-[var(--text-dim)] font-mono">
+                  {sorted.length} {t(i18n, 'stats.unitTable.configs')}
+                </span>
+              </div>
+              <div class="max-h-[500px] overflow-y-auto">
+                <table class="w-full text-xs border-collapse">
+                  <thead class="sticky top-0 bg-[var(--bg)] z-10">
+                    <tr class="text-[var(--text-dim)] uppercase tracking-[0.2em] text-[8px]">
+                      <th class="text-left py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.unitTable.unit')}</th>
+                      <th class="text-left py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.unitTable.options')}</th>
+                      <th class="text-left py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.unitTable.faction')}</th>
+                      {showEloCol && <th class="text-left py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.unitTable.elo')}</th>}
+                      <th class="text-right py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.unitPopularity.deployed')}</th>
+                      <th class="text-right py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.topUnits.avgKills')}</th>
+                      <th class="text-right py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.topUnits.avgDamage')}</th>
+                      <th class="text-right py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.unitTable.refundPct')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sorted.map((u, idx) => {
+                      const refundPct = u.deployCount > 0 ? ((u.refundCount / u.deployCount) * 100).toFixed(1) : '0.0';
+                      const opts = resolveUnitOptionNames(u.optionNames ?? [], i18n.locale);
+                      return (
+                        <tr
+                          key={`${u.configKey}-${u.eloBracket ?? 'all'}-${idx}`}
+                          class="border-b border-[rgba(51,51,51,0.15)] hover:bg-[rgba(70,151,195,0.05)]"
+                        >
+                          <td class="py-1.5 px-2">
+                            <a href={`/arsenal/${u.unitId}`} class="text-[var(--accent)] hover:underline">
+                              {u.unitName}
+                            </a>
+                          </td>
+                          <td class="py-1.5 px-2 text-[var(--text-dim)] text-[10px]">
+                            {opts.length > 0 ? opts.join(' + ') : '-'}
+                          </td>
+                          <td class="py-1.5 px-2 text-[var(--text-dim)]">{u.factionName}</td>
+                          {showEloCol && <td class="py-1.5 px-2 text-[var(--text-dim)] font-mono text-[10px]">{u.eloBracket}</td>}
+                          <td class="py-1.5 px-2 text-[var(--text)] font-mono text-right">{u.deployCount}</td>
+                          <td class="py-1.5 px-2 text-[var(--text)] font-mono text-right">{u.avgKills.toFixed(1)}</td>
+                          <td class="py-1.5 px-2 text-[var(--text)] font-mono text-right">{Math.round(u.avgDamage)}</td>
+                          <td class="py-1.5 px-2 text-[var(--text-dim)] font-mono text-right">{refundPct}%</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          );
+        }}
+      />
     </Panel>
   );
 });
@@ -681,7 +646,44 @@ const UnitPerformanceSection = component$<{
 
 export default component$(() => {
   const i18n = useI18n();
-  const overview = useStatsOverview();
+
+  // ── Client-side leaderboard + unit performance fetch (non-blocking) ──
+  const overviewData = useResource$<{
+    analyticsLeaderboard: AnalyticsLeaderboardEntry[];
+    unitPerformance: UnitPerformanceEntry[];
+  }>(async () => {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
+
+    const [overviewRes, unitPerformanceRes] = await Promise.all([
+      fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ query: STATS_OVERVIEW_QUERY }),
+      }),
+      fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          query: UNIT_PERFORMANCE_QUERY,
+          variables: { since: '30d', limit: 100 },
+        }),
+      }).catch(() => null),
+    ]);
+
+    let analyticsLeaderboard: AnalyticsLeaderboardEntry[] = [];
+    if (overviewRes.ok) {
+      const payload = (await overviewRes.json()) as { data?: StatsOverviewData };
+      analyticsLeaderboard = payload.data?.analyticsLeaderboard ?? [];
+    }
+
+    let unitPerformance: UnitPerformanceEntry[] = [];
+    if (unitPerformanceRes?.ok) {
+      const d = (await unitPerformanceRes.json()) as { data?: { unitPerformance: UnitPerformanceEntry[] } };
+      unitPerformance = d.data?.unitPerformance ?? [];
+    }
+
+    return { analyticsLeaderboard, unitPerformance };
+  });
 
   // ── Player lookup state ──
   const searchSteamId = useSignal('');
@@ -724,16 +726,63 @@ export default component$(() => {
     }
   });
 
-  // ── Derived chart configs ──
-  const mapChartConfig = buildMapChart(overview.value.analyticsMapRatings);
-  const specChartConfig = buildSpecChart(overview.value.analyticsSpecUsage);
-  const factionWinRateConfig = buildFactionWinRateChart(overview.value.analyticsCountryStats);
-  const mapTeamSidesConfig = buildMapTeamSidesChart(
-    overview.value.analyticsMapTeamSides.data,
-  );
+  // ── Derived state ──
 
-  const leaderboard = overview.value.analyticsLeaderboard;
   const lbExpanded = useSignal(false);
+
+  // ── Rolling data (client-side, reactive to time range + elo) ──
+  const rollingRange = useSignal<'7d' | '14d' | '30d'>('30d');
+  const rollingElo = useSignal('');
+
+  const rollingData = useResource$<{
+    factionRows: RollingFactionStatsRow[];
+    mapRows: RollingMapStatsRow[];
+    specRows: RollingSpecStatsRow[];
+  }>(async ({ track }) => {
+    const since = track(() => rollingRange.value);
+    const eloBracket = track(() => rollingElo.value) || undefined;
+    const apiUrl =
+      import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
+
+    const [factionRes, mapRes, specRes] = await Promise.all([
+      fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          query: ROLLING_FACTION_STATS_QUERY,
+          variables: { since, eloBracket },
+        }),
+      }).catch(() => null),
+      fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          query: ROLLING_MAP_STATS_QUERY,
+          variables: { since, eloBracket },
+        }),
+      }).catch(() => null),
+      fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          query: ROLLING_SPEC_STATS_QUERY,
+          variables: { since, eloBracket },
+        }),
+      }).catch(() => null),
+    ]);
+
+    const factionRows: RollingFactionStatsRow[] = factionRes?.ok
+      ? ((await factionRes.json()) as any).data?.rollingFactionStats?.rows ?? []
+      : [];
+    const mapRows: RollingMapStatsRow[] = mapRes?.ok
+      ? ((await mapRes.json()) as any).data?.rollingMapStats?.rows ?? []
+      : [];
+    const specRows: RollingSpecStatsRow[] = specRes?.ok
+      ? ((await specRes.json()) as any).data?.rollingSpecStats?.rows ?? []
+      : [];
+
+    return { factionRows, mapRows, specRows };
+  });
 
   return (
     <div class="w-full max-w-[2000px] mx-auto">
@@ -803,269 +852,266 @@ export default component$(() => {
 
       {/* ═══ Section 1: Leaderboard ═══ */}
       <div class="mb-6">
-        <Panel title={t(i18n, 'stats.tab.leaderboard')}>
-          <div class={lbExpanded.value ? 'max-h-[600px] overflow-y-auto' : ''}>
-            <table class="w-full text-xs border-collapse">
-              <thead class={lbExpanded.value ? 'sticky top-0 bg-[var(--bg)] z-10' : ''}>
-                <tr class="text-[var(--text-dim)] uppercase tracking-[0.2em] text-[8px]">
-                  <th class="text-left py-1.5 px-1 border-b border-[rgba(51,51,51,0.3)]">
-                    {t(i18n, 'stats.leaderboard.rank')}
-                  </th>
-                  <th class="text-left py-1.5 px-1 border-b border-[rgba(51,51,51,0.3)]">
-                    {t(i18n, 'stats.leaderboard.player')}
-                  </th>
-                  <th class="text-right py-1.5 px-1 border-b border-[rgba(51,51,51,0.3)]">
-                    ELO
-                  </th>
-                  <th class="text-right py-1.5 px-1 border-b border-[rgba(51,51,51,0.3)]">
-                    {t(i18n, 'stats.leaderboard.score')}
-                  </th>
-                  <th class="text-right py-1.5 px-1 border-b border-[rgba(51,51,51,0.3)]">
-                    K/D
-                  </th>
-                  <th class="text-right py-1.5 px-1 border-b border-[rgba(51,51,51,0.3)]">
-                    {t(i18n, 'stats.leaderboard.winRate')}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {leaderboard.slice(0, lbExpanded.value ? 20 : 10).map((e) => (
-                  <tr
-                    key={`lb-${e.rank}-${e.userId}`}
-                    class="border-b border-[rgba(51,51,51,0.15)] hover:bg-[rgba(70,151,195,0.05)]"
-                  >
-                    <td class="py-1.5 px-1 text-[var(--accent)] font-mono">
-                      {e.rank}
-                    </td>
-                    <td class="py-1.5 px-1 text-[var(--text)]">
-                      {e.steamId ? (
-                        <a
-                          href={`/stats/player/${e.steamId}`}
-                          class="hover:text-[var(--accent)] transition-colors"
-                        >
-                          {e.name ?? `User ${e.userId ?? '-'}`}
-                        </a>
-                      ) : (
-                        e.name ?? `User ${e.userId ?? '-'}`
-                      )}
-                    </td>
-                    <td class="py-1.5 px-1 text-[var(--text)] font-mono text-right">
-                      {Math.round(e.elo ?? e.rating ?? 0)}
-                    </td>
-                    <td class="py-1.5 px-1 text-[var(--text)] font-mono text-right">
-                      Lv.{e.level ?? '-'}
-                    </td>
-                    <td class="py-1.5 px-1 text-[var(--text)] font-mono text-right">
-                      {e.kdRatio?.toFixed(2) ?? '-'}
-                    </td>
-                    <td class="py-1.5 px-1 text-[var(--text)] font-mono text-right">
-                      {e.winRate != null ? `${(e.winRate * 100).toFixed(1)}%` : '-'}
-                    </td>
-                  </tr>
-                ))}
-                {leaderboard.length === 0 && (
-                  <tr>
-                    <td colSpan={6} class="py-4 text-center text-[var(--text-dim)] text-xs">
-                      {t(i18n, 'stats.leaderboard.empty')}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-          {leaderboard.length > 10 && (
-            <button
-              class="w-full mt-2 py-1.5 text-[9px] font-mono uppercase tracking-[0.2em] text-[var(--text-dim)] hover:text-[var(--accent)] border border-[rgba(51,51,51,0.2)] hover:border-[rgba(51,51,51,0.4)] transition-colors"
-              onClick$={() => { lbExpanded.value = !lbExpanded.value; }}
-            >
-              {lbExpanded.value ? '▲ Show Top 10' : `▼ Show Top 20`}
-            </button>
+        <Resource
+          value={overviewData}
+          onPending={() => <LeaderboardSkeleton />}
+          onRejected={() => (
+            <Panel title={t(i18n, 'stats.tab.leaderboard')}>
+              <p class="py-4 text-center text-xs text-[var(--text-dim)]">{t(i18n, 'stats.leaderboard.empty')}</p>
+            </Panel>
           )}
-        </Panel>
-      </div>
-
-      {/* ═══ Section 2: Maps ═══ */}
-      <div class="mb-6">
-        <p class="text-[var(--accent)] text-xs font-mono tracking-[0.3em] uppercase mb-3">
-          {t(i18n, 'stats.maps.title')}
-        </p>
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-3">
-          <Panel title={t(i18n, 'stats.overview.mapPlayFrequency')}>
-            <ChartCanvas config={mapChartConfig} height={380} />
-          </Panel>
-          <Panel title={t(i18n, 'stats.mapAnalytics.factionBreakdown')}>
-            <ChartCanvas config={mapTeamSidesConfig} height={380} />
-          </Panel>
-        </div>
-      </div>
-
-      {/* ═══ Section 3: Specializations & Faction Win Rates ═══ */}
-      <div class="mb-6">
-        <p class="text-[var(--accent)] text-xs font-mono tracking-[0.3em] uppercase mb-3">
-          {t(i18n, 'stats.country.title')}
-        </p>
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-3 mb-3">
-          <Panel title={t(i18n, 'stats.overview.specUsage')}>
-            <ChartCanvas config={specChartConfig} height={320} />
-          </Panel>
-          <Panel title={t(i18n, 'stats.overview.factionWinRates')}>
-            <ChartCanvas config={factionWinRateConfig} height={320} />
-          </Panel>
-        </div>
-      </div>
-
-      {/* ═══ Section 4: Game History (from periodic snapshots) ═══ */}
-      <div class="mb-6">
-        <p class="text-[var(--accent)] text-xs font-mono tracking-[0.3em] uppercase mb-3">
-          {t(i18n, 'stats.history.title')}
-        </p>
-        <p class="text-xs text-[var(--text-dim)] mb-3">
-          {t(i18n, 'stats.history.subtitle')}
-        </p>
-        {overview.value.factionHistory.length > 0 || overview.value.mapHistory.length > 0 ? (
-          <div class="grid grid-cols-1 xl:grid-cols-2 gap-3">
-            {overview.value.factionHistory.length > 0 && (
-              <Panel title={t(i18n, 'stats.overview.factionWinRates') + ' — ' + t(i18n, 'stats.history.timeRange.month')}>
-                <ChartCanvas config={buildFactionHistoryChart(overview.value.factionHistory)} height={300} crosshair />
-              </Panel>
-            )}
-            {overview.value.mapHistory.length > 0 && (
-              <Panel title={t(i18n, 'stats.overview.mapPlayFrequency') + ' — ' + t(i18n, 'stats.history.timeRange.month')}>
-                <ChartCanvas config={buildMapHistoryChart(overview.value.mapHistory)} height={300} crosshair />
-              </Panel>
-            )}
-          </div>
-        ) : (
-          <Panel title={t(i18n, 'stats.history.title')}>
-            <div class="py-6 text-center">
-              <p class="text-xs text-[var(--text-dim)]">
-                {t(i18n, 'stats.history.comingSoon')}
-              </p>
-            </div>
-          </Panel>
-        )}
-      </div>
-
-      {/* ═══ Section 5: Top Performing Units (from crawler match data) ═══ */}
-      <div class="mb-6">
-        <p class="text-[var(--accent)] text-xs font-mono tracking-[0.3em] uppercase mb-3">
-          {t(i18n, 'stats.topUnits.title')}
-        </p>
-        <p class="text-xs text-[var(--text-dim)] mb-3">
-          {t(i18n, 'stats.topUnits.subtitle')}
-        </p>
-        {overview.value.unitPerformance.length > 0 ? (
-          <Panel title={t(i18n, 'stats.topUnits.title')}>
-            <div class="max-h-[500px] overflow-y-auto">
-              <table class="w-full text-xs border-collapse">
-                <thead class="sticky top-0 bg-[var(--bg)] z-10">
-                  <tr class="text-[var(--text-dim)] uppercase tracking-[0.2em] text-[8px]">
-                    <th class="text-left py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.unitTable.unit')}</th>
-                    <th class="text-left py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.unitTable.options')}</th>
-                    <th class="text-left py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.unitTable.faction')}</th>
-                    <th class="text-right py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.topUnits.deployed')}</th>
-                    <th class="text-right py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.topUnits.avgKills')}</th>
-                    <th class="text-right py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.topUnits.avgDamage')}</th>
-                    <th class="text-right py-1.5 px-2 border-b border-[rgba(51,51,51,0.3)]">{t(i18n, 'stats.match.damageDealt')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...overview.value.unitPerformance]
-                    .sort((a, b) => b.totalDamageDealt - a.totalDamageDealt)
-                    .slice(0, 50)
-                    .map((u, idx) => {
-                      const opts = resolveUnitOptionNames(u.optionNames ?? [], i18n.locale);
-                      return (
+          onResolved={(data) => {
+            const leaderboard = data.analyticsLeaderboard;
+            return (
+              <Panel title={t(i18n, 'stats.tab.leaderboard')}>
+                <div class={lbExpanded.value ? 'max-h-[600px] overflow-y-auto' : ''}>
+                  <table class="w-full text-xs border-collapse">
+                    <thead class={lbExpanded.value ? 'sticky top-0 bg-[var(--bg)] z-10' : ''}>
+                      <tr class="text-[var(--text-dim)] uppercase tracking-[0.2em] text-[8px]">
+                        <th class="text-left py-1.5 px-1 border-b border-[rgba(51,51,51,0.3)]">
+                          {t(i18n, 'stats.leaderboard.rank')}
+                        </th>
+                        <th class="text-left py-1.5 px-1 border-b border-[rgba(51,51,51,0.3)]">
+                          {t(i18n, 'stats.leaderboard.player')}
+                        </th>
+                        <th class="text-right py-1.5 px-1 border-b border-[rgba(51,51,51,0.3)]">
+                          ELO
+                        </th>
+                        <th class="text-right py-1.5 px-1 border-b border-[rgba(51,51,51,0.3)]">
+                          {t(i18n, 'stats.leaderboard.score')}
+                        </th>
+                        <th class="text-right py-1.5 px-1 border-b border-[rgba(51,51,51,0.3)]">
+                          K/D
+                        </th>
+                        <th class="text-right py-1.5 px-1 border-b border-[rgba(51,51,51,0.3)]">
+                          {t(i18n, 'stats.leaderboard.winRate')}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {leaderboard.slice(0, lbExpanded.value ? 100 : 10).map((e) => (
                         <tr
-                          key={`top-${u.configKey}-${idx}`}
+                          key={`lb-${e.rank}-${e.userId}`}
                           class="border-b border-[rgba(51,51,51,0.15)] hover:bg-[rgba(70,151,195,0.05)]"
                         >
-                          <td class="py-1.5 px-2">
-                            <a href={`/arsenal/${u.unitId}`} class="text-[var(--accent)] hover:underline">
-                              {u.unitName}
-                            </a>
+                          <td class="py-1.5 px-1 text-[var(--accent)] font-mono">
+                            {e.rank}
                           </td>
-                          <td class="py-1.5 px-2 text-[var(--text-dim)] text-[10px]">
-                            {opts.length > 0 ? opts.join(' + ') : '-'}
+                          <td class="py-1.5 px-1 text-[var(--text)]">
+                            {e.steamId ? (
+                              <a
+                                href={`/stats/player/${e.steamId}`}
+                                class="hover:text-[var(--accent)] transition-colors"
+                              >
+                                {e.name ?? `User ${e.userId ?? '-'}`}
+                              </a>
+                            ) : (
+                              e.name ?? `User ${e.userId ?? '-'}`
+                            )}
                           </td>
-                          <td class="py-1.5 px-2 text-[var(--text-dim)]">{u.factionName}</td>
-                          <td class="py-1.5 px-2 text-[var(--text)] font-mono text-right">{u.deployCount}</td>
-                          <td class="py-1.5 px-2 text-[var(--text)] font-mono text-right">{u.avgKills.toFixed(1)}</td>
-                          <td class="py-1.5 px-2 text-[var(--text)] font-mono text-right">{Math.round(u.avgDamage)}</td>
-                          <td class="py-1.5 px-2 text-[var(--text-dim)] font-mono text-right">{Math.round(u.totalDamageDealt).toLocaleString()}</td>
+                          <td class="py-1.5 px-1 text-[var(--text)] font-mono text-right">
+                            {Math.round(e.elo ?? e.rating ?? 0)}
+                          </td>
+                          <td class="py-1.5 px-1 text-[var(--text)] font-mono text-right">
+                            Lv.{e.level ?? '-'}
+                          </td>
+                          <td class="py-1.5 px-1 text-[var(--text)] font-mono text-right">
+                            {e.kdRatio?.toFixed(2) ?? '-'}
+                          </td>
+                          <td class="py-1.5 px-1 text-[var(--text)] font-mono text-right">
+                            {e.winRate != null ? `${(e.winRate * 100).toFixed(1)}%` : '-'}
+                          </td>
                         </tr>
-                      );
-                    })}
-                </tbody>
-              </table>
-            </div>
-          </Panel>
-        ) : (
-          <Panel title={t(i18n, 'stats.topUnits.title')}>
-            <div class="py-6 text-center">
-              <p class="text-xs text-[var(--text-dim)]">
-                {t(i18n, 'stats.topUnits.comingSoon')}
-              </p>
-            </div>
-          </Panel>
-        )}
+                      ))}
+                      {leaderboard.length === 0 && (
+                        <tr>
+                          <td colSpan={6} class="py-4 text-center text-[var(--text-dim)] text-xs">
+                            {t(i18n, 'stats.leaderboard.empty')}
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                {leaderboard.length > 10 && (
+                  <button
+                    class="w-full mt-2 py-1.5 text-[9px] font-mono uppercase tracking-[0.2em] text-[var(--text-dim)] hover:text-[var(--accent)] border border-[rgba(51,51,51,0.2)] hover:border-[rgba(51,51,51,0.4)] transition-colors"
+                    onClick$={() => { lbExpanded.value = !lbExpanded.value; }}
+                  >
+                    {lbExpanded.value ? '▲ Show Top 10' : `▼ Show Top 100`}
+                  </button>
+                )}
+              </Panel>
+            );
+          }}
+        />
       </div>
 
-      {/* ═══ Section 6: Crawler-Derived Stats (from ranked match data) ═══ */}
-      <p class="text-[8px] text-[var(--text-dim)] italic mb-4">
-        {t(i18n, 'stats.crawler.disclaimer')}
-      </p>
-
-      {/* Spec Popularity (Ranked) */}
+      {/* ═══ Section 2: All Ranked Match Data ═══ */}
       <div class="mb-6">
-        <p class="text-[var(--accent)] text-xs font-mono tracking-[0.3em] uppercase mb-3">
-          {t(i18n, 'stats.specPopularity.title')}
-        </p>
-        <p class="text-xs text-[var(--text-dim)] mb-3">
-          {t(i18n, 'stats.specPopularity.subtitle')}
-        </p>
-        {overview.value.specHistory.length > 0 ? (
-          <Panel title={t(i18n, 'stats.specPopularity.title')}>
-            <ChartCanvas config={buildSpecPopularityChart(overview.value.specHistory)} height={300} crosshair />
-          </Panel>
-        ) : (
-          <Panel title={t(i18n, 'stats.specPopularity.title')}>
-            <div class="py-6 text-center">
-              <p class="text-xs text-[var(--text-dim)]">
-                {t(i18n, 'stats.specPopularity.comingSoon')}
-              </p>
-            </div>
-          </Panel>
-        )}
-      </div>
+        {/* Shared header + controls for all ranked data sections */}
+        <div class="flex items-center justify-between mb-1">
+          <p class="text-[var(--accent)] text-xs font-mono tracking-[0.3em] uppercase">
+            {t(i18n, 'stats.history.title')}
+          </p>
+          <div class="flex items-center gap-3">
+            {/* ELO bracket filter */}
+            <select
+              class="px-2 py-1 text-[9px] font-mono uppercase tracking-wider border border-[rgba(51,51,51,0.3)] bg-[rgba(26,26,26,0.6)] text-[var(--text-dim)] appearance-none cursor-pointer"
+              value={rollingElo.value}
+              onChange$={(e) => {
+                rollingElo.value = (e.target as HTMLSelectElement).value;
+              }}
+            >
+              <option value="">{t(i18n, 'stats.unitPerformance.allElo')}</option>
+              {ELO_BRACKETS.map((b) => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
 
-      {/* Unit Popularity */}
-      <div class="mb-6">
-        <p class="text-[var(--accent)] text-xs font-mono tracking-[0.3em] uppercase mb-3">
-          {t(i18n, 'stats.unitPopularity.title')}
-        </p>
-        <p class="text-xs text-[var(--text-dim)] mb-3">
-          {t(i18n, 'stats.unitPopularity.subtitle')}
-        </p>
-        {overview.value.unitPerformance.length > 0 ? (
-          <UnitPerformanceSection entries={overview.value.unitPerformance} />
-        ) : (
-          <Panel title={t(i18n, 'stats.unitPopularity.title')}>
-            <div class="py-6 text-center">
-              <p class="text-xs text-[var(--text-dim)]">
-                {t(i18n, 'stats.unitPopularity.comingSoon')}
-              </p>
+            {/* Time range selector */}
+            <div class="flex gap-1">
+              {(['7d', '14d', '30d'] as const).map((range) => (
+                <button
+                  key={range}
+                  class={[
+                    'px-3 py-1 text-[9px] font-mono uppercase tracking-wider border transition-colors',
+                    rollingRange.value === range
+                      ? 'border-[var(--accent)] text-[var(--accent)] bg-[rgba(70,151,195,0.1)]'
+                      : 'border-[rgba(51,51,51,0.3)] text-[var(--text-dim)] hover:border-[rgba(51,51,51,0.5)] hover:text-[var(--text)]',
+                  ].join(' ')}
+                  onClick$={() => { rollingRange.value = range; }}
+                >
+                  {range === '7d'
+                    ? t(i18n, 'stats.history.timeRange.week')
+                    : range === '14d'
+                      ? t(i18n, 'stats.history.timeRange.twoWeeks')
+                      : t(i18n, 'stats.history.timeRange.month')}
+                </button>
+              ))}
             </div>
-          </Panel>
-        )}
-      </div>
+          </div>
+        </div>
+        <p class="text-[8px] text-[var(--text-dim)] italic mb-4">
+          {t(i18n, 'stats.history.subtitle')}
+        </p>
 
-      {/* Footer timestamp */}
-      <p class="text-[10px] text-[var(--text-dim)]">
-        {t(i18n, 'stats.maps.lastUpdated')}:{' '}
-        {overview.value.analyticsMapTeamSides.updateDate ??
-          t(i18n, 'stats.unknown')}
-      </p>
+        {/* Charts: faction win rate, map popularity, spec picks */}
+        <Resource
+          value={rollingData}
+          onPending={() => (
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-3">
+              {[0, 1, 2].map((i) => (
+                <ChartSkeleton key={i} />
+              ))}
+            </div>
+          )}
+          onRejected={() => (
+            <Panel title={t(i18n, 'stats.history.title')}>
+              <div class="py-6 text-center">
+                <p class="text-xs text-[var(--text-dim)]">
+                  {t(i18n, 'stats.history.comingSoon')}
+                </p>
+              </div>
+            </Panel>
+          )}
+          onResolved={(data) => {
+            const hasData = data.factionRows.length > 0 || data.mapRows.length > 0 || data.specRows.length > 0;
+            if (!hasData) {
+              return (
+                <Panel title={t(i18n, 'stats.history.title')}>
+                  <div class="py-6 text-center">
+                    <p class="text-xs text-[var(--text-dim)]">
+                      {t(i18n, 'stats.history.comingSoon')}
+                    </p>
+                  </div>
+                </Panel>
+              );
+            }
+            return (
+              <div class="grid grid-cols-1 xl:grid-cols-3 gap-3">
+                {data.factionRows.length > 0 && (
+                  <Panel title={t(i18n, 'stats.history.factionWinRate')}>
+                    <ChartCanvas config={buildRollingFactionChart(data.factionRows)} height={300} />
+                  </Panel>
+                )}
+                {data.mapRows.length > 0 && (
+                  <Panel title={t(i18n, 'stats.history.mapPopularity')}>
+                    <ChartCanvas config={buildRollingMapChart(data.mapRows)} height={300} />
+                  </Panel>
+                )}
+                {data.specRows.length > 0 && (
+                  <Panel title={t(i18n, 'stats.history.specPopularity')}>
+                    <div class="flex items-center gap-4 mb-2 text-xs font-mono">
+                      <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded-sm" style={{ backgroundColor: CHART_COLORS[1] }} /> Russia</span>
+                      <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded-sm" style={{ backgroundColor: CHART_COLORS[0] }} /> USA</span>
+                    </div>
+                    <ChartCanvas config={buildRollingSpecChart(data.specRows)} height={300} />
+                  </Panel>
+                )}
+              </div>
+            );
+          }}
+        />
+
+        {/* Top Performing Units */}
+        <div class="mt-4">
+          <Resource
+            value={overviewData}
+            onPending={() => <UnitTableSkeleton />}
+            onRejected={() => (
+              <Panel title={t(i18n, 'stats.topUnits.title')}>
+                <div class="py-6 text-center">
+                  <p class="text-xs text-[var(--text-dim)]">{t(i18n, 'stats.topUnits.comingSoon')}</p>
+                </div>
+              </Panel>
+            )}
+            onResolved={(data) => {
+              if (data.unitPerformance.length > 0) {
+                return <TopPerformingUnitsSection entries={data.unitPerformance} since={rollingRange.value} />;
+              }
+              return (
+                <Panel title={t(i18n, 'stats.topUnits.title')}>
+                  <div class="py-6 text-center">
+                    <p class="text-xs text-[var(--text-dim)]">{t(i18n, 'stats.topUnits.comingSoon')}</p>
+                  </div>
+                </Panel>
+              );
+            }}
+          />
+        </div>
+
+        {/* Unit Popularity */}
+        <div class="mt-4">
+          <Resource
+            value={overviewData}
+            onPending={() => <UnitTableSkeleton />}
+            onRejected={() => (
+              <Panel title={t(i18n, 'stats.unitPopularity.title')}>
+                <div class="py-6 text-center">
+                  <p class="text-xs text-[var(--text-dim)]">{t(i18n, 'stats.unitPopularity.comingSoon')}</p>
+                </div>
+              </Panel>
+            )}
+            onResolved={(data) => {
+              if (data.unitPerformance.length > 0) {
+                return <UnitPerformanceSection entries={data.unitPerformance} since={rollingRange.value} />;
+              }
+              return (
+                <Panel title={t(i18n, 'stats.unitPopularity.title')}>
+                  <div class="py-6 text-center">
+                    <p class="text-xs text-[var(--text-dim)]">{t(i18n, 'stats.unitPopularity.comingSoon')}</p>
+                  </div>
+                </Panel>
+              );
+            }}
+          />
+        </div>
+
+        <p class="text-[8px] text-[var(--text-dim)] italic mt-3">
+          {t(i18n, 'stats.crawler.disclaimer')}
+        </p>
+      </div>
     </div>
   );
 });

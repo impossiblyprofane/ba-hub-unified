@@ -50,13 +50,11 @@ export const schema = `
 
     # ── Snapshot / history data ──────────────────────────────
     snapshotLeaderboardHistory(steamId: String!, since: String): [SnapshotLeaderboardEntry!]!
-    snapshotMapHistory(since: String): [SnapshotMapEntry!]!
-    snapshotFactionHistory(since: String): [SnapshotFactionEntry!]!
-    snapshotUnitRankings(limit: Int = 50): SnapshotUnitRankings!
 
-    # ── Crawler-derived snapshot data ────────────────────────
-    crawlerFactionHistory(since: String): [CrawlerFactionEntry!]!
-    snapshotSpecHistory(since: String): [SnapshotSpecEntry!]!
+    # ── Rolling aggregation queries (from raw match data) ────
+    rollingFactionStats(since: String, eloBracket: String): RollingFactionStats!
+    rollingMapStats(since: String, eloBracket: String): RollingMapStats!
+    rollingSpecStats(since: String, eloBracket: String): RollingSpecStats!
     unitPerformance(since: String, eloBracket: String, faction: String, limit: Int): [UnitPerformanceEntry!]!
     specCombos(since: String, limit: Int): [SpecComboEntry!]!
     crawlerStatus: CrawlerStatus
@@ -832,6 +830,7 @@ export const schema = `
     countryName: String
     countryFlag: String
     specNames: [String!]!
+    specIcons: [String!]!
   }
 
   type AnalyticsFightData {
@@ -959,54 +958,39 @@ export const schema = `
     createdAt: String!
   }
 
-  type SnapshotMapEntry {
+  # ── Rolling aggregation types ──────────────────────────
+
+  type RollingFactionStatsRow {
+    factionName: String!
+    matchCount: Int!
+    winCount: Int!
+  }
+
+  type RollingFactionStats {
+    rows: [RollingFactionStatsRow!]!
+    since: String!
+  }
+
+  type RollingMapStatsRow {
     mapName: String!
     playCount: Int!
-    snapshotType: String!
-    createdAt: String!
   }
 
-  type SnapshotFactionEntry {
-    factionName: String!
-    matchCount: Int!
-    winCount: Int!
-    snapshotType: String!
-    createdAt: String!
+  type RollingMapStats {
+    rows: [RollingMapStatsRow!]!
+    since: String!
   }
 
-  type SnapshotUnitEntry {
-    unitName: String!
-    timesDeployed: Int!
-    totalKills: Int!
-    totalDamageDealt: Float!
-    totalDamageReceived: Float!
-    totalSupplyConsumed: Float!
-    timesRefunded: Int!
-    avgKills: Float!
-    avgDamage: Float!
-  }
-
-  type SnapshotUnitRankings {
-    snapshotDate: String
-    units: [SnapshotUnitEntry!]!
-  }
-
-  # ── Crawler-derived types ──────────────────────────────
-
-  type CrawlerFactionEntry {
-    factionName: String!
-    matchCount: Int!
-    winCount: Int!
-    snapshotType: String!
-    createdAt: String!
-  }
-
-  type SnapshotSpecEntry {
+  type RollingSpecStatsRow {
     specName: String!
     specId: Int
+    factionName: String!
     pickCount: Int!
-    snapshotType: String!
-    createdAt: String!
+  }
+
+  type RollingSpecStats {
+    rows: [RollingSpecStatsRow!]!
+    since: String!
   }
 
   type UnitPerformanceEntry {
@@ -1016,7 +1000,7 @@ export const schema = `
     factionName: String!
     optionIds: String
     optionNames: [String!]!
-    eloBracket: String!
+    eloBracket: String
     deployCount: Int!
     totalKills: Int!
     avgKills: Float!

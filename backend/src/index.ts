@@ -7,7 +7,6 @@ import { resolvers } from './graphql/resolvers.js';
 import { loadStaticData } from './data/loader.js';
 import { buildIndexes } from './data/indexes.js';
 import { DatabaseClient } from './services/databaseClient.js';
-import { StatsClient } from './services/statsClient.js';
 import { StatsCollector } from './services/statsCollector.js';
 import { MatchCrawler } from './services/matchCrawler.js';
 import { encryptDek, decryptDek } from './services/dekEncryption.js';
@@ -16,15 +15,12 @@ import { encryptPayload, decryptPayload, isEncryptionConfigured } from '@ba-hub/
 
 const PORT = process.env.PORT || 3001;
 const DATABASE_SERVICE_URL = process.env.DATABASE_SERVICE_URL || 'http://localhost:3002';
-const STATS_API_URL = process.env.STATS_API_URL || 'https://api.brokenarrowgame.tech';
-const STATS_PARTNER_TOKEN = process.env.STATS_PARTNER_TOKEN || '';
 const STATS_COLLECTION_ENABLED = process.env.STATS_COLLECTION_ENABLED !== 'false';
 
 async function buildServer() {
   const data = await loadStaticData();
   const indexes = buildIndexes(data);
   const dbClient = new DatabaseClient(DATABASE_SERVICE_URL);
-  const statsClient = new StatsClient(STATS_API_URL, STATS_PARTNER_TOKEN || undefined);
 
   // Keep mutable references for hot-reloading
   let currentData = data;
@@ -65,9 +61,17 @@ async function buildServer() {
     }
   });
 
-  // CORS for frontend
+  // CORS for frontend — accept www and non-www variants
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const allowedOrigins = [frontendUrl];
+  // Auto-add the www / non-www counterpart for production domains
+  if (frontendUrl.includes('://www.')) {
+    allowedOrigins.push(frontendUrl.replace('://www.', '://'));
+  } else if (frontendUrl.match(/^https?:\/\/[^/]+\./)) {
+    allowedOrigins.push(frontendUrl.replace('://', '://www.'));
+  }
   await fastify.register(cors, {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: allowedOrigins,
     credentials: true,
   });
 
@@ -134,7 +138,6 @@ async function buildServer() {
       data: currentData,
       indexes: currentIndexes,
       dbClient,
-      statsClient,
     }),
     graphiql: true, // GraphiQL interface at /graphiql
     subscription: true, // Enable subscriptions via WebSocket
@@ -180,12 +183,12 @@ async function buildServer() {
     return payload;
   });
 
-  return { fastify, data: currentData, indexes: currentIndexes, statsClient };
+  return { fastify, dbClient, data: currentData, indexes: currentIndexes };
 }
 
 async function start() {
   try {
-    const { fastify, data, indexes, statsClient } = await buildServer();
+    const { fastify, dbClient, data, indexes } = await buildServer();
 
     await fastify.listen({ port: PORT as number, host: '0.0.0.0' });
 
@@ -194,7 +197,7 @@ async function start() {
 
     // Create match crawler for independent fight data collection
     const matchCrawler = new MatchCrawler({
-      statsClient,
+      dbClient,
       databaseServiceUrl: DATABASE_SERVICE_URL,
       indexes,
       data,
@@ -202,7 +205,7 @@ async function start() {
 
     // Start periodic stats collection
     const collector = new StatsCollector({
-      statsClient,
+      dbClient,
       databaseServiceUrl: DATABASE_SERVICE_URL,
       enabled: STATS_COLLECTION_ENABLED,
       matchCrawler,

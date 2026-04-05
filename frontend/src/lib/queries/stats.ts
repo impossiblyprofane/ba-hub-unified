@@ -1,26 +1,5 @@
 export const STATS_OVERVIEW_QUERY = `
   query StatsOverview {
-    analyticsMapRatings {
-      id
-      name
-      count
-    }
-    analyticsMapTeamSides {
-      updateDate
-      data {
-        map
-        winData {
-          id
-          name
-          count
-        }
-      }
-    }
-    analyticsSpecUsage {
-      id
-      name
-      count
-    }
     analyticsLeaderboard(start: 0, end: 100) {
       rank
       userId
@@ -31,17 +10,6 @@ export const STATS_OVERVIEW_QUERY = `
       level
       winRate
       kdRatio
-    }
-    analyticsCountryStats {
-      updateDate
-      matchesCount {
-        name
-        count
-      }
-      winsCount {
-        name
-        count
-      }
     }
   }
 `;
@@ -168,6 +136,7 @@ export const STATS_RECENT_FIGHTS_QUERY = `
         countryName
         countryFlag
         specNames
+        specIcons
       }
       frequentTeammates {
         name
@@ -328,7 +297,7 @@ export const STATS_FIGHT_DATA_QUERY = `
   }
 `;
 
-/* ─── Snapshot / History queries ──────────────────────────── */
+/* ─── Leaderboard history query (for player profiles) ─────── */
 
 export const SNAPSHOT_LEADERBOARD_HISTORY_QUERY = `
   query SnapshotLeaderboardHistory($steamId: String!, $since: String) {
@@ -344,70 +313,43 @@ export const SNAPSHOT_LEADERBOARD_HISTORY_QUERY = `
   }
 `;
 
-export const SNAPSHOT_MAP_HISTORY_QUERY = `
-  query SnapshotMapHistory($since: String) {
-    snapshotMapHistory(since: $since) {
-      mapName
-      playCount
-      snapshotType
-      createdAt
-    }
-  }
-`;
+/* ─── Rolling aggregation queries ─────────────────────────── */
 
-export const SNAPSHOT_FACTION_HISTORY_QUERY = `
-  query SnapshotFactionHistory($since: String) {
-    snapshotFactionHistory(since: $since) {
-      factionName
-      matchCount
-      winCount
-      snapshotType
-      createdAt
-    }
-  }
-`;
-
-export const SNAPSHOT_UNIT_RANKINGS_QUERY = `
-  query SnapshotUnitRankings($limit: Int) {
-    snapshotUnitRankings(limit: $limit) {
-      snapshotDate
-      units {
-        unitName
-        timesDeployed
-        totalKills
-        totalDamageDealt
-        totalDamageReceived
-        totalSupplyConsumed
-        timesRefunded
-        avgKills
-        avgDamage
+export const ROLLING_FACTION_STATS_QUERY = `
+  query RollingFactionStats($since: String, $eloBracket: String) {
+    rollingFactionStats(since: $since, eloBracket: $eloBracket) {
+      rows {
+        factionName
+        matchCount
+        winCount
       }
+      since
     }
   }
 `;
 
-// ── Crawler-derived snapshot queries ─────────────────────────
-
-export const CRAWLER_FACTION_HISTORY_QUERY = `
-  query CrawlerFactionHistory($since: String) {
-    crawlerFactionHistory(since: $since) {
-      factionName
-      matchCount
-      winCount
-      snapshotType
-      createdAt
+export const ROLLING_MAP_STATS_QUERY = `
+  query RollingMapStats($since: String, $eloBracket: String) {
+    rollingMapStats(since: $since, eloBracket: $eloBracket) {
+      rows {
+        mapName
+        playCount
+      }
+      since
     }
   }
 `;
 
-export const SNAPSHOT_SPEC_HISTORY_QUERY = `
-  query SnapshotSpecHistory($since: String) {
-    snapshotSpecHistory(since: $since) {
-      specName
-      specId
-      pickCount
-      snapshotType
-      createdAt
+export const ROLLING_SPEC_STATS_QUERY = `
+  query RollingSpecStats($since: String, $eloBracket: String) {
+    rollingSpecStats(since: $since, eloBracket: $eloBracket) {
+      rows {
+        specName
+        specId
+        factionName
+        pickCount
+      }
+      since
     }
   }
 `;

@@ -14,6 +14,7 @@ import {
   STATS_USER_PROFILE_QUERY,
   STATS_RECENT_FIGHTS_QUERY,
 } from '~/lib/queries/stats';
+import { toCountryIconPath, toSpecializationIconPath } from '~/lib/iconPaths';
 import { ChartCanvas } from '~/components/stats/ChartCanvas';
 import type { ChartConfiguration } from 'chart.js';
 
@@ -1149,10 +1150,10 @@ export default component$(() => {
           {(mostUsedUnits.length > 0 || topKillerUnits.length > 0 || topDamageUnits.length > 0 || topDamageReceivedUnits.length > 0) && (() => {
             const filterFn = (u: UnitPerformance) =>
               factionFilter.value === 'all' || u.countryName === factionFilter.value;
-            const fMostUsed = mostUsedUnits.filter(filterFn);
-            const fTopKillers = topKillerUnits.filter(filterFn);
-            const fTopDamage = topDamageUnits.filter(filterFn);
-            const fTopDmgRecv = topDamageReceivedUnits.filter(filterFn);
+            const fMostUsed = mostUsedUnits.filter(filterFn).slice(0, 10);
+            const fTopKillers = topKillerUnits.filter(filterFn).slice(0, 10);
+            const fTopDamage = topDamageUnits.filter(filterFn).slice(0, 10);
+            const fTopDmgRecv = topDamageReceivedUnits.filter(filterFn).slice(0, 10);
             return (
               <>
                 <div class="flex items-center gap-2">
@@ -1356,15 +1357,28 @@ export default component$(() => {
                           </td>
                           <td class="py-1.5">
                             <div class="flex items-center gap-1.5">
-                              {fight.countryName && (
-                                <span class="text-[9px] font-mono text-[var(--accent)]">
-                                  {fight.countryName === 'USA' ? 'US' : fight.countryName === 'Russia' ? 'RU' : fight.countryName}
-                                </span>
+                              {fight.countryFlag && (
+                                <img
+                                  src={toCountryIconPath(fight.countryFlag)}
+                                  alt={fight.countryName ?? ''}
+                                  class="w-4 h-3 object-contain opacity-80"
+                                  width={16}
+                                  height={12}
+                                />
                               )}
-                              {fight.specNames && fight.specNames.length > 0 && (
-                                <span class="text-[8px] text-[var(--text-dim)] truncate max-w-[120px]">
-                                  {fight.specNames.join(' + ')}
-                                </span>
+                              {fight.specIcons && fight.specIcons.length > 0 && fight.specIcons.map((icon, si) => (
+                                <img
+                                  key={`si-${si}`}
+                                  src={toSpecializationIconPath(icon)}
+                                  alt={fight.specNames?.[si] ?? ''}
+                                  title={fight.specNames?.[si] ?? ''}
+                                  class="w-4 h-4 object-contain opacity-70"
+                                  width={16}
+                                  height={16}
+                                />
+                              ))}
+                              {!fight.countryFlag && (!fight.specIcons || fight.specIcons.length === 0) && (
+                                <span class="text-[8px] text-[var(--text-dim)]">-</span>
                               )}
                             </div>
                           </td>

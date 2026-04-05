@@ -526,6 +526,7 @@ const en: TranslationDict = {
   'stats.title': 'Statistics',
   'stats.subtitle': 'View player leaderboards and performance analytics.',
   'stats.comingSoon': 'Statistics page is under construction. Check back soon for player leaderboards, match history, and performance analytics.',
+  'stats.loading': 'Loading...',
 
   // Stats: tabs
   'stats.tab.leaderboard': 'Leaderboard',
@@ -608,7 +609,7 @@ const en: TranslationDict = {
   // Stats: overview charts
   'stats.overview.mapPlayFrequency': 'Map Play Frequency',
   'stats.overview.specUsage': 'Specialization Usage',
-  'stats.overview.factionWinRates': 'Map Side Win Rate',
+  'stats.overview.factionWinRates': 'Faction Win Rates',
   'stats.overview.factionMatchups': 'Faction Matchups',
   'stats.overview.matchesPlayed': 'Matches Played',
   'stats.overview.winsLabel': 'Wins',
@@ -753,7 +754,7 @@ const en: TranslationDict = {
   'stats.profile.recent': 'Recent',
 
   'stats.profile.supplyNet': 'Supply Net',
-  'stats.profile.deck': 'Deck',
+  'stats.profile.deck': 'Faction',
   'stats.profile.rating': 'Rating',
 
   // Stats: unit tables
@@ -765,14 +766,20 @@ const en: TranslationDict = {
   'stats.unitTable.allElo': 'All ELO',
   'stats.unitTable.configs': 'configs',
 
-  // Stats: game history (future — periodic snapshots)
-  'stats.history.title': 'Game History',
-  'stats.history.subtitle': 'Track trends in faction balance, map popularity, and player rankings over time.',
-  'stats.history.comingSoon': 'Historical trend data is being collected. Charts will appear here as data accumulates.',
+  // Stats: ranked match data (rolling aggregation)
+  'stats.history.title': 'Ranked Match Data',
+  'stats.history.subtitle': 'All data below is aggregated from crawled ranked matches and subject to inaccuracies.',
+  'stats.history.comingSoon': 'Match data is being collected. Charts will appear here as data accumulates.',
   'stats.history.timeRange.day': 'Last 24h',
   'stats.history.timeRange.week': 'Last 7 Days',
+  'stats.history.timeRange.twoWeeks': 'Last 14 Days',
   'stats.history.timeRange.month': 'Last 30 Days',
   'stats.history.timeRange.all': 'All Time',
+  'stats.history.factionWinRate': 'Faction Win Rates',
+  'stats.history.mapPopularity': 'Map Popularity',
+  'stats.history.specPopularity': 'Specialization Picks (% within faction)',
+  'stats.history.matchCount': 'matches',
+  'stats.history.winRate': 'Win Rate',
 
   // Stats: top units (future)
   'stats.topUnits.title': 'Top Performing Units',
@@ -782,19 +789,19 @@ const en: TranslationDict = {
   'stats.topUnits.avgKills': 'Avg Kills',
   'stats.topUnits.avgDamage': 'Avg Damage',
 
-  // -- Crawler-derived stats --
+  // -- Ranked match data --
   'stats.crawlerFactionWinRates.title': 'Faction Win Rates (Ranked)',
-  'stats.crawlerFactionWinRates.subtitle': 'Win rate trends from recent ranked matches.',
-  'stats.crawlerFactionWinRates.comingSoon': 'Match data is being collected. Win rate trends will appear here as data accumulates.',
+  'stats.crawlerFactionWinRates.subtitle': 'Win rates from recent ranked matches.',
+  'stats.crawlerFactionWinRates.comingSoon': 'Match data is being collected. Win rate data will appear here as data accumulates.',
   'stats.specPopularity.title': 'Specialization Popularity (Ranked)',
-  'stats.specPopularity.subtitle': 'Pick frequency trends from recent ranked matches.',
-  'stats.specPopularity.comingSoon': 'Match data is being collected. Specialization trends will appear here as data accumulates.',
+  'stats.specPopularity.subtitle': 'Pick frequency from recent ranked matches.',
+  'stats.specPopularity.comingSoon': 'Match data is being collected. Specialization data will appear here as data accumulates.',
   'stats.unitPopularity.title': 'Unit Popularity',
   'stats.unitPopularity.subtitle': 'Most deployed units from recent ranked matches.',
   'stats.unitPopularity.comingSoon': 'Match data is being collected. Unit popularity will appear here as data accumulates.',
   'stats.unitPopularity.allFactions': 'All Factions',
   'stats.unitPopularity.deployed': 'Deployed',
-  'stats.crawler.disclaimer': 'Based on recent game data within the last 30 days. Results are approximate and may not reflect all matches.',
+  'stats.crawler.disclaimer': 'Data is aggregated from crawled ranked matches over the selected time window. Results are approximate and may not reflect all matches played.',
 
   // ── Guides page ──
   'guides.tag': 'Strategic Knowledge',

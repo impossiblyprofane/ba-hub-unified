@@ -1,4 +1,4 @@
-import type { StatsClient, FightData, FightPlayerData } from './statsClient.js';
+import type { DatabaseClient, StatsFightData, StatsFightPlayerData } from './databaseClient.js';
 import type { StaticData } from '../data/loader.js';
 import type { StaticIndexes } from '../data/indexes.js';
 import { MAP_ID_TO_NAME } from '../data/constants.js';
@@ -6,7 +6,7 @@ import { MAP_ID_TO_NAME } from '../data/constants.js';
 // ── Types ────────────────────────────────────────────────────────
 
 interface CrawlerConfig {
-  statsClient: StatsClient;
+  dbClient: DatabaseClient;
   databaseServiceUrl: string;
   indexes: StaticIndexes;
   data: StaticData;
@@ -33,6 +33,8 @@ interface MatchInsert {
   playerCount: number;
   totalPlayTimeSec?: number;
   endTime?: number;
+  /** Raw S3 FightData JSON blob — stored in fight_data table. */
+  rawFightData?: unknown;
   teams: Array<{
     teamId: number;
     factionName: string;
@@ -82,26 +84,6 @@ interface CrawlerState {
   updatedAt: string | null;
 }
 
-export interface CrawlerAggregates {
-  crawlerFactionStats: Array<{ factionName: string; matchCount: number; winCount: number }>;
-  specStats: Array<{ specName: string; specId?: number; pickCount: number }>;
-  mapPopularity: Array<{ mapName: string; playCount: number }>;
-  unitPerformance: Array<{
-    configKey: string;
-    unitId?: number;
-    unitName: string;
-    factionName: string;
-    optionIds: string;
-    eloBracket: string;
-    deployCount: number;
-    totalKills: number;
-    totalDamageDealt: number;
-    totalDamageReceived: number;
-    totalSupplyConsumed: number;
-    refundCount: number;
-  }>;
-}
-
 /** Derive ELO bracket from a player's rating. Buckets per 500. */
 function getEloBracket(rating?: number): string {
   if (rating === undefined || rating === null) return 'unranked';
@@ -112,7 +94,7 @@ function getEloBracket(rating?: number): string {
 // ── MatchCrawler ─────────────────────────────────────────────────
 
 export class MatchCrawler {
-  private statsClient: StatsClient;
+  private dbClient: DatabaseClient;
   private dbUrl: string;
   private indexes: StaticIndexes;
   private data: StaticData;
@@ -124,7 +106,7 @@ export class MatchCrawler {
   private unitIdToSpecIds: Map<number, Set<number>> | null = null;
 
   constructor(config: CrawlerConfig) {
-    this.statsClient = config.statsClient;
+    this.dbClient = config.dbClient;
     this.dbUrl = config.databaseServiceUrl.replace(/\/$/, '');
     this.indexes = config.indexes;
     this.data = config.data;
@@ -308,7 +290,7 @@ export class MatchCrawler {
     const fightIdSet = new Set<number>();
 
     try {
-      const leaderboard = await this.statsClient.getLeaderboard(0, 100);
+      const leaderboard = await this.dbClient.getLeaderboard(0, 100);
       const playerIds = leaderboard
         .filter((e) => e.userId)
         .slice(0, this.playerCount)
@@ -319,12 +301,12 @@ export class MatchCrawler {
         const batch = playerIds.slice(i, i + 5);
         const results = await Promise.all(
           batch.map((userId) =>
-            this.statsClient.getRecentFightIds(userId).catch(() => [] as string[]),
+            this.dbClient.getRecentFightIds(userId).catch(() => [] as number[]),
           ),
         );
         for (const ids of results) {
           for (const id of ids) {
-            const num = parseInt(id, 10);
+            const num = typeof id === 'number' ? id : parseInt(String(id), 10);
             if (Number.isFinite(num)) fightIdSet.add(num);
           }
         }
@@ -363,7 +345,7 @@ export class MatchCrawler {
     for (let i = 0; i < newIds.length; i += this.batchSize) {
       const batch = newIds.slice(i, i + this.batchSize);
       const results = await Promise.all(
-        batch.map((id) => this.statsClient.getFightData(String(id)).catch(() => null)),
+        batch.map((id) => this.dbClient.getFightData(String(id)).catch(() => null)),
       );
 
       const toInsert: MatchInsert[] = [];
@@ -404,7 +386,7 @@ export class MatchCrawler {
       }
       const mid = Math.floor((low + high) / 2);
       try {
-        const exists = await this.statsClient.getFightData(String(mid));
+        const exists = await this.dbClient.getFightData(String(mid));
         consecutiveFailures = 0;
         if (exists) {
           high = mid; // Data exists here, floor might be lower
@@ -499,7 +481,7 @@ export class MatchCrawler {
 
       const results = await Promise.all(
         batch.map((id) =>
-          this.statsClient.getFightData(String(id)).catch(() => {
+          this.dbClient.getFightData(String(id)).catch(() => {
             errors++;
             return null;
           }),
@@ -538,10 +520,10 @@ export class MatchCrawler {
 
   // ── Fight processing ───────────────────────────────────────────
 
-  private processFight(fightId: number, fight: FightData): MatchInsert | null {
+  private processFight(fightId: number, fight: StatsFightData): MatchInsert | null {
     if (!fight.players || fight.players.length === 0) return null;
 
-    // Only process ranked matches (players with rating changes)
+    // Detect whether the match is ranked (players with rating changes)
     const isRanked = fight.players.some(
       (p) =>
         p.oldRating !== undefined &&
@@ -549,13 +531,10 @@ export class MatchCrawler {
         p.oldRating !== p.newRating,
     );
 
-    // Skip unranked matches entirely — no value in storing them
-    if (!isRanked) return null;
-
     const mapName = fight.mapId ? MAP_ID_TO_NAME[fight.mapId] ?? fight.mapName ?? null : fight.mapName ?? null;
 
     // Group players by team
-    const teamPlayers = new Map<number, FightPlayerData[]>();
+    const teamPlayers = new Map<number, StatsFightPlayerData[]>();
     for (const player of fight.players) {
       const teamId = player.teamId ?? 0;
       const existing = teamPlayers.get(teamId);
@@ -672,6 +651,7 @@ export class MatchCrawler {
       playerCount: fight.players.length,
       totalPlayTimeSec: fight.totalPlayTimeSec,
       endTime: fight.endTime,
+      rawFightData: fight,
       teams,
       playerPicks,
       unitDeployments,
@@ -679,7 +659,7 @@ export class MatchCrawler {
   }
 
   /** Determine majority faction from a list of players (team or individual). */
-  private inferFaction(players: FightPlayerData[]): string {
+  private inferFaction(players: StatsFightPlayerData[]): string {
     const countryCounts = new Map<number, number>();
     for (const player of players) {
       for (const unit of player.units) {
@@ -695,7 +675,7 @@ export class MatchCrawler {
   }
 
   /** Infer top 2 specs for a player from their deployed units. */
-  private inferPlayerSpecs(player: FightPlayerData): Array<{ id: number; name: string }> {
+  private inferPlayerSpecs(player: StatsFightPlayerData): Array<{ id: number; name: string }> {
     const specMap = this.getUnitIdToSpecIds();
     const specScores = new Map<number, number>();
     for (const unit of player.units) {
@@ -713,38 +693,5 @@ export class MatchCrawler {
         const spec = this.indexes.specializationsById.get(id);
         return { id, name: spec?.Name || spec?.UIName || `Spec_${id}` };
       });
-  }
-
-  // ── Aggregation ────────────────────────────────────────────────
-
-  async computeAggregates(snapshotType: 'hourly' | 'daily'): Promise<CrawlerAggregates | null> {
-    const now = Date.now();
-    const window = snapshotType === 'hourly' ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
-    const since = new Date(now - window).toISOString();
-    const until = new Date(now).toISOString();
-
-    try {
-      const res = await fetch(
-        `${this.dbUrl}/api/crawler/matches/aggregates?since=${encodeURIComponent(since)}&until=${encodeURIComponent(until)}`,
-      );
-      if (!res.ok) return null;
-
-      const data = (await res.json()) as {
-        factionWinRates: Array<{ factionName: string; matchCount: number; winCount: number }>;
-        specPopularity: Array<{ specName: string; specId?: number; pickCount: number }>;
-        mapPopularity: Array<{ mapName: string; playCount: number }>;
-        unitPerformance: CrawlerAggregates['unitPerformance'];
-      };
-
-      return {
-        crawlerFactionStats: data.factionWinRates,
-        specStats: data.specPopularity,
-        mapPopularity: data.mapPopularity,
-        unitPerformance: data.unitPerformance,
-      };
-    } catch (err) {
-      console.error(`[MatchCrawler] Failed to compute ${snapshotType} aggregates:`, err);
-      return null;
-    }
   }
 }

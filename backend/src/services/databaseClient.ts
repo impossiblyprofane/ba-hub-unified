@@ -143,32 +143,24 @@ export class DatabaseClient {
     return this.request('GET', '/api/snapshots/leaderboard-history', undefined, { steamId, since });
   }
 
-  async getMapHistory(since?: string): Promise<MapHistoryEntry[]> {
-    return this.request('GET', '/api/snapshots/map-history', undefined, { since });
-  }
-
-  async getFactionHistory(since?: string): Promise<FactionHistoryEntry[]> {
-    return this.request('GET', '/api/snapshots/faction-history', undefined, { since });
-  }
-
-  async getUnitRankings(limit?: number): Promise<UnitRankingsResult> {
-    return this.request('GET', '/api/snapshots/unit-rankings', undefined, { limit });
-  }
-
   // ── Crawler state ─────────────────────────────────────────
 
   async getCrawlerState(): Promise<CrawlerStateResult> {
     return this.request('GET', '/api/crawler/state');
   }
 
-  // ── Crawler-derived snapshot data (read) ──────────────────
+  // ── Rolling aggregation data (from raw match data) ────────
 
-  async getCrawlerFactionHistory(since?: string): Promise<CrawlerFactionHistoryEntry[]> {
-    return this.request('GET', '/api/snapshots/crawler-faction-history', undefined, { since });
+  async getRollingFactionStats(since?: string, eloBracket?: string): Promise<RollingFactionStatsResult> {
+    return this.request('GET', '/api/crawler/matches/faction-stats', undefined, { since, eloBracket });
   }
 
-  async getSpecHistory(since?: string): Promise<SpecHistoryEntry[]> {
-    return this.request('GET', '/api/snapshots/spec-history', undefined, { since });
+  async getRollingMapStats(since?: string, eloBracket?: string): Promise<RollingMapStatsResult> {
+    return this.request('GET', '/api/crawler/matches/map-stats', undefined, { since, eloBracket });
+  }
+
+  async getRollingSpecStats(since?: string, eloBracket?: string): Promise<RollingSpecStatsResult> {
+    return this.request('GET', '/api/crawler/matches/spec-stats', undefined, { since, eloBracket });
   }
 
   async getUnitPerformanceRolling(since?: string, eloBracket?: string, faction?: string, limit?: number): Promise<UnitPerformanceRollingResult> {
@@ -177,10 +169,6 @@ export class DatabaseClient {
 
   async getSpecCombos(since?: string, limit?: number): Promise<SpecComboResult> {
     return this.request('GET', '/api/crawler/matches/spec-combos', undefined, { since, limit });
-  }
-
-  async getUnitPerformanceHistory(since?: string, faction?: string, eloBracket?: string): Promise<UnitPerformanceSnapshotEntry[]> {
-    return this.request('GET', '/api/snapshots/unit-performance', undefined, { since, faction, eloBracket });
   }
 
   // ── Player match history (aggregated from crawled data) ───
@@ -196,6 +184,72 @@ export class DatabaseClient {
       limit,
     });
   }
+
+  // ── Stats proxy (external game API via database service) ──
+
+  async getMapRatings(): Promise<StatsStatItem[]> {
+    return this.request('GET', '/api/stats/map-ratings');
+  }
+
+  async getMapTeamSides(): Promise<StatsMapTeamSides> {
+    return this.request('GET', '/api/stats/map-team-sides');
+  }
+
+  async getSpecUsage(): Promise<StatsStatItem[]> {
+    return this.request('GET', '/api/stats/spec-usage');
+  }
+
+  async getCountryStats(): Promise<StatsCountryStats> {
+    return this.request('GET', '/api/stats/country-stats');
+  }
+
+  async getLeaderboard(start: number, end: number): Promise<StatsLeaderboardEntry[]> {
+    return this.request('GET', '/api/stats/leaderboard', undefined, { start, end });
+  }
+
+  async getUserById(
+    id: string,
+    opts?: { steam?: boolean; market?: boolean },
+  ): Promise<StatsRestUserInfo | null> {
+    return this.request('GET', `/api/stats/user/${encodeURIComponent(id)}`, undefined, {
+      steam: opts?.steam ? 'true' : undefined,
+      market: opts?.market ? 'true' : undefined,
+    });
+  }
+
+  async getUsersByIds(ids: number[]): Promise<Map<number, StatsRestUserInfo>> {
+    const obj = await this.request<Record<string, StatsRestUserInfo>>(
+      'POST', '/api/stats/users-by-ids', { ids },
+    );
+    const map = new Map<number, StatsRestUserInfo>();
+    for (const [k, v] of Object.entries(obj)) {
+      map.set(Number(k), v);
+    }
+    return map;
+  }
+
+  async getPlayerStats(marketId: string): Promise<StatsPlayerStats | null> {
+    return this.request('GET', `/api/stats/player-stats/${encodeURIComponent(marketId)}`);
+  }
+
+  async getPlayerStatsBatch(marketIds: string[]): Promise<Map<string, StatsPlayerStats | null>> {
+    const obj = await this.request<Record<string, StatsPlayerStats | null>>(
+      'POST', '/api/stats/player-stats-batch', { marketIds },
+    );
+    const map = new Map<string, StatsPlayerStats | null>();
+    for (const [k, v] of Object.entries(obj)) {
+      map.set(k, v);
+    }
+    return map;
+  }
+
+  async getRecentFightIds(userId: number): Promise<number[]> {
+    return this.request('GET', `/api/stats/recent-fights/${userId}`);
+  }
+
+  async getFightData(fightId: string | number): Promise<StatsFightData | null> {
+    return this.request('GET', `/api/stats/fight/${fightId}`);
+  }
 }
 
 // ── Snapshot result types ──────────────────────────────────
@@ -210,38 +264,6 @@ export interface LeaderboardHistoryEntry {
   createdAt: string;
 }
 
-export interface MapHistoryEntry {
-  mapName: string;
-  playCount: number;
-  snapshotType: string;
-  createdAt: string;
-}
-
-export interface FactionHistoryEntry {
-  factionName: string;
-  matchCount: number;
-  winCount: number;
-  snapshotType: string;
-  createdAt: string;
-}
-
-export interface UnitRankingEntry {
-  unitName: string;
-  timesDeployed: number;
-  totalKills: number;
-  totalDamageDealt: number;
-  totalDamageReceived: number;
-  totalSupplyConsumed: number;
-  timesRefunded: number;
-  avgKills: number;
-  avgDamage: number;
-}
-
-export interface UnitRankingsResult {
-  snapshotDate: string | null;
-  units: UnitRankingEntry[];
-}
-
 export interface CrawlerStateResult {
   scanFloor: number;
   scanCeiling: number;
@@ -250,20 +272,38 @@ export interface CrawlerStateResult {
   updatedAt: string | null;
 }
 
-export interface CrawlerFactionHistoryEntry {
+// ── Rolling aggregation result types ───────────────────
+
+export interface RollingFactionStatsRow {
   factionName: string;
   matchCount: number;
   winCount: number;
-  snapshotType: string;
-  createdAt: string;
 }
 
-export interface SpecHistoryEntry {
+export interface RollingFactionStatsResult {
+  rows: RollingFactionStatsRow[];
+  since: string;
+}
+
+export interface RollingMapStatsRow {
+  mapName: string;
+  playCount: number;
+}
+
+export interface RollingMapStatsResult {
+  rows: RollingMapStatsRow[];
+  since: string;
+}
+
+export interface RollingSpecStatsRow {
   specName: string;
   specId: number | null;
   pickCount: number;
-  snapshotType: string;
-  createdAt: string;
+}
+
+export interface RollingSpecStatsResult {
+  rows: RollingSpecStatsRow[];
+  since: string;
 }
 
 export interface SpecComboEntry {
@@ -300,22 +340,7 @@ export interface UnitPerformanceRollingResult {
   since: string;
 }
 
-export interface UnitPerformanceSnapshotEntry {
-  configKey: string;
-  unitId: number | null;
-  unitName: string;
-  factionName: string;
-  optionIds: string;
-  eloBracket: string;
-  deployCount: number;
-  totalKills: number;
-  totalDamageDealt: number;
-  totalDamageReceived: number;
-  totalSupplyConsumed: number;
-  refundCount: number;
-  snapshotType: string;
-  createdAt: string;
-}
+
 
 // ── Player match history types ─────────────────────────────
 
@@ -381,4 +406,116 @@ export interface PlayerMatchHistoryResult {
   teams: PlayerMatchTeamRow[];
   units: PlayerMatchUnitRow[];
   otherPlayers: PlayerMatchOtherPlayer[];
+}
+
+// ── Stats proxy types (mirror external game API shapes) ─────
+
+export interface StatsStatItem {
+  id?: number;
+  name?: string;
+  count?: number;
+}
+
+export interface StatsMapTeamSide {
+  map?: string;
+  winData?: StatsStatItem[];
+}
+
+export interface StatsMapTeamSides {
+  updateDate?: string;
+  data?: StatsMapTeamSide[];
+}
+
+export interface StatsLeaderboardEntry {
+  rank: number;
+  userId?: number;
+  steamId?: string;
+  name?: string;
+  rating?: number;
+  elo?: number;
+  level?: number;
+  winRate?: number;
+  kdRatio?: number;
+}
+
+export interface StatsPlayerStats {
+  marketId: string;
+  name?: string;
+  level?: number;
+  kdRatio?: number;
+  fightsCount?: number;
+  winsCount?: number;
+  losesCount?: number;
+  killsCount?: number;
+  deathsCount?: number;
+  totalMatchTimeSec?: number;
+  capturedZonesCount?: number;
+  supplyPointsConsumed?: number;
+  supplyCapturedCount?: number;
+  supplyCapturedByEnemyCount?: number;
+  mapsPlayCount: StatsStatItem[];
+}
+
+export interface StatsCountryStats {
+  updateDate?: string;
+  matchesCount: StatsStatItem[];
+  winsCount: StatsStatItem[];
+}
+
+export interface StatsFightUnitData {
+  id: number;
+  optionIds: number[];
+  killedCount?: number;
+  totalDamageDealt?: number;
+  totalDamageReceived?: number;
+  supplyPointsConsumed?: number;
+  wasRefunded?: boolean;
+}
+
+export interface StatsFightPlayerData {
+  id: number;
+  teamId?: number;
+  name?: string;
+  steamId?: string;
+  destruction?: number;
+  losses?: number;
+  oldRating?: number;
+  newRating?: number;
+  damageDealt?: number;
+  damageReceived?: number;
+  objectivesCaptured?: number;
+  totalSpawnedUnitScore?: number;
+  totalRefundedUnitScore?: number;
+  supplyPointsConsumed?: number;
+  destructionScore?: number;
+  lossesScore?: number;
+  supplyConsumedByAllies?: number;
+  supplyConsumedFromAllies?: number;
+  dlRatio?: number;
+  medals?: number[];
+  units: StatsFightUnitData[];
+}
+
+export interface StatsFightData {
+  fightId: string;
+  mapId?: number;
+  mapName?: string;
+  totalPlayTimeSec?: number;
+  endTime?: number;
+  victoryLevel?: number;
+  endMatchReason?: number;
+  totalObjectiveZonesCount?: number;
+  winnerTeam?: number;
+  players: StatsFightPlayerData[];
+}
+
+export interface StatsRestUserInfo {
+  id: number;
+  name?: string;
+  steamId?: string;
+  level?: number;
+  rating?: number;
+  rank?: number;
+  marketId?: string;
+  ratedGames?: number;
 }

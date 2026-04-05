@@ -5,50 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1774978802995,
-      "tag": "0000_icy_dexter_bennett",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1775000713891,
-      "tag": "0001_safe_lilith",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1775095026692,
-      "tag": "0002_complete_gideon",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1775191749467,
-      "tag": "0003_funny_puma",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1775222400000,
-      "tag": "0004_unit_performance_redesign",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1775240000000,
-      "tag": "0005_crawler_state_redesign",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1775350000000,
-      "tag": "0006_player_profile_columns",
+      "when": 1775334332335,
+      "tag": "0000_wakeful_redwing",
       "breakpoints": true
     }
   ]

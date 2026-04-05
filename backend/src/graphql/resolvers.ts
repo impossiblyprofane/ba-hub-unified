@@ -2,8 +2,7 @@ import type { MercuriusContext, IResolvers } from 'mercurius';
 import { GraphQLScalarType, Kind } from 'graphql';
 import type { StaticData } from '../data/loader.js';
 import type { StaticIndexes } from '../data/indexes.js';
-import type { DatabaseClient, PlayerMatchHistoryResult, PlayerMatchTeamRow, PlayerMatchUnitRow, PlayerMatchOtherPlayer } from '../services/databaseClient.js';
-import type { StatsClient } from '../services/statsClient.js';
+import type { DatabaseClient, StatsLeaderboardEntry } from '../services/databaseClient.js';
 import type {
   BrowseDecksFilter,
   PublishDeckInput,
@@ -12,11 +11,17 @@ import type {
 } from '@ba-hub/shared';
 import { resolveMapName } from '../data/constants.js';
 
+// ── Leaderboard response cache ──────────────────────────────
+// Fully-resolved leaderboard (with KD/winRate enrichment) is cached
+// for 5 minutes to avoid the expensive batch getPlayerStats on every
+// page load. Cache key = `${start}:${end}`.
+const leaderboardCache = new Map<string, { data: StatsLeaderboardEntry[]; expires: number }>();
+const LEADERBOARD_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 type GraphQLContext = MercuriusContext & {
   data: StaticData;
   indexes: StaticIndexes;
   dbClient: DatabaseClient;
-  statsClient: StatsClient;
 };
 
 type UnitWeaponSlot = {
@@ -793,14 +798,14 @@ export const resolvers = {
 
     // ── Analytics queries ────────────────────────────────
     analyticsMapRatings: async (_: unknown, _args: unknown, ctx: GraphQLContext) => {
-      const { statsClient } = ctx;
+      const { dbClient } = ctx;
       try {
         // Derive map play counts from teamsides (which has human-readable names)
         // instead of mapsrating (which has sv_play_map_* internal IDs)
-        const teamsides = await statsClient.getMapTeamSides();
+        const teamsides = await dbClient.getMapTeamSides();
         if (!teamsides.data || teamsides.data.length === 0) {
           // Fallback to raw mapsrating if teamsides fails
-          return await statsClient.getMapRatings();
+          return await dbClient.getMapRatings();
         }
         return teamsides.data.map(entry => ({
           name: entry.map ?? null,
@@ -812,18 +817,18 @@ export const resolvers = {
     },
 
     analyticsMapTeamSides: async (_: unknown, _args: unknown, ctx: GraphQLContext) => {
-      const { statsClient } = ctx;
+      const { dbClient } = ctx;
       try {
-        return await statsClient.getMapTeamSides();
+        return await dbClient.getMapTeamSides();
       } catch {
         return { updateDate: null, data: [] };
       }
     },
 
     analyticsSpecUsage: async (_: unknown, _args: unknown, ctx: GraphQLContext) => {
-      const { statsClient, indexes } = ctx;
+      const { dbClient, indexes } = ctx;
       try {
-        const raw = await statsClient.getSpecUsage();
+        const raw = await dbClient.getSpecUsage();
         // Resolve numeric spec IDs to human-readable names
         return raw.map(item => {
           const specId = item.name ? parseInt(item.name, 10) : NaN;
@@ -841,9 +846,19 @@ export const resolvers = {
     },
 
     analyticsLeaderboard: async (_: unknown, args: { start?: number; end?: number }, ctx: GraphQLContext) => {
-      const { statsClient } = ctx;
+      const { dbClient } = ctx;
+      const start = args.start ?? 0;
+      const end = args.end ?? 100;
+      const cacheKey = `${start}:${end}`;
+
+      // Return cached result if available
+      const cached = leaderboardCache.get(cacheKey);
+      if (cached && Date.now() < cached.expires) {
+        return cached.data;
+      }
+
       try {
-        const entries = await statsClient.getLeaderboard(args.start ?? 0, args.end ?? 100);
+        const entries = await dbClient.getLeaderboard(start, end);
 
         // Batch-resolve user IDs to get names, steamIds, marketIds
         const userIds = entries
@@ -851,7 +866,7 @@ export const resolvers = {
           .filter((id): id is number => id != null);
 
         if (userIds.length > 0) {
-          const users = await statsClient.getUsersByIds(userIds);
+          const users = await dbClient.getUsersByIds(userIds);
           for (const entry of entries) {
             if (entry.userId == null) continue;
             const user = users.get(entry.userId);
@@ -861,23 +876,38 @@ export const resolvers = {
             if (entry.level == null && user.level != null) entry.level = user.level;
           }
 
-          // Fetch player stats (KD, win rate) in parallel for entries with marketId
-          const statsPromises = entries.map(async (entry) => {
-            if (entry.userId == null) return;
+          // Fetch player stats (KD, win rate) in batch for entries missing those fields
+          const marketIdMap = new Map<string, StatsLeaderboardEntry[]>();
+          for (const entry of entries) {
+            // Skip entries that already have both KD and winRate from the leaderboard API
+            if (entry.kdRatio != null && entry.winRate != null) continue;
+            if (entry.userId == null) continue;
             const user = users.get(entry.userId);
             const marketId = user?.marketId ?? user?.steamId;
-            if (!marketId) return;
+            if (!marketId) continue;
+            if (!marketIdMap.has(marketId)) marketIdMap.set(marketId, []);
+            marketIdMap.get(marketId)!.push(entry);
+          }
+
+          if (marketIdMap.size > 0) {
             try {
-              const stats = await statsClient.getPlayerStats(marketId);
-              if (!stats) return;
-              if (stats.kdRatio != null) entry.kdRatio = stats.kdRatio;
-              if (stats.winsCount != null && stats.fightsCount != null && stats.fightsCount > 0) {
-                entry.winRate = stats.winsCount / stats.fightsCount;
+              const batchStats = await dbClient.getPlayerStatsBatch([...marketIdMap.keys()]);
+              for (const [marketId, relatedEntries] of marketIdMap) {
+                const stats = batchStats.get(marketId);
+                if (!stats) continue;
+                for (const entry of relatedEntries) {
+                  if (stats.kdRatio != null) entry.kdRatio = stats.kdRatio;
+                  if (stats.winsCount != null && stats.fightsCount != null && stats.fightsCount > 0) {
+                    entry.winRate = stats.winsCount / stats.fightsCount;
+                  }
+                }
               }
-            } catch { /* non-critical */ }
-          });
-          await Promise.all(statsPromises);
+            } catch { /* non-critical — leaderboard still shows without KD/winRate */ }
+          }
         }
+
+        // Cache the fully-resolved result
+        leaderboardCache.set(cacheKey, { data: entries, expires: Date.now() + LEADERBOARD_CACHE_TTL });
 
         return entries;
       } catch {
@@ -886,45 +916,45 @@ export const resolvers = {
     },
 
     analyticsPlayer: async (_: unknown, args: { marketId: string }, ctx: GraphQLContext) => {
-      const { statsClient } = ctx;
+      const { dbClient } = ctx;
       try {
-        return await statsClient.getPlayerStats(args.marketId);
+        return await dbClient.getPlayerStats(args.marketId);
       } catch {
         return null;
       }
     },
 
     analyticsCountryStats: async (_: unknown, _args: unknown, ctx: GraphQLContext) => {
-      const { statsClient } = ctx;
+      const { dbClient } = ctx;
       try {
-        return await statsClient.getCountryStats();
+        return await dbClient.getCountryStats();
       } catch {
         return { updateDate: null, matchesCount: [], winsCount: [] };
       }
     },
 
     analyticsUserLookup: async (_: unknown, args: { steamId: string }, ctx: GraphQLContext) => {
-      const { statsClient } = ctx;
+      const { dbClient } = ctx;
       try {
-        return await statsClient.getUserById(args.steamId, { steam: true });
+        return await dbClient.getUserById(args.steamId, { steam: true });
       } catch {
         return null;
       }
     },
 
     analyticsUserProfile: async (_: unknown, args: { steamId: string }, ctx: GraphQLContext) => {
-      const { statsClient } = ctx;
+      const { dbClient } = ctx;
       try {
         // Resolve Steam ID → internal user info
-        const user = await statsClient.getUserById(args.steamId, { steam: true });
+        const user = await dbClient.getUserById(args.steamId, { steam: true });
         if (!user) return null;
 
         // Fetch player stats using marketId (which equals steamId for Steam users)
         const marketId = user.marketId ?? user.steamId ?? args.steamId;
-        const stats = await statsClient.getPlayerStats(marketId);
+        const stats = await dbClient.getPlayerStats(marketId);
 
         // Fetch recent fight IDs
-        const recentFightIds = await statsClient.getRecentFightIds(user.id);
+        const recentFightIds = await dbClient.getRecentFightIds(user.id);
 
         return {
           user,
@@ -937,7 +967,7 @@ export const resolvers = {
     },
 
     analyticsRecentFights: async (_: unknown, args: { steamId: string }, ctx: GraphQLContext) => {
-      const { statsClient, dbClient, indexes, data } = ctx;
+      const { dbClient, indexes, data } = ctx;
       const emptyResult = {
         fights: [], frequentTeammates: [], frequentOpponents: [],
         mostUsedUnits: [], topKillerUnits: [], topDamageUnits: [],
@@ -983,35 +1013,25 @@ export const resolvers = {
       };
 
       const buildUnitRankings = (unitMap: Map<string, UnitAgg>) => {
+        // Return ALL units sorted by each metric — no slice here.
+        // Frontend applies faction filter THEN slices to top-N.
         const allUnits = [...unitMap.values()];
         return {
-          mostUsedUnits: [...allUnits].sort((a, b) => b.count - a.count).slice(0, 10).map(resolveUnitPerf),
-          topKillerUnits: [...allUnits].sort((a, b) => b.totalKills - a.totalKills).slice(0, 10).map(resolveUnitPerf),
-          topDamageUnits: [...allUnits].sort((a, b) => b.totalDamageDealt - a.totalDamageDealt).slice(0, 10).map(resolveUnitPerf),
-          topDamageReceivedUnits: [...allUnits].sort((a, b) => b.totalDamageReceived - a.totalDamageReceived).slice(0, 10).map(resolveUnitPerf),
+          mostUsedUnits: [...allUnits].sort((a, b) => b.count - a.count).map(resolveUnitPerf),
+          topKillerUnits: [...allUnits].sort((a, b) => b.totalKills - a.totalKills).map(resolveUnitPerf),
+          topDamageUnits: [...allUnits].sort((a, b) => b.totalDamageDealt - a.totalDamageDealt).map(resolveUnitPerf),
+          topDamageReceivedUnits: [...allUnits].sort((a, b) => b.totalDamageReceived - a.totalDamageReceived).map(resolveUnitPerf),
         };
       };
 
       try {
         // Resolve Steam ID → internal user (lightweight, always needed)
-        const user = await statsClient.getUserById(args.steamId, { steam: true });
+        const user = await dbClient.getUserById(args.steamId, { steam: true });
         if (!user) return emptyResult;
 
-        // ── Try DB-first path (fast, no S3 calls) ─────────────
-        let dbResult: PlayerMatchHistoryResult | null = null;
-        try {
-          dbResult = await dbClient.getPlayerMatchHistory(args.steamId, user.id, 100);
-        } catch {
-          // DB unavailable — fall through to external API path
-        }
-
-        if (dbResult && dbResult.matches.length > 0) {
-          return buildFromDbData(dbResult, user.id, args.steamId, indexes, statsClient);
-        }
-
-        // ── Fallback: limited S3 fetch (20 fights max) ────────
-        const fightIds = await statsClient.getRecentFightIds(user.id);
-        const targetIds = fightIds.slice(0, 20); // Reduced from 100 to avoid hammering S3
+        // ── S3 fight data (with in-memory TTL cache) ───────────
+        const fightIds = await dbClient.getRecentFightIds(user.id);
+        const targetIds = fightIds.slice(0, 100); // fight cache absorbs repeat fetches
         if (targetIds.length === 0) return emptyResult;
 
         // Track teammate/opponent frequency
@@ -1039,7 +1059,7 @@ export const resolvers = {
           const batchResults = await Promise.all(
             batch.map(async (fightId) => {
               try {
-                const fight = await statsClient.getFightData(fightId);
+                const fight = await dbClient.getFightData(fightId);
                 if (!fight) return null;
 
                 const player = fight.players.find(
@@ -1064,32 +1084,47 @@ export const resolvers = {
                 const enemyRatings: number[] = [];
                 if (player?.oldRating != null) allyRatings.push(player.oldRating);
 
-                if (isRanked && fight.players.length > 2) {
-                  const playerWon = ratingChange! > 0;
+                // Use teamId from S3 data to reliably identify allies vs enemies.
+                // Falls back to rating-change inference only if teamId is missing.
+                const playerTeamKnown = playerTeam != null;
+
+                if (fight.players.length > 2) {
                   for (const other of fight.players) {
                     if (other.id === player?.id) continue;
-                    const otherChange = other.oldRating != null && other.newRating != null
-                      ? other.newRating - other.oldRating : null;
-                    if (otherChange == null) continue;
-                    const isSameTeam = playerWon === (otherChange > 0);
+
+                    // Determine if same team: prefer teamId, fallback to rating direction
+                    let isSameTeam: boolean | null = null;
+                    if (playerTeamKnown && other.teamId != null) {
+                      isSameTeam = other.teamId === playerTeam;
+                    } else if (isRanked) {
+                      const otherChange = other.oldRating != null && other.newRating != null
+                        ? other.newRating - other.oldRating : null;
+                      if (otherChange != null && otherChange !== 0) {
+                        isSameTeam = (ratingChange! > 0) === (otherChange > 0);
+                      }
+                    }
+                    if (isSameTeam == null) continue;
 
                     if (other.oldRating != null) {
                       (isSameTeam ? allyRatings : enemyRatings).push(other.oldRating);
                     }
 
-                    const map = isSameTeam ? teammateMap : opponentMap;
-                    const existing = map.get(other.id);
-                    if (existing) {
-                      existing.count++;
-                      if (result === 'win') existing.wins++;
-                      else if (result === 'loss') existing.losses++;
-                    } else {
-                      map.set(other.id, {
-                        name: other.name ?? `Player ${other.id}`,
-                        count: 1,
-                        wins: result === 'win' ? 1 : 0,
-                        losses: result === 'loss' ? 1 : 0,
-                      });
+                    // Track teammates/opponents for the frequent-players panel
+                    if (isRanked) {
+                      const map = isSameTeam ? teammateMap : opponentMap;
+                      const existing = map.get(other.id);
+                      if (existing) {
+                        existing.count++;
+                        if (result === 'win') existing.wins++;
+                        else if (result === 'loss') existing.losses++;
+                      } else {
+                        map.set(other.id, {
+                          name: other.name ?? `Player ${other.id}`,
+                          count: 1,
+                          wins: result === 'win' ? 1 : 0,
+                          losses: result === 'loss' ? 1 : 0,
+                        });
+                      }
                     }
                   }
                 }
@@ -1102,6 +1137,7 @@ export const resolvers = {
                 let fightCountryName: string | null = null;
                 let fightCountryFlag: string | null = null;
                 let fightSpecNames: string[] = [];
+                let fightSpecIcons: string[] = [];
 
                 if (isRanked && player) {
                   const countryCounts = new Map<number, number>();
@@ -1156,6 +1192,10 @@ export const resolvers = {
                     const spec = indexes.specializationsById.get(id);
                     return spec?.Name || spec?.UIName || `Spec ${id}`;
                   });
+                  fightSpecIcons = topSpecs.map((id) => {
+                    const spec = indexes.specializationsById.get(id);
+                    return spec?.Icon || '';
+                  });
                   if (topSpecs.length === 2) {
                     const comboKey = topSpecs.sort((a, b) => a - b).join(':');
                     const ex = specComboCounts.get(comboKey);
@@ -1178,7 +1218,7 @@ export const resolvers = {
                   objectivesCaptured: player?.objectivesCaptured ?? null,
                   oldRating: player?.oldRating ?? null,
                   countryName: fightCountryName, countryFlag: fightCountryFlag,
-                  specNames: fightSpecNames,
+                  specNames: fightSpecNames, specIcons: fightSpecIcons,
                 };
               } catch {
                 return null;
@@ -1203,7 +1243,7 @@ export const resolvers = {
         const allIds = [...teammates, ...opponents].map((p) => p.odId).filter(Boolean);
         if (allIds.length > 0) {
           try {
-            const userMap = await statsClient.getUsersByIds(allIds);
+            const userMap = await dbClient.getUsersByIds(allIds);
             for (const p of [...teammates, ...opponents]) {
               const resolved = userMap.get(p.odId);
               if (resolved?.steamId) p.steamId = resolved.steamId;
@@ -1244,250 +1284,12 @@ export const resolvers = {
       } catch {
         return emptyResult;
       }
-
-      // ── DB-backed player match history builder ───────────────
-      async function buildFromDbData(
-        dbData: PlayerMatchHistoryResult,
-        _userId: number,
-        _steamId: string,
-        idx: StaticIndexes,
-        sc: StatsClient,
-      ) {
-        const { matches, teams, units, otherPlayers } = dbData;
-
-        // Index teams and units by fightId for fast lookup
-        const teamsByFight = new Map<number, PlayerMatchTeamRow[]>();
-        for (const t of teams) {
-          let arr = teamsByFight.get(t.fightId);
-          if (!arr) { arr = []; teamsByFight.set(t.fightId, arr); }
-          arr.push(t);
-        }
-
-        const unitsByFight = new Map<number, PlayerMatchUnitRow[]>();
-        for (const u of units) {
-          let arr = unitsByFight.get(u.fightId);
-          if (!arr) { arr = []; unitsByFight.set(u.fightId, arr); }
-          arr.push(u);
-        }
-
-        const othersByFight = new Map<number, PlayerMatchOtherPlayer[]>();
-        for (const o of otherPlayers) {
-          let arr = othersByFight.get(o.fightId);
-          if (!arr) { arr = []; othersByFight.set(o.fightId, arr); }
-          arr.push(o);
-        }
-
-        // Aggregation maps
-        const teammateMap = new Map<number, { name: string; count: number; wins: number; losses: number }>();
-        const opponentMap = new Map<number, { name: string; count: number; wins: number; losses: number }>();
-        type UnitAggLocal = {
-          unitId: number; optionIds: number[]; count: number;
-          totalKills: number; totalDamageDealt: number; totalDamageReceived: number;
-          countryId: number | null;
-        };
-        const unitMap = new Map<string, UnitAggLocal>();
-        const factionCounts = new Map<string, number>();
-        const specCounts = new Map<number, number>();
-        const specComboCounts = new Map<string, { specIds: number[]; count: number }>();
-
-        // Build fight results
-        const fights = matches.map((m) => {
-          const fightTeams = teamsByFight.get(m.fightId) ?? [];
-          const fightUnits = unitsByFight.get(m.fightId) ?? [];
-          const fightOthers = othersByFight.get(m.fightId) ?? [];
-
-          // Win/loss detection
-          const ratingChange = m.oldRating != null && m.newRating != null
-            ? m.newRating - m.oldRating : null;
-          let result: string | null = null;
-          if (m.winnerTeam != null && m.playerTeamId != null) {
-            result = m.playerTeamId === m.winnerTeam ? 'win' : 'loss';
-          } else if (ratingChange != null && ratingChange !== 0) {
-            result = ratingChange > 0 ? 'win' : 'loss';
-          }
-
-          const isRanked = m.isRanked && ratingChange != null;
-
-          // Team average ratings
-          const allyTeam = fightTeams.find((t) => t.teamId === m.playerTeamId);
-          const enemyTeam = fightTeams.find((t) => t.teamId !== m.playerTeamId);
-          const allyAvgRating = allyTeam?.avgRating != null ? Math.round(allyTeam.avgRating) : null;
-          const enemyAvgRating = enemyTeam?.avgRating != null ? Math.round(enemyTeam.avgRating) : null;
-
-          // Teammate/opponent tracking from other players in this fight
-          if (isRanked) {
-            for (const other of fightOthers) {
-              if (other.odId == null) continue;
-              const isSameTeam = other.teamId === m.playerTeamId;
-              const map = isSameTeam ? teammateMap : opponentMap;
-              const existing = map.get(other.odId);
-              if (existing) {
-                existing.count++;
-                if (result === 'win') existing.wins++;
-                else if (result === 'loss') existing.losses++;
-              } else {
-                map.set(other.odId, {
-                  name: other.steamId ?? `Player ${other.odId}`,
-                  count: 1,
-                  wins: result === 'win' ? 1 : 0,
-                  losses: result === 'loss' ? 1 : 0,
-                });
-              }
-            }
-          }
-
-          // Aggregate unit performance
-          let fightCountryName: string | null = null;
-          let fightCountryFlag: string | null = null;
-          if (isRanked) {
-            const countryCounts = new Map<number, number>();
-            for (const u of fightUnits) {
-              const unitData = idx.unitsById.get(u.unitId);
-              if (unitData?.CountryId) {
-                countryCounts.set(unitData.CountryId, (countryCounts.get(unitData.CountryId) ?? 0) + 1);
-              }
-              const optIds = u.optionIds ? u.optionIds.split(',').map(Number).filter((n) => !isNaN(n)).sort((a, b) => a - b) : [];
-              const key = `${u.unitId}:${optIds.join(',')}`;
-              const existing = unitMap.get(key);
-              if (existing) {
-                existing.count++;
-                existing.totalKills += u.killedCount ?? 0;
-                existing.totalDamageDealt += u.totalDamageDealt ?? 0;
-                existing.totalDamageReceived += u.totalDamageReceived ?? 0;
-              } else {
-                unitMap.set(key, {
-                  unitId: u.unitId, optionIds: optIds, count: 1,
-                  totalKills: u.killedCount ?? 0,
-                  totalDamageDealt: u.totalDamageDealt ?? 0,
-                  totalDamageReceived: u.totalDamageReceived ?? 0,
-                  countryId: unitData?.CountryId ?? null,
-                });
-              }
-            }
-
-            if (countryCounts.size > 0) {
-              const topCountryId = [...countryCounts.entries()].sort((a, b) => b[1] - a[1])[0][0];
-              const country = idx.countriesById?.get(topCountryId);
-              const fn = country?.Name ?? `Faction ${topCountryId}`;
-              factionCounts.set(fn, (factionCounts.get(fn) ?? 0) + 1);
-              fightCountryName = fn;
-              fightCountryFlag = country?.FlagFileName ?? null;
-            }
-          }
-
-          // Faction from player pick
-          if (m.playerFaction && !fightCountryName) {
-            factionCounts.set(m.playerFaction, (factionCounts.get(m.playerFaction) ?? 0) + 1);
-            fightCountryName = m.playerFaction;
-          }
-
-          // Spec tracking from DB-stored spec names/IDs
-          const fightSpecNames: string[] = [];
-          const specIds: number[] = [];
-          if (m.spec1Id != null) { specIds.push(m.spec1Id); specCounts.set(m.spec1Id, (specCounts.get(m.spec1Id) ?? 0) + 1); }
-          if (m.spec2Id != null) { specIds.push(m.spec2Id); specCounts.set(m.spec2Id, (specCounts.get(m.spec2Id) ?? 0) + 1); }
-          if (m.spec1Name) fightSpecNames.push(m.spec1Name);
-          if (m.spec2Name) fightSpecNames.push(m.spec2Name);
-          if (specIds.length === 2) {
-            const comboKey = [...specIds].sort((a, b) => a - b).join(':');
-            const ex = specComboCounts.get(comboKey);
-            if (ex) ex.count++;
-            else specComboCounts.set(comboKey, { specIds: [...specIds].sort((a, b) => a - b), count: 1 });
-          }
-
-          const teamSize = m.playerCount >= 2
-            ? `${Math.ceil(m.playerCount / 2)}v${Math.floor(m.playerCount / 2)}`
-            : `${m.playerCount}`;
-
-          return {
-            fightId: m.fightId,
-            mapId: m.mapId,
-            mapName: m.mapName ?? resolveMapName(m.mapId ?? undefined),
-            totalPlayTimeSec: m.totalPlayTimeSec,
-            endTime: m.endTime,
-            victoryLevel: null, // Not stored in DB — minor stat
-            playerCount: m.playerCount,
-            teamSize,
-            result,
-            ratingChange,
-            winnerTeam: m.winnerTeam,
-            destruction: m.destruction,
-            losses: m.playerLosses,
-            damageDealt: m.damageDealt,
-            damageReceived: m.damageReceived,
-            allyAvgRating,
-            enemyAvgRating,
-            objectivesCaptured: m.objectivesCaptured,
-            oldRating: m.oldRating,
-            countryName: fightCountryName,
-            countryFlag: fightCountryFlag,
-            specNames: fightSpecNames,
-          };
-        });
-
-        // Build sorted frequent player lists (top 10) and resolve Steam IDs
-        const toSortedList = (map: Map<number, { name: string; count: number; wins: number; losses: number }>) =>
-          [...map.entries()]
-            .sort((a, b) => b[1].count - a[1].count)
-            .slice(0, 10)
-            .map(([id, v]) => ({ odId: id, name: v.name, steamId: null as string | null, count: v.count, wins: v.wins, losses: v.losses }));
-
-        const teammates = toSortedList(teammateMap);
-        const opponents = toSortedList(opponentMap);
-
-        // Batch-resolve internal IDs → Steam IDs for profile linking
-        const allIds = [...teammates, ...opponents].map((p) => p.odId).filter(Boolean);
-        if (allIds.length > 0) {
-          try {
-            const userMap = await sc.getUsersByIds(allIds);
-            for (const p of [...teammates, ...opponents]) {
-              const resolved = userMap.get(p.odId);
-              if (resolved?.steamId) p.steamId = resolved.steamId;
-              if (resolved?.name) p.name = resolved.name;
-            }
-          } catch { /* non-critical */ }
-        }
-
-        const unitRankings = buildUnitRankings(unitMap as Map<string, UnitAgg>);
-
-        const factionBreakdown = [...factionCounts.entries()]
-          .sort((a, b) => b[1] - a[1])
-          .map(([name, count]) => ({ name, count }));
-
-        const specUsage = [...specCounts.entries()]
-          .sort((a, b) => b[1] - a[1]).slice(0, 10)
-          .map(([specId, count]) => {
-            const spec = idx.specializationsById.get(specId);
-            return { specId, name: spec?.Name || spec?.UIName || `Spec ${specId}`, count };
-          });
-
-        const specCombos = [...specComboCounts.values()]
-          .sort((a, b) => b.count - a.count).slice(0, 10)
-          .map((combo) => ({
-            specIds: combo.specIds,
-            names: combo.specIds.map((id) => {
-              const spec = idx.specializationsById.get(id);
-              return spec?.Name || spec?.UIName || `Spec ${id}`;
-            }),
-            count: combo.count,
-          }));
-
-        return {
-          fights,
-          frequentTeammates: teammates,
-          frequentOpponents: opponents,
-          ...unitRankings,
-          factionBreakdown,
-          specUsage,
-          specCombos,
-        };
-      }
     },
 
     analyticsFightData: async (_: unknown, args: { fightId: string }, ctx: GraphQLContext) => {
-      const { statsClient, indexes, data } = ctx;
+      const { dbClient, indexes, data } = ctx;
       try {
-        const fight = await statsClient.getFightData(args.fightId);
+        const fight = await dbClient.getFightData(args.fightId);
         if (!fight) return null;
 
         // Batch-resolve player internal IDs → Steam IDs for profile linking
@@ -1495,7 +1297,7 @@ export const resolvers = {
         let userMap = new Map<number, { steamId?: string }>();
         if (playerIds.length > 0) {
           try {
-            userMap = await statsClient.getUsersByIds(playerIds);
+            userMap = await dbClient.getUsersByIds(playerIds);
           } catch { /* Non-critical */ }
         }
 
@@ -1655,50 +1457,32 @@ export const resolvers = {
       }
     },
 
-    snapshotMapHistory: async (_: unknown, args: { since?: string }, ctx: GraphQLContext) => {
+    // ── Rolling aggregation queries (from raw match data) ────
+
+    rollingFactionStats: async (_: unknown, args: { since?: string; eloBracket?: string }, ctx: GraphQLContext) => {
       const { dbClient } = ctx;
       try {
-        return await dbClient.getMapHistory(args.since);
+        return await dbClient.getRollingFactionStats(args.since, args.eloBracket);
       } catch {
-        return [];
+        return { rows: [], since: '' };
       }
     },
 
-    snapshotFactionHistory: async (_: unknown, args: { since?: string }, ctx: GraphQLContext) => {
+    rollingMapStats: async (_: unknown, args: { since?: string; eloBracket?: string }, ctx: GraphQLContext) => {
       const { dbClient } = ctx;
       try {
-        return await dbClient.getFactionHistory(args.since);
+        return await dbClient.getRollingMapStats(args.since, args.eloBracket);
       } catch {
-        return [];
+        return { rows: [], since: '' };
       }
     },
 
-    snapshotUnitRankings: async (_: unknown, args: { limit?: number }, ctx: GraphQLContext) => {
+    rollingSpecStats: async (_: unknown, args: { since?: string; eloBracket?: string }, ctx: GraphQLContext) => {
       const { dbClient } = ctx;
       try {
-        return await dbClient.getUnitRankings(args.limit);
+        return await dbClient.getRollingSpecStats(args.since, args.eloBracket);
       } catch {
-        return { snapshotDate: null, units: [] };
-      }
-    },
-
-    // ── Crawler-derived snapshot queries ─────────────────────
-
-    crawlerFactionHistory: async (_: unknown, args: { since?: string }, ctx: GraphQLContext) => {
-      const { dbClient } = ctx;
-      try {
-        return await dbClient.getCrawlerFactionHistory(args.since);
-      } catch {
-        return [];
-      }
-    },
-
-    snapshotSpecHistory: async (_: unknown, args: { since?: string }, ctx: GraphQLContext) => {
-      const { dbClient } = ctx;
-      try {
-        return await dbClient.getSpecHistory(args.since);
-      } catch {
-        return [];
+        return { rows: [], since: '' };
       }
     },
 
