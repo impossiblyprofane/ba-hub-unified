@@ -48,6 +48,9 @@ export const schema = `
     analyticsRecentFights(steamId: String!): AnalyticsRecentFightsResult!
     analyticsFightData(fightId: String!): AnalyticsFightData
 
+    # ── Steam profile enrichment (avatars, personas) ──────────
+    steamProfiles(steamIds: [String!]!): [SteamProfile!]!
+
     # ── Snapshot / history data ──────────────────────────────
     snapshotLeaderboardHistory(steamId: String!, since: String): [SnapshotLeaderboardEntry!]!
     snapshotMapHistory(since: String): [SnapshotMapEntry!]!
@@ -753,6 +756,15 @@ export const schema = `
     recentFightIds: [String!]!
   }
 
+  type SteamProfile {
+    steamId: String!
+    personaName: String
+    avatarIcon: String
+    avatarMedium: String
+    avatarFull: String
+    profileUrl: String
+  }
+
   type FrequentPlayer {
     name: String
     odId: Int
@@ -832,6 +844,8 @@ export const schema = `
     countryName: String
     countryFlag: String
     specNames: [String!]!
+    specIcons: [String!]!
+    isRanked: Boolean!
   }
 
   type AnalyticsFightData {

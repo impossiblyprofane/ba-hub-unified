@@ -345,6 +345,8 @@ export type AnalyticsRecentFight = {
   countryName: string | null;
   countryFlag: string | null;
   specNames: string[];
+  specIcons: string[];
+  isRanked: boolean;
 };
 
 export type FrequentPlayer = {
@@ -720,4 +722,17 @@ export type {
 /** Like status query response. */
 export type LikeStatus = {
   liked: boolean;
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+ * Steam Profile — avatar / persona enrichment
+ * ═══════════════════════════════════════════════════════════════════ */
+
+export type SteamProfile = {
+  steamId: string;
+  personaName: string | null;
+  avatarIcon: string | null;
+  avatarMedium: string | null;
+  avatarFull: string | null;
+  profileUrl: string | null;
 };

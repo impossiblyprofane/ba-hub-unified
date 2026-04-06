@@ -15,7 +15,17 @@ import {
   STATS_RECENT_FIGHTS_QUERY,
 } from '~/lib/queries/stats';
 import { ChartCanvas } from '~/components/stats/ChartCanvas';
+import { SteamAvatar } from '~/components/stats/SteamAvatar';
+import { useSteamProfiles } from '~/lib/stats/useSteamProfiles';
+import type { SteamProfile } from '~/lib/graphql-types';
+import { toCountryIconPath, toSpecializationIconPath } from '~/lib/iconPaths';
 import type { ChartConfiguration } from 'chart.js';
+
+/** Canonical "is this fight ranked?" check.
+ *  A fight is ranked iff the backend marked it ranked AND we have a usable rating delta.
+ *  This is the single source of truth — use it everywhere instead of ad-hoc ratingChange checks. */
+const isRankedFight = (f: AnalyticsRecentFight): boolean =>
+  f.isRanked === true && f.ratingChange != null && f.oldRating != null;
 
 /* ─── Route loader: SSR profile data ─────────────────────── */
 
@@ -222,7 +232,7 @@ function buildEloProgressionChart(
 ): ChartConfiguration<'line'> {
   // Only ranked fights for all chart data
   const ranked = [...fights]
-    .filter((f) => f.ratingChange != null && f.ratingChange !== 0)
+    .filter(isRankedFight)
     .reverse(); // chronological
 
   if (ranked.length === 0 || currentRating == null) {
@@ -476,7 +486,7 @@ const StatRow = component$<{
 
 const RecentFormDots = component$<{ fights: AnalyticsRecentFight[] }>((props) => {
   // Only show ranked matches (those with ELO change)
-  const ranked = props.fights.filter((f) => f.ratingChange != null && f.ratingChange !== 0);
+  const ranked = props.fights.filter(isRankedFight);
   const recent = ranked.slice(0, 10);
   if (recent.length === 0) return null;
 
@@ -513,7 +523,8 @@ const RecentFormDots = component$<{ fights: AnalyticsRecentFight[] }>((props) =>
 const FrequentPlayersList = component$<{
   players: FrequentPlayer[];
   title: string;
-}>(({ players, title }) => {
+  profiles: Record<string, SteamProfile>;
+}>(({ players, title, profiles }) => {
   if (players.length === 0) return null;
   return (
     <Panel title={title} fill>
@@ -523,18 +534,26 @@ const FrequentPlayersList = component$<{
             key={`fp-${i}`}
             class="flex items-center justify-between py-1 border-b border-[rgba(51,51,51,0.1)] last:border-0"
           >
-            {p.steamId ? (
-              <a
-                href={`/stats/player/${p.steamId}/`}
-                class="text-xs text-[var(--accent)] hover:underline truncate max-w-[160px]"
-              >
-                {p.name ?? 'Unknown'}
-              </a>
-            ) : (
-              <span class="text-xs text-[var(--text)] truncate max-w-[160px]">
-                {p.name ?? 'Unknown'}
-              </span>
-            )}
+            <div class="flex items-center gap-2 min-w-0">
+              <SteamAvatar
+                size="sm"
+                steamId={p.steamId}
+                profile={p.steamId ? profiles[p.steamId] : null}
+                name={p.name}
+              />
+              {p.steamId ? (
+                <a
+                  href={`/stats/player/${p.steamId}/`}
+                  class="text-xs text-[var(--accent)] hover:underline truncate max-w-[140px]"
+                >
+                  {p.name ?? 'Unknown'}
+                </a>
+              ) : (
+                <span class="text-xs text-[var(--text)] truncate max-w-[140px]">
+                  {p.name ?? 'Unknown'}
+                </span>
+              )}
+            </div>
             <div class="flex gap-2 text-[10px] font-mono">
               <span class="text-[var(--text-dim)]">×{p.count}</span>
               <span class="text-[var(--green)]">{p.wins}W</span>
@@ -758,6 +777,15 @@ export default component$(() => {
 
   const user = profile.user;
   const stats = profile.stats;
+
+  // Client-side Steam profile resolution — header player + frequent teammates + opponents.
+  const headerSteamId = user.steamId ?? loc.params.steamId;
+  const steamProfiles = useSteamProfiles([
+    headerSteamId ?? null,
+    ...frequentTeammates.map((p) => p.steamId ?? null),
+    ...frequentOpponents.map((p) => p.steamId ?? null),
+  ]);
+  const headerProfile = headerSteamId ? steamProfiles[headerSteamId] : null;
   const winRate =
     stats && stats.winsCount && stats.fightsCount && stats.fightsCount > 0
       ? ((stats.winsCount / stats.fightsCount) * 100).toFixed(1)
@@ -782,7 +810,7 @@ export default component$(() => {
       : null;
 
   // Recent fight stats (from match history data)
-  const rankedFights = fights.filter((f) => f.ratingChange != null && f.ratingChange !== 0);
+  const rankedFights = fights.filter(isRankedFight);
   const recentWithResult = fights.filter((f) => f.result != null);
   const recentWins = recentWithResult.filter((f) => f.result === 'win').length;
   const recentWinRate =
@@ -817,13 +845,26 @@ export default component$(() => {
           {t(i18n, 'stats.profile.title')}
         </p>
         <div class="flex flex-col sm:flex-row sm:items-end gap-2 sm:gap-4">
-          <div>
-            <h1 class="text-2xl font-semibold text-[var(--text)] tracking-tight">
-              {user.name ?? `Player ${loc.params.steamId}`}
-            </h1>
-            <p class="text-xs text-[var(--text-dim)] font-mono mt-1">
-              Steam ID: {user.steamId ?? loc.params.steamId}
-            </p>
+          <div class="flex items-center gap-4">
+            <SteamAvatar
+              size="md"
+              steamId={headerSteamId}
+              profile={headerProfile}
+              name={user.name}
+            />
+            <div>
+              <h1 class="text-2xl font-semibold text-[var(--text)] tracking-tight">
+                {user.name ?? `Player ${loc.params.steamId}`}
+              </h1>
+              {headerProfile?.personaName && headerProfile.personaName !== user.name && (
+                <p class="text-sm text-[var(--text-dim)] mt-0.5 truncate max-w-[320px]">
+                  {headerProfile.personaName}
+                </p>
+              )}
+              <p class="text-xs text-[var(--text-dim)] font-mono mt-1">
+                Steam ID: {user.steamId ?? loc.params.steamId}
+              </p>
+            </div>
           </div>
           {/* Recent form dots (ranked only) */}
           {rankedFights.length > 0 && (
@@ -1137,10 +1178,12 @@ export default component$(() => {
               <FrequentPlayersList
                 players={frequentTeammates}
                 title={t(i18n, 'stats.profile.frequentTeammates')}
+                profiles={steamProfiles}
               />
               <FrequentPlayersList
                 players={frequentOpponents}
                 title={t(i18n, 'stats.profile.frequentOpponents')}
+                profiles={steamProfiles}
               />
             </div>
           )}
@@ -1224,7 +1267,7 @@ export default component$(() => {
       {/* ═══ Matches section ═══ */}
       {activeSection.value === 'matches' && (() => {
         const filteredFights = showRankedOnly.value
-          ? fights.filter((f) => f.ratingChange != null && f.ratingChange !== 0)
+          ? fights.filter(isRankedFight)
           : fights;
         const filteredEloChange = filteredFights.reduce(
           (sum, f) => sum + (f.ratingChange ?? 0), 0,
@@ -1244,7 +1287,7 @@ export default component$(() => {
                 <span class="text-[var(--red)]">
                   {filteredFights.filter((f) => f.result === 'loss').length}L
                 </span>
-                {filteredFights.some((f) => f.ratingChange != null) && (
+                {filteredFights.some(isRankedFight) && (
                   <span
                     class={filteredEloChange >= 0 ? 'text-[var(--green)]' : 'text-[var(--red)]'}
                   >
@@ -1283,6 +1326,9 @@ export default component$(() => {
                     <tr class="text-[var(--text-dim)] uppercase tracking-[0.2em] text-[8px]">
                       <th class="text-center py-1 border-b border-[rgba(51,51,51,0.3)] w-14">
                         {t(i18n, 'stats.match.result')}
+                      </th>
+                      <th class="text-center py-1 border-b border-[rgba(51,51,51,0.3)] w-16">
+                        {t(i18n, 'stats.profile.ranked')}
                       </th>
                       <th class="text-left py-1 border-b border-[rgba(51,51,51,0.3)]">
                         {t(i18n, 'stats.player.matchMap')}
@@ -1351,20 +1397,49 @@ export default component$(() => {
                               <span class="text-[9px] font-mono text-[var(--text-dim)]">-</span>
                             )}
                           </td>
+                          <td class="py-1.5 text-center">
+                            {isRankedFight(fight) ? (
+                              <span
+                                class="text-[8px] font-mono font-bold uppercase tracking-[0.15em] text-[var(--accent)] border border-[rgba(70,151,195,0.4)] bg-[rgba(70,151,195,0.1)] px-1 py-0.5"
+                                title={t(i18n, 'stats.profile.ranked')}
+                              >
+                                {t(i18n, 'stats.profile.ranked')}
+                              </span>
+                            ) : (
+                              <span class="text-[9px] font-mono text-[var(--text-dim)]">-</span>
+                            )}
+                          </td>
                           <td class="py-1.5 text-[var(--text)]">
                             {fight.mapName ?? `Map ${fight.mapId ?? '?'}`}
                           </td>
                           <td class="py-1.5">
                             <div class="flex items-center gap-1.5">
-                              {fight.countryName && (
-                                <span class="text-[9px] font-mono text-[var(--accent)]">
-                                  {fight.countryName === 'USA' ? 'US' : fight.countryName === 'Russia' ? 'RU' : fight.countryName}
-                                </span>
+                              {fight.countryFlag && (
+                                <img
+                                  src={toCountryIconPath(fight.countryFlag)}
+                                  alt={fight.countryName ?? ''}
+                                  title={fight.countryName ?? ''}
+                                  class="w-4 h-3 object-contain opacity-80 shrink-0"
+                                  width={16}
+                                  height={12}
+                                />
                               )}
-                              {fight.specNames && fight.specNames.length > 0 && (
-                                <span class="text-[8px] text-[var(--text-dim)] truncate max-w-[120px]">
-                                  {fight.specNames.join(' + ')}
-                                </span>
+                              {fight.specIcons && fight.specIcons.length > 0 && (
+                                <div class="flex items-center gap-1 shrink-0">
+                                  {fight.specIcons.map((icon, si) =>
+                                    icon ? (
+                                      <img
+                                        key={`si-${si}`}
+                                        src={toSpecializationIconPath(icon)}
+                                        alt={fight.specNames[si] ?? ''}
+                                        title={fight.specNames[si] ?? ''}
+                                        class="w-4 h-4 object-contain opacity-70"
+                                        width={16}
+                                        height={16}
+                                      />
+                                    ) : null,
+                                  )}
+                                </div>
                               )}
                             </div>
                           </td>

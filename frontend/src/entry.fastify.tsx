@@ -24,6 +24,7 @@ import { resolveArsenalMeta } from '~/lib/meta/resolvers/arsenal';
 import { resolveDeckMeta } from '~/lib/meta/resolvers/deck';
 import { resolvePlayerMeta } from '~/lib/meta/resolvers/player';
 import { resolveMatchMeta } from '~/lib/meta/resolvers/match';
+import { resolveGuideMeta } from '~/lib/meta/resolvers/guide';
 
 declare global {
   type QwikCityPlatform = PlatformNode;
@@ -67,6 +68,9 @@ async function resolveRouteMeta(path: string): Promise<PageMeta> {
 
   const fightMatch = route.match(/^\/stats\/match\/([a-zA-Z0-9_-]+)$/);
   if (fightMatch) return resolveMatchMeta(fightMatch[1]);
+
+  const guideMatch = route.match(/^\/guides\/([a-z0-9-]+)$/);
+  if (guideMatch) return resolveGuideMeta(guideMatch[1]);
 
   return {
     title: 'BA HUB - Broken Arrow Community Toolkit',

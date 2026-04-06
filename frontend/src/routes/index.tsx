@@ -102,7 +102,24 @@ export default component$(() => {
   const secondary = FEATURES.filter(f => !f.primary);
 
   return (
-    <div class="w-full min-h-[calc(100vh-8rem)] flex flex-col justify-center">
+    <div class="relative w-full min-h-[calc(100vh-8rem)] flex flex-col justify-center">
+      {/* Zhukov Approved — meme stamp (floats over hero, does not affect layout) */}
+      <div
+        class="hidden sm:block absolute top-2 right-2 md:top-4 md:right-6 pointer-events-none select-none z-30"
+        style="transform: rotate(-14deg);"
+        aria-hidden="true"
+      >
+        <div
+          class="px-3 py-1.5 md:px-4 md:py-2 border-[3px] border-double"
+          style="border-color: rgba(200,50,50,0.75); box-shadow: inset 0 0 0 1px rgba(200,50,50,0.25); mix-blend-mode: screen; opacity: 0.9;"
+        >
+          <div class="font-mono font-black uppercase tracking-[0.15em] leading-none text-center" style="color: rgba(220,60,60,0.9); text-shadow: 0 0 1px rgba(220,60,60,0.4);">
+            <div class="text-[13px] md:text-[16px]">{t(i18n, 'home.stamp.line1')}</div>
+            <div class="text-[9px] md:text-[11px] mt-0.5 tracking-[0.25em]">{t(i18n, 'home.stamp.line2')}</div>
+          </div>
+        </div>
+      </div>
+
       {/* ── Hero banner — compact identity strip ── */}
       <div class="relative mb-px py-5 flex flex-col items-center justify-center border border-[rgba(51,51,51,0.15)] bg-gradient-to-b from-[rgba(26,26,26,0.5)] to-[rgba(26,26,26,0.8)] overflow-hidden">
         {/* Soft background glow */}

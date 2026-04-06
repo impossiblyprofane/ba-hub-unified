@@ -29,6 +29,8 @@ const en: TranslationDict = {
   'home.title': 'Broken Arrow',
   'home.titleAccent': 'BA-HUB',
   'home.subtitle': 'Browse units, build decks, analyze maps, and track competitive performance.',
+  'home.stamp.line1': 'Zhukov',
+  'home.stamp.line2': 'Approved',
   'home.status.active': 'SYS:ACTIVE',
   'home.status.nodes': 'NET:3',
 
@@ -622,6 +624,10 @@ const en: TranslationDict = {
   'stats.country.title': 'Faction Statistics',
   'stats.country.matchDistribution': 'Match Distribution by Faction',
   'stats.country.winDistribution': 'Win Distribution',
+
+  // Stats: Steam profile enrichment
+  'stats.steam.profileTooltip': 'View Steam profile',
+  'stats.steam.unknownPlayer': 'Unknown player',
 
   // Stats: player profile
   'stats.profile.title': 'Player Profile',

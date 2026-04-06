@@ -7,6 +7,8 @@ import type { AnalyticsFightData, AnalyticsFightPlayer, AnalyticsFightUnit } fro
 import { STATS_FIGHT_DATA_QUERY } from '~/lib/queries/stats';
 import { toCountryIconPath, toSpecializationIconPath } from '~/lib/iconPaths';
 import { ReadonlyUnitPanel } from '~/components/decks/ReadonlyUnitPanel';
+import { SteamAvatar } from '~/components/stats/SteamAvatar';
+import { useSteamProfiles } from '~/lib/stats/useSteamProfiles';
 import { getMapBackgroundByName } from '~/lib/maps/mapData';
 import type { UnitConfig } from '@ba-hub/shared';
 
@@ -390,6 +392,11 @@ export default component$(() => {
   const fight = data.value.fight;
   const fromPlayer = data.value.fromPlayer;
 
+  // Client-side Steam profile resolution for all players in the match.
+  const steamProfiles = useSteamProfiles(
+    (fight?.players ?? []).map((p) => p.steamId ?? null),
+  );
+
   // Compute default selected player (top scorer from first team, or first player)
   const defaultPlayerId = (() => {
     if (!fight || fight.players.length === 0) return null;
@@ -664,7 +671,13 @@ export default component$(() => {
                                     />
                                   ))}
                                   {/* Player name + badges */}
-                                  <div class="flex items-center gap-1 min-w-0">
+                                  <div class="flex items-center gap-1.5 min-w-0">
+                                    <SteamAvatar
+                                      size="sm"
+                                      steamId={p.steamId}
+                                      profile={p.steamId ? steamProfiles[p.steamId] : null}
+                                      name={p.name}
+                                    />
                                     {p.steamId ? (
                                       <a
                                         href={`/stats/player/${p.steamId}`}

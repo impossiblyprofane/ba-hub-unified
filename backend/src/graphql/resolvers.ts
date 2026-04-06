@@ -4,6 +4,7 @@ import type { StaticData } from '../data/loader.js';
 import type { StaticIndexes } from '../data/indexes.js';
 import type { DatabaseClient, PlayerMatchHistoryResult, PlayerMatchTeamRow, PlayerMatchUnitRow, PlayerMatchOtherPlayer } from '../services/databaseClient.js';
 import type { StatsClient } from '../services/statsClient.js';
+import type { SteamProfileClient } from '../services/steamProfileClient.js';
 import type {
   BrowseDecksFilter,
   PublishDeckInput,
@@ -17,6 +18,7 @@ type GraphQLContext = MercuriusContext & {
   indexes: StaticIndexes;
   dbClient: DatabaseClient;
   statsClient: StatsClient;
+  steamProfileClient: SteamProfileClient;
 };
 
 type UnitWeaponSlot = {
@@ -990,11 +992,45 @@ export const resolvers = {
 
       const buildUnitRankings = (unitMap: Map<string, UnitAgg>) => {
         const allUnits = [...unitMap.values()];
+
+        // Country names we expose faction filters for. Top-10 lists are
+        // returned as the UNION of the global top 10 + the top 10 within
+        // each of these faction buckets, so the frontend can filter to
+        // any single faction and still see a true top 10 (not just the
+        // intersection of "global top 10" ∩ "this faction").
+        const FILTERABLE_FACTIONS = ['USA', 'Russia'];
+
+        const topNUnion = (cmp: (a: UnitAgg, b: UnitAgg) => number, n: number) => {
+          const sortedAll = [...allUnits].sort(cmp);
+          const buckets: UnitAgg[][] = [sortedAll.slice(0, n)];
+          for (const factionName of FILTERABLE_FACTIONS) {
+            const country = [...indexes.countriesById?.values() ?? []]
+              .find((c) => c.Name === factionName);
+            if (!country) continue;
+            buckets.push(
+              sortedAll.filter((u) => u.countryId === country.Id).slice(0, n),
+            );
+          }
+          // Dedupe by configKey (unitId + sorted optionIds)
+          const seen = new Set<string>();
+          const merged: UnitAgg[] = [];
+          for (const bucket of buckets) {
+            for (const u of bucket) {
+              const k = `${u.unitId}:${u.optionIds.join(',')}`;
+              if (seen.has(k)) continue;
+              seen.add(k);
+              merged.push(u);
+            }
+          }
+          // Re-sort the merged set so the "All" view stays correctly ordered
+          return merged.sort(cmp).map(resolveUnitPerf);
+        };
+
         return {
-          mostUsedUnits: [...allUnits].sort((a, b) => b.count - a.count).slice(0, 10).map(resolveUnitPerf),
-          topKillerUnits: [...allUnits].sort((a, b) => b.totalKills - a.totalKills).slice(0, 10).map(resolveUnitPerf),
-          topDamageUnits: [...allUnits].sort((a, b) => b.totalDamageDealt - a.totalDamageDealt).slice(0, 10).map(resolveUnitPerf),
-          topDamageReceivedUnits: [...allUnits].sort((a, b) => b.totalDamageReceived - a.totalDamageReceived).slice(0, 10).map(resolveUnitPerf),
+          mostUsedUnits: topNUnion((a, b) => b.count - a.count, 10),
+          topKillerUnits: topNUnion((a, b) => b.totalKills - a.totalKills, 10),
+          topDamageUnits: topNUnion((a, b) => b.totalDamageDealt - a.totalDamageDealt, 10),
+          topDamageReceivedUnits: topNUnion((a, b) => b.totalDamageReceived - a.totalDamageReceived, 10),
         };
       };
 
@@ -1065,24 +1101,51 @@ export const resolvers = {
                   result = ratingChange > 0 ? 'win' : 'loss';
                 }
 
-                const isRanked = ratingChange != null && ratingChange !== 0;
+                // ── Multi-detector ranked check ─────────────────
+                // Layer multiple signals so a single missing field doesn't
+                // misclassify a ranked match. Any one signal qualifies.
+                const detRanked_eloMoved = ratingChange != null && ratingChange !== 0;
+                const detRanked_hasRatings =
+                  player?.oldRating != null && player?.newRating != null;
+                const detRanked_otherEloMoved = fight.players.some(
+                  (p) =>
+                    p.id !== player?.id &&
+                    p.oldRating != null &&
+                    p.newRating != null &&
+                    p.newRating !== p.oldRating,
+                );
+                const detRanked_anyOtherHasRatings = fight.players.some(
+                  (p) => p.id !== player?.id && p.oldRating != null && p.newRating != null,
+                );
+                const isRanked =
+                  detRanked_eloMoved ||
+                  detRanked_hasRatings ||
+                  detRanked_otherEloMoved ||
+                  detRanked_anyOtherHasRatings;
+
+                // ── Team average ratings via teamId ─────────────
+                // Use the authoritative teamId on each player record. Works
+                // for any player count (including 1v1) and doesn't drop
+                // players whose own ELO didn't move. Recovers MM data the
+                // old rating-direction-inference path was silently dropping.
                 const allyRatings: number[] = [];
                 const enemyRatings: number[] = [];
                 if (player?.oldRating != null) allyRatings.push(player.oldRating);
-
-                if (isRanked && fight.players.length > 2) {
-                  const playerWon = ratingChange! > 0;
+                if (player?.teamId != null) {
                   for (const other of fight.players) {
-                    if (other.id === player?.id) continue;
-                    const otherChange = other.oldRating != null && other.newRating != null
-                      ? other.newRating - other.oldRating : null;
-                    if (otherChange == null) continue;
-                    const isSameTeam = playerWon === (otherChange > 0);
+                    if (other.id === player.id) continue;
+                    if (other.oldRating == null) continue;
+                    if (other.teamId === player.teamId) allyRatings.push(other.oldRating);
+                    else if (other.teamId != null) enemyRatings.push(other.oldRating);
+                  }
+                }
 
-                    if (other.oldRating != null) {
-                      (isSameTeam ? allyRatings : enemyRatings).push(other.oldRating);
-                    }
-
+                // ── Teammate / opponent frequency tracking ──────
+                if (isRanked && player?.teamId != null) {
+                  for (const other of fight.players) {
+                    if (other.id === player.id) continue;
+                    if (other.teamId == null) continue;
+                    const isSameTeam = other.teamId === player.teamId;
                     const map = isSameTeam ? teammateMap : opponentMap;
                     const existing = map.get(other.id);
                     if (existing) {
@@ -1108,6 +1171,7 @@ export const resolvers = {
                 let fightCountryName: string | null = null;
                 let fightCountryFlag: string | null = null;
                 let fightSpecNames: string[] = [];
+                let fightSpecIcons: string[] = [];
 
                 if (isRanked && player) {
                   const countryCounts = new Map<number, number>();
@@ -1162,6 +1226,10 @@ export const resolvers = {
                     const spec = indexes.specializationsById.get(id);
                     return spec?.Name || spec?.UIName || `Spec ${id}`;
                   });
+                  fightSpecIcons = topSpecs.map((id) => {
+                    const spec = indexes.specializationsById.get(id);
+                    return spec?.Icon || '';
+                  });
                   if (topSpecs.length === 2) {
                     const comboKey = topSpecs.sort((a, b) => a - b).join(':');
                     const ex = specComboCounts.get(comboKey);
@@ -1185,6 +1253,8 @@ export const resolvers = {
                   oldRating: player?.oldRating ?? null,
                   countryName: fightCountryName, countryFlag: fightCountryFlag,
                   specNames: fightSpecNames,
+                  specIcons: fightSpecIcons,
+                  isRanked,
                 };
               } catch {
                 return null;
@@ -1312,19 +1382,75 @@ export const resolvers = {
             result = ratingChange > 0 ? 'win' : 'loss';
           }
 
-          const isRanked = m.isRanked && ratingChange != null;
+          // ── Multi-detector ranked check ──────────────────────
+          // The DB query already filters to is_ranked = true, but we layer
+          // multiple signals so the resolver is resilient to upstream drift
+          // and so the frontend can trust isRanked even if any single signal
+          // is missing.
+          const detRanked_dbFlag = m.isRanked === true;
+          const detRanked_eloMoved = ratingChange != null && ratingChange !== 0;
+          const detRanked_hasRatings = m.oldRating != null && m.newRating != null;
+          const detRanked_otherEloMoved = fightOthers.some(
+            (o) => o.oldRating != null && o.newRating != null && o.newRating !== o.oldRating,
+          );
+          const isRanked =
+            detRanked_dbFlag ||
+            detRanked_eloMoved ||
+            detRanked_hasRatings ||
+            detRanked_otherEloMoved;
 
-          // Team average ratings
-          const allyTeam = fightTeams.find((t) => t.teamId === m.playerTeamId);
-          const enemyTeam = fightTeams.find((t) => t.teamId !== m.playerTeamId);
-          const allyAvgRating = allyTeam?.avgRating != null ? Math.round(allyTeam.avgRating) : null;
-          const enemyAvgRating = enemyTeam?.avgRating != null ? Math.round(enemyTeam.avgRating) : null;
+          // ── Player team-id inference ────────────────────────
+          // The crawler currently doesn't always populate
+          // match_player_picks.team_id, which silently breaks team-side
+          // attribution. Recover it from the win/loss + match_team_results.is_winner.
+          let inferredPlayerTeamId: number | null = m.playerTeamId;
+          if (inferredPlayerTeamId == null && result != null && fightTeams.length > 0) {
+            const wantsWinner = result === 'win';
+            const matched = fightTeams.find((t) => t.isWinner === wantsWinner);
+            if (matched) inferredPlayerTeamId = matched.teamId;
+          }
+          if (inferredPlayerTeamId == null && m.winnerTeam != null && result === 'win') {
+            inferredPlayerTeamId = m.winnerTeam;
+          }
+
+          // ── Team average ratings ────────────────────────────
+          // 1) Prefer the precomputed match_team_results.avg_rating
+          // 2) Fall back to averaging individual oldRating values from
+          //    match_player_picks (other players + the player themselves)
+          //    grouped by team_id. This recovers many "ranked but no MM"
+          //    rows where the precomputed avg was null because the crawler
+          //    saw zero rated players on a team at insert time.
+          const allyTeam = inferredPlayerTeamId != null
+            ? fightTeams.find((t) => t.teamId === inferredPlayerTeamId)
+            : undefined;
+          const enemyTeam = inferredPlayerTeamId != null
+            ? fightTeams.find((t) => t.teamId !== inferredPlayerTeamId)
+            : undefined;
+          let allyAvgRating: number | null = allyTeam?.avgRating != null ? Math.round(allyTeam.avgRating) : null;
+          let enemyAvgRating: number | null = enemyTeam?.avgRating != null ? Math.round(enemyTeam.avgRating) : null;
+
+          if ((allyAvgRating == null || enemyAvgRating == null) && inferredPlayerTeamId != null) {
+            const allyRatings: number[] = [];
+            const enemyRatings: number[] = [];
+            if (m.oldRating != null) allyRatings.push(m.oldRating);
+            for (const o of fightOthers) {
+              if (o.oldRating == null) continue;
+              if (o.teamId === inferredPlayerTeamId) allyRatings.push(o.oldRating);
+              else if (o.teamId != null) enemyRatings.push(o.oldRating);
+            }
+            if (allyAvgRating == null && allyRatings.length > 0) {
+              allyAvgRating = Math.round(allyRatings.reduce((s, r) => s + r, 0) / allyRatings.length);
+            }
+            if (enemyAvgRating == null && enemyRatings.length > 0) {
+              enemyAvgRating = Math.round(enemyRatings.reduce((s, r) => s + r, 0) / enemyRatings.length);
+            }
+          }
 
           // Teammate/opponent tracking from other players in this fight
-          if (isRanked) {
+          if (isRanked && inferredPlayerTeamId != null) {
             for (const other of fightOthers) {
               if (other.odId == null) continue;
-              const isSameTeam = other.teamId === m.playerTeamId;
+              const isSameTeam = other.teamId === inferredPlayerTeamId;
               const map = isSameTeam ? teammateMap : opponentMap;
               const existing = map.get(other.odId);
               if (existing) {
@@ -1389,11 +1515,16 @@ export const resolvers = {
 
           // Spec tracking from DB-stored spec names/IDs
           const fightSpecNames: string[] = [];
+          const fightSpecIcons: string[] = [];
           const specIds: number[] = [];
           if (m.spec1Id != null) { specIds.push(m.spec1Id); specCounts.set(m.spec1Id, (specCounts.get(m.spec1Id) ?? 0) + 1); }
           if (m.spec2Id != null) { specIds.push(m.spec2Id); specCounts.set(m.spec2Id, (specCounts.get(m.spec2Id) ?? 0) + 1); }
           if (m.spec1Name) fightSpecNames.push(m.spec1Name);
           if (m.spec2Name) fightSpecNames.push(m.spec2Name);
+          for (const sid of specIds) {
+            const spec = idx.specializationsById.get(sid);
+            fightSpecIcons.push(spec?.Icon || '');
+          }
           if (specIds.length === 2) {
             const comboKey = [...specIds].sort((a, b) => a - b).join(':');
             const ex = specComboCounts.get(comboKey);
@@ -1428,6 +1559,8 @@ export const resolvers = {
             countryName: fightCountryName,
             countryFlag: fightCountryFlag,
             specNames: fightSpecNames,
+            specIcons: fightSpecIcons,
+            isRanked: Boolean(isRanked),
           };
         });
 
@@ -1644,6 +1777,30 @@ export const resolvers = {
       } catch {
         return null;
       }
+    },
+
+    // ── Steam profile enrichment ──────────────────────────────
+
+    steamProfiles: async (
+      _: unknown,
+      args: { steamIds: string[] },
+      ctx: GraphQLContext,
+    ) => {
+      const ids = Array.isArray(args.steamIds) ? args.steamIds : [];
+      if (ids.length === 0) return [];
+      if (ids.length > 200) {
+        throw new Error('Too many steamIds (max 200)');
+      }
+      const deduped = Array.from(new Set(ids));
+      const resolved = await ctx.steamProfileClient.getProfiles(deduped);
+      return deduped.map((id) => resolved.get(id) ?? {
+        steamId: id,
+        personaName: null,
+        avatarIcon: null,
+        avatarMedium: null,
+        avatarFull: null,
+        profileUrl: null,
+      });
     },
 
     // ── Snapshot / history queries ────────────────────────────

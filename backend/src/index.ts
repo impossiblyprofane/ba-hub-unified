@@ -8,10 +8,13 @@ import { loadStaticData } from './data/loader.js';
 import { buildIndexes } from './data/indexes.js';
 import { DatabaseClient } from './services/databaseClient.js';
 import { StatsClient } from './services/statsClient.js';
+import { SteamProfileClient } from './services/steamProfileClient.js';
 import { StatsCollector } from './services/statsCollector.js';
 import { MatchCrawler } from './services/matchCrawler.js';
 import { encryptDek, decryptDek } from './services/dekEncryption.js';
 import { isrRelayPlugin } from './routes/isrRelay.js';
+import { adminRoutesPlugin } from './routes/admin.js';
+import { createLogBuffer } from './services/logBuffer.js';
 import { encryptPayload, decryptPayload, isEncryptionConfigured } from '@ba-hub/shared';
 
 const PORT = process.env.PORT || 3001;
@@ -25,14 +28,22 @@ async function buildServer() {
   const indexes = buildIndexes(data);
   const dbClient = new DatabaseClient(DATABASE_SERVICE_URL);
   const statsClient = new StatsClient(STATS_API_URL, STATS_PARTNER_TOKEN || undefined);
+  const steamProfileClient = new SteamProfileClient(process.env.STEAM_API_KEY);
 
   // Keep mutable references for hot-reloading
   let currentData = data;
   let currentIndexes = indexes;
 
+  // In-memory log ring buffer — feeds the admin /sys panel.
+  // The tee Writable forwards every Pino NDJSON line to both stdout and the
+  // ring buffer so normal logging is preserved unchanged.
+  const logBuffer = createLogBuffer(1000);
+  const startedAt = Date.now();
+
   const fastify = Fastify({
     logger: {
       level: process.env.LOG_LEVEL || 'info',
+      stream: logBuffer.stream,
     },
   });
 
@@ -120,6 +131,18 @@ async function buildServer() {
     }
   });
 
+  // ── Admin REST plugin (hidden /sys panel backend) ────────────
+  // Mounted under /admin/*. All routes return 503 unless ADMIN_TOKEN is set.
+  // The plugin proxies the database service's read-only admin API and tails
+  // the in-memory log buffer.
+  await fastify.register(adminRoutesPlugin, {
+    prefix: '/admin',
+    logBuffer,
+    dbClient,
+    getStaticData: () => currentData,
+    startedAt,
+  });
+
   // WebSocket support
   await fastify.register(websocket);
 
@@ -135,6 +158,7 @@ async function buildServer() {
       indexes: currentIndexes,
       dbClient,
       statsClient,
+      steamProfileClient,
     }),
     graphiql: true, // GraphiQL interface at /graphiql
     subscription: true, // Enable subscriptions via WebSocket

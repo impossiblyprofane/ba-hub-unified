@@ -166,6 +166,8 @@ export const STATS_RECENT_FIGHTS_QUERY = `
         countryName
         countryFlag
         specNames
+        specIcons
+        isRanked
       }
       frequentTeammates {
         name

@@ -370,7 +370,8 @@ export async function registerCrawlerRoutes(app: FastifyInstance) {
           ),
         ),
 
-      // Other players in same matches (for teammate/opponent detection)
+      // Other players in same matches (for teammate/opponent detection
+      // and for fallback team-rating computation when match_team_results.avg_rating is null)
       db
         .select({
           fightId: matchPlayerPicks.fightId,
@@ -380,6 +381,8 @@ export async function registerCrawlerRoutes(app: FastifyInstance) {
           factionName: matchPlayerPicks.factionName,
           spec1Name: matchPlayerPicks.spec1Name,
           spec2Name: matchPlayerPicks.spec2Name,
+          oldRating: matchPlayerPicks.oldRating,
+          newRating: matchPlayerPicks.newRating,
         })
         .from(matchPlayerPicks)
         .where(

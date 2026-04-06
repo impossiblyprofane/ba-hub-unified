@@ -38,6 +38,8 @@ jobs:
           ENCRYPT_API=true
           ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}
           ENCRYPTION_IV=${{ secrets.ENCRYPTION_IV }}
+          ADMIN_TOKEN=${{ secrets.ADMIN_TOKEN }}
+          DB_ADMIN_SECRET=${{ secrets.DB_ADMIN_SECRET }}
           ENVEOF
           sed -i 's/^[[:space:]]*//' docker/.env
 

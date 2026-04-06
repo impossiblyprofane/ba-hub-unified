@@ -22,6 +22,8 @@ import {
   UNIT_PERFORMANCE_QUERY,
 } from '~/lib/queries/stats';
 import { ChartCanvas } from '~/components/stats/ChartCanvas';
+import { SteamAvatar } from '~/components/stats/SteamAvatar';
+import { useSteamProfiles } from '~/lib/stats/useSteamProfiles';
 import type { ChartConfiguration } from 'chart.js';
 
 /* ─── Option name resolution ─────────────────────────────── */
@@ -733,7 +735,9 @@ export default component$(() => {
   );
 
   const leaderboard = overview.value.analyticsLeaderboard;
-  const lbExpanded = useSignal(false);
+
+  // Client-side Steam profile resolution — doesn't block SSR.
+  const steamProfiles = useSteamProfiles(leaderboard.map((e) => e.steamId ?? null));
 
   return (
     <div class="w-full max-w-[2000px] mx-auto">
@@ -804,9 +808,9 @@ export default component$(() => {
       {/* ═══ Section 1: Leaderboard ═══ */}
       <div class="mb-6">
         <Panel title={t(i18n, 'stats.tab.leaderboard')}>
-          <div class={lbExpanded.value ? 'max-h-[600px] overflow-y-auto' : ''}>
+          <div class="max-h-[600px] overflow-y-auto">
             <table class="w-full text-xs border-collapse">
-              <thead class={lbExpanded.value ? 'sticky top-0 bg-[var(--bg)] z-10' : ''}>
+              <thead class="sticky top-0 bg-[var(--bg)] z-10">
                 <tr class="text-[var(--text-dim)] uppercase tracking-[0.2em] text-[8px]">
                   <th class="text-left py-1.5 px-1 border-b border-[rgba(51,51,51,0.3)]">
                     {t(i18n, 'stats.leaderboard.rank')}
@@ -823,7 +827,7 @@ export default component$(() => {
                 </tr>
               </thead>
               <tbody>
-                {leaderboard.slice(0, lbExpanded.value ? leaderboard.length : 10).map((e) => (
+                {leaderboard.map((e) => (
                   <tr
                     key={`lb-${e.rank}-${e.userId}`}
                     class="border-b border-[rgba(51,51,51,0.15)] hover:bg-[rgba(70,151,195,0.05)]"
@@ -832,16 +836,24 @@ export default component$(() => {
                       {e.rank}
                     </td>
                     <td class="py-1.5 px-1 text-[var(--text)]">
-                      {e.steamId ? (
-                        <a
-                          href={`/stats/player/${e.steamId}`}
-                          class="hover:text-[var(--accent)] transition-colors"
-                        >
-                          {e.name ?? `User ${e.userId ?? '-'}`}
-                        </a>
-                      ) : (
-                        e.name ?? `User ${e.userId ?? '-'}`
-                      )}
+                      <div class="flex items-center gap-2">
+                        <SteamAvatar
+                          size="xs"
+                          steamId={e.steamId}
+                          profile={e.steamId ? steamProfiles[e.steamId] : null}
+                          name={e.name}
+                        />
+                        {e.steamId ? (
+                          <a
+                            href={`/stats/player/${e.steamId}`}
+                            class="hover:text-[var(--accent)] transition-colors truncate"
+                          >
+                            {e.name ?? `User ${e.userId ?? '-'}`}
+                          </a>
+                        ) : (
+                          <span class="truncate">{e.name ?? `User ${e.userId ?? '-'}`}</span>
+                        )}
+                      </div>
                     </td>
                     <td class="py-1.5 px-1 text-[var(--text)] font-mono text-right">
                       {Math.round(e.elo ?? e.rating ?? 0)}
@@ -861,14 +873,6 @@ export default component$(() => {
               </tbody>
             </table>
           </div>
-          {leaderboard.length > 10 && (
-            <button
-              class="w-full mt-2 py-1.5 text-[9px] font-mono uppercase tracking-[0.2em] text-[var(--text-dim)] hover:text-[var(--accent)] border border-[rgba(51,51,51,0.2)] hover:border-[rgba(51,51,51,0.4)] transition-colors"
-              onClick$={() => { lbExpanded.value = !lbExpanded.value; }}
-            >
-              {lbExpanded.value ? '▲ Show Top 10' : `▼ Show Top ${leaderboard.length}`}
-            </button>
-          )}
         </Panel>
       </div>
 

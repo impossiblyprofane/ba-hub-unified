@@ -374,6 +374,8 @@ export interface PlayerMatchOtherPlayer {
   factionName: string;
   spec1Name: string | null;
   spec2Name: string | null;
+  oldRating: number | null;
+  newRating: number | null;
 }
 
 export interface PlayerMatchHistoryResult {

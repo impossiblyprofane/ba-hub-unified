@@ -21,3 +21,4 @@ export * from './unit.js';
 export * from './weapon.js';
 export * from './user.js';
 export * from './published-deck.js';
+export * from './steam-profile.js';

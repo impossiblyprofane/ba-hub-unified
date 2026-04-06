@@ -1,30 +1,49 @@
 import type { PageMeta } from './types';
 
+const DEFAULT_OG_IMAGE = '/images/bahub.png';
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export function renderMetaHtml(meta: PageMeta, url: string, siteUrl: string): string {
   const ogType = meta.ogType || 'website';
-  const imageMeta = meta.ogImage
-    ? `\n  <meta property="og:image" content="${siteUrl}${meta.ogImage}">\n  <meta name="twitter:image" content="${siteUrl}${meta.ogImage}">`
+  // Default to small twitter card unless caller explicitly opts into the large variant.
+  const twitterCard = meta.twitterCard ?? 'summary';
+  // Resolvers may return null to mean "no image"; undefined means "use default".
+  const imagePath = meta.ogImage === undefined ? DEFAULT_OG_IMAGE : meta.ogImage;
+  const imageMeta = imagePath
+    ? `\n  <meta property="og:image" content="${escapeHtml(siteUrl + imagePath)}">\n  <meta name="twitter:image" content="${escapeHtml(siteUrl + imagePath)}">`
     : '';
-  const twitterCard = meta.twitterCard ?? (meta.ogImage ? 'summary_large_image' : 'summary');
+
+  const title = escapeHtml(meta.title);
+  const description = escapeHtml(meta.description);
+  const safeUrl = escapeHtml(url);
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>${meta.title}</title>
-  <meta name="description" content="${meta.description}">
-  <meta property="og:title" content="${meta.title}">
-  <meta property="og:description" content="${meta.description}">
-  <meta property="og:type" content="${ogType}">
-  <meta property="og:url" content="${url}">${imageMeta}
+  <title>${title}</title>
+  <meta name="description" content="${description}">
+  <meta property="og:title" content="${title}">
+  <meta property="og:description" content="${description}">
+  <meta property="og:type" content="${escapeHtml(ogType)}">
+  <meta property="og:url" content="${safeUrl}">${imageMeta}
   <meta name="twitter:card" content="${twitterCard}">
-  <meta name="twitter:title" content="${meta.title}">
-  <meta name="twitter:description" content="${meta.description}">
-  <link rel="canonical" href="${url}">
+  <meta name="twitter:title" content="${title}">
+  <meta name="twitter:description" content="${description}">
+  <link rel="canonical" href="${safeUrl}">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 </head>
 <body>
-  <h1>${meta.title}</h1>
-  <p>${meta.description}</p>
+  <h1>${title}</h1>
+  <p>${description}</p>
 </body>
 </html>`;
 }
