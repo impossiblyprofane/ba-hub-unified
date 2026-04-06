@@ -63,7 +63,7 @@ function formatFactionName(name: string): string {
   return name;
 }
 
-/* ─── Route loader: SSR overview + full 100 leaderboard ───── */
+/* ─── Route loader: SSR overview + full 1000 leaderboard ───── */
 
 type OverviewPayload = StatsOverviewData & {
   analyticsCountryStats: AnalyticsCountryStats;
@@ -820,16 +820,10 @@ export default component$(() => {
                   <th class="text-right py-1.5 px-1 border-b border-[rgba(51,51,51,0.3)]">
                     {t(i18n, 'stats.leaderboard.score')}
                   </th>
-                  <th class="text-right py-1.5 px-1 border-b border-[rgba(51,51,51,0.3)]">
-                    K/D
-                  </th>
-                  <th class="text-right py-1.5 px-1 border-b border-[rgba(51,51,51,0.3)]">
-                    {t(i18n, 'stats.leaderboard.winRate')}
-                  </th>
                 </tr>
               </thead>
               <tbody>
-                {leaderboard.slice(0, lbExpanded.value ? 20 : 10).map((e) => (
+                {leaderboard.slice(0, lbExpanded.value ? leaderboard.length : 10).map((e) => (
                   <tr
                     key={`lb-${e.rank}-${e.userId}`}
                     class="border-b border-[rgba(51,51,51,0.15)] hover:bg-[rgba(70,151,195,0.05)]"
@@ -855,17 +849,11 @@ export default component$(() => {
                     <td class="py-1.5 px-1 text-[var(--text)] font-mono text-right">
                       Lv.{e.level ?? '-'}
                     </td>
-                    <td class="py-1.5 px-1 text-[var(--text)] font-mono text-right">
-                      {e.kdRatio?.toFixed(2) ?? '-'}
-                    </td>
-                    <td class="py-1.5 px-1 text-[var(--text)] font-mono text-right">
-                      {e.winRate != null ? `${(e.winRate * 100).toFixed(1)}%` : '-'}
-                    </td>
                   </tr>
                 ))}
                 {leaderboard.length === 0 && (
                   <tr>
-                    <td colSpan={6} class="py-4 text-center text-[var(--text-dim)] text-xs">
+                    <td colSpan={4} class="py-4 text-center text-[var(--text-dim)] text-xs">
                       {t(i18n, 'stats.leaderboard.empty')}
                     </td>
                   </tr>
@@ -878,7 +866,7 @@ export default component$(() => {
               class="w-full mt-2 py-1.5 text-[9px] font-mono uppercase tracking-[0.2em] text-[var(--text-dim)] hover:text-[var(--accent)] border border-[rgba(51,51,51,0.2)] hover:border-[rgba(51,51,51,0.4)] transition-colors"
               onClick$={() => { lbExpanded.value = !lbExpanded.value; }}
             >
-              {lbExpanded.value ? '▲ Show Top 10' : `▼ Show Top 20`}
+              {lbExpanded.value ? '▲ Show Top 10' : `▼ Show Top ${leaderboard.length}`}
             </button>
           )}
         </Panel>

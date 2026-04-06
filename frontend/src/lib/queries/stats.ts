@@ -21,7 +21,7 @@ export const STATS_OVERVIEW_QUERY = `
       name
       count
     }
-    analyticsLeaderboard(start: 0, end: 100) {
+    analyticsLeaderboard(start: 0, end: 1000) {
       rank
       userId
       steamId
@@ -29,8 +29,6 @@ export const STATS_OVERVIEW_QUERY = `
       rating
       elo
       level
-      winRate
-      kdRatio
     }
     analyticsCountryStats {
       updateDate
