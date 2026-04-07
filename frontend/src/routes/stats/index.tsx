@@ -1,4 +1,4 @@
-import { $, component$, useResource$, useSignal, Resource, Slot } from '@builder.io/qwik';
+import { $, component$, useSignal, useVisibleTask$, Slot } from '@builder.io/qwik';
 import type { DocumentHead } from '@builder.io/qwik-city';
 import { StatsOverviewSkeleton } from '~/components/skeletons/StatsOverviewSkeleton';
 import { GenericErrorView } from '~/components/errors/GenericErrorView';
@@ -1075,37 +1075,48 @@ const StatsContent = component$<{ data: StatsPageData }>(({ data }) => {
   );
 });
 
-/* ─── Outer component: data fetching + resource wrapper ─── */
+/* ─── Outer component: client-only data fetching ───────── */
 
 export default component$(() => {
+  const data = useSignal<StatsPageData | null>(null);
+  const error = useSignal<unknown>(null);
   const refreshCounter = useSignal(0);
 
-  const statsResource = useResource$<StatsPageData>(async ({ track, cleanup }) => {
+  // eslint-disable-next-line qwik/no-use-visible-task
+  useVisibleTask$(({ track, cleanup }) => {
     track(() => refreshCounter.value);
     const abort = new AbortController();
     cleanup(() => abort.abort());
-    return fetchStatsOverview(abort.signal);
+    data.value = null;
+    error.value = null;
+    fetchStatsOverview(abort.signal)
+      .then((result) => {
+        data.value = result;
+      })
+      .catch((err) => {
+        if (err instanceof Error && err.name === 'AbortError') return;
+        error.value = err;
+      });
   });
 
   const retry$ = $(() => {
     refreshCounter.value++;
   });
 
-  return (
-    <Resource
-      value={statsResource}
-      onPending={() => <StatsOverviewSkeleton />}
-      onRejected={(error) => (
-        <GenericErrorView
-          titleKey="errors.statsLoadFailed"
-          messageKey="errors.statsLoadMessage"
-          error={error}
-          retry$={retry$}
-        />
-      )}
-      onResolved={(data) => <StatsContent data={data} />}
-    />
-  );
+  if (error.value) {
+    return (
+      <GenericErrorView
+        titleKey="errors.statsLoadFailed"
+        messageKey="errors.statsLoadMessage"
+        error={error.value}
+        retry$={retry$}
+      />
+    );
+  }
+  if (!data.value) {
+    return <StatsOverviewSkeleton />;
+  }
+  return <StatsContent data={data.value} />;
 });
 
 export const head: DocumentHead = {

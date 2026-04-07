@@ -1,4 +1,4 @@
-import { $, component$, useResource$, useSignal, useStore, Resource, Slot, type Signal } from '@builder.io/qwik';
+import { $, component$, useSignal, useStore, useVisibleTask$, Slot, type Signal } from '@builder.io/qwik';
 import { useLocation } from '@builder.io/qwik-city';
 import type { DocumentHead } from '@builder.io/qwik-city';
 import { useI18n, t, GAME_LOCALES, getGameLocaleValueOrKey } from '~/lib/i18n';
@@ -1536,41 +1536,60 @@ const PlayerContent = component$<{ data: PlayerProfileData }>(({ data }) => {
   );
 });
 
-/* ─── Outer component: data fetching + resource wrapper ─── */
+/* ─── Outer component: client-only data fetching ──────────
+
+   The fetch runs in useVisibleTask$ so it NEVER executes during SSR.
+   On SSR, data.value is null → the skeleton is streamed in the HTML.
+   On hydration, useVisibleTask$ fires → fetch runs → signal populates
+   → component re-renders with real data. This keeps raw player data
+   out of the HTML response (scraping friction + visible GraphQL in
+   DevTools Network), which is the whole point of the SPA conversion.
+*/
 
 export default component$(() => {
   const loc = useLocation();
+  const data = useSignal<PlayerProfileData | null>(null);
+  const error = useSignal<unknown>(null);
   const refreshCounter = useSignal(0);
 
-  const profileResource = useResource$<PlayerProfileData>(async ({ track, cleanup }) => {
+  // eslint-disable-next-line qwik/no-use-visible-task
+  useVisibleTask$(({ track, cleanup }) => {
     const steamId = track(() => loc.params.steamId);
     track(() => refreshCounter.value);
     const abort = new AbortController();
     cleanup(() => abort.abort());
-    return fetchPlayerProfile(steamId, abort.signal);
+    data.value = null;
+    error.value = null;
+    fetchPlayerProfile(steamId, abort.signal)
+      .then((result) => {
+        data.value = result;
+      })
+      .catch((err) => {
+        if (err instanceof Error && err.name === 'AbortError') return;
+        error.value = err;
+      });
   });
 
   const retry$ = $(() => {
     refreshCounter.value++;
   });
 
-  return (
-    <Resource
-      value={profileResource}
-      onPending={() => <PlayerDetailSkeleton />}
-      onRejected={(error) => (
-        <GenericErrorView
-          titleKey="errors.playerLoadFailed"
-          messageKey="errors.playerLoadMessage"
-          error={error}
-          retry$={retry$}
-          backHref="/stats"
-          backLabelKey="stats.player.backToStats"
-        />
-      )}
-      onResolved={(data) => <PlayerContent data={data} />}
-    />
-  );
+  if (error.value) {
+    return (
+      <GenericErrorView
+        titleKey="errors.playerLoadFailed"
+        messageKey="errors.playerLoadMessage"
+        error={error.value}
+        retry$={retry$}
+        backHref="/stats"
+        backLabelKey="stats.player.backToStats"
+      />
+    );
+  }
+  if (!data.value) {
+    return <PlayerDetailSkeleton />;
+  }
+  return <PlayerContent data={data.value} />;
 });
 
 export const head: DocumentHead = ({ params }) => {

@@ -123,6 +123,8 @@ After this plan is complete:
 
 Every conversion follows the same mechanical transform. This is the reference implementation — copy this shape for each route.
 
+**⚠ Critical clarification (discovered during execution):** `useResource$` is NOT client-only. Qwik City SSR awaits its promises and embeds the resolved data in the HTML. To get actual client-only fetching — which is the whole point of this plan — you MUST use `useVisibleTask$` to trigger the fetch after hydration, storing the result in a signal. The template below reflects this corrected approach.
+
 ### 5.1 Before (current)
 
 ```tsx
@@ -152,56 +154,99 @@ export default component$(() => {
 });
 ```
 
-### 5.2 After (target)
+### 5.2 After (target — client-only via useVisibleTask$)
 
 ```tsx
-import { component$, useResource$, Resource } from '@builder.io/qwik';
+import { $, component$, useSignal, useVisibleTask$ } from '@builder.io/qwik';
 import { useLocation } from '@builder.io/qwik-city';
 import type { PlayerData } from '~/lib/graphql-types';
 import { STATS_USER_PROFILE_QUERY } from '~/lib/queries/stats';
-import { PlayerSkeleton } from '~/components/stats/PlayerSkeleton';
-import { PlayerErrorView } from '~/components/stats/PlayerErrorView';
+import { PlayerSkeleton } from '~/components/skeletons/PlayerSkeleton';
+import { GenericErrorView } from '~/components/errors/GenericErrorView';
+
+async function fetchPlayerProfile(steamId: string, signal: AbortSignal): Promise<PlayerData | null> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
+  const res = await fetch(apiUrl, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      query: STATS_USER_PROFILE_QUERY,
+      variables: { steamId },
+    }),
+    signal,
+  });
+  if (!res.ok) throw new Error(`Failed to load profile: ${res.status}`);
+  const payload = await res.json();
+  return payload.data?.analyticsUserProfile ?? null;
+}
 
 export default component$(() => {
   const loc = useLocation();
+  const data = useSignal<PlayerData | null>(null);
+  const error = useSignal<unknown>(null);
+  const refreshCounter = useSignal(0);
 
-  const profileResource = useResource$<PlayerData | null>(async ({ track, cleanup }) => {
+  // useVisibleTask$ NEVER runs on the server — this guarantees the fetch is
+  // browser-only and the SSR response contains only the skeleton.
+  // eslint-disable-next-line qwik/no-use-visible-task
+  useVisibleTask$(({ track, cleanup }) => {
     const steamId = track(() => loc.params.steamId);
+    track(() => refreshCounter.value);
     const abort = new AbortController();
     cleanup(() => abort.abort());
-
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
-    const res = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        query: STATS_USER_PROFILE_QUERY,
-        variables: { steamId },
-      }),
-      signal: abort.signal,
-    });
-    if (!res.ok) throw new Error(`Failed to load profile: ${res.status}`);
-    const payload = await res.json();
-    return payload.data?.analyticsUserProfile ?? null;
+    data.value = null;
+    error.value = null;
+    fetchPlayerProfile(steamId, abort.signal)
+      .then((result) => { data.value = result; })
+      .catch((err) => {
+        if (err instanceof Error && err.name === 'AbortError') return;
+        error.value = err;
+      });
   });
 
-  return (
-    <Resource
-      value={profileResource}
-      onPending={() => <PlayerSkeleton />}
-      onRejected={(err) => <PlayerErrorView error={err} />}
-      onResolved={(profile) => profile ? <PlayerView profile={profile} /> : <PlayerNotFound />}
-    />
-  );
+  const retry$ = $(() => { refreshCounter.value++; });
+
+  if (error.value) {
+    return (
+      <GenericErrorView
+        titleKey="errors.playerLoadFailed"
+        messageKey="errors.playerLoadMessage"
+        error={error.value}
+        retry$={retry$}
+        backHref="/stats"
+        backLabelKey="stats.player.backToStats"
+      />
+    );
+  }
+  if (!data.value) return <PlayerSkeleton />;
+  return <PlayerContent data={data.value} />;
 });
 ```
 
 ### 5.3 Key rules
-- **Track route params.** Re-fetch when `steamId` / `fightId` / `unitid` changes (client-side navigation between different entities).
-- **Abort controller.** Cancel in-flight requests when the component unmounts or the tracked value changes. Prevents stale writes.
-- **Three states via `<Resource>`.** `onPending` = skeleton. `onRejected` = error view. `onResolved` = the real page. Don't collapse these into a single spinner.
-- **Null vs empty vs error are different.** A successful response with no player found is `onResolved` with `null` or `{ profile: null }`, not `onRejected`. The error path is reserved for network failures and 5xx.
-- **Don't touch `DocumentHead` exports.** Page titles and meta tags remain static. The crawler path in `entry.fastify.tsx` handles dynamic meta tags for bots independently.
+- **Use `useVisibleTask$`, NOT `useResource$`.** `useResource$` runs during SSR and defeats the entire purpose of this conversion. `useVisibleTask$` is guaranteed to be browser-only.
+- **Track route params inside the task.** Re-fetch when `steamId` / `fightId` / `unitid` changes (client-side navigation between different entities).
+- **Abort controller.** Cancel in-flight requests via `cleanup()`. Prevents stale writes when the component unmounts or the tracked value changes.
+- **Null-out before fetching.** Set `data.value = null` and `error.value = null` before kicking off a new fetch so the skeleton re-shows during param-change navigation.
+- **Three states via conditional render.** `error.value` → error view. `!data.value` → skeleton. Otherwise → content. Don't collapse these into a single spinner.
+- **Null vs empty vs error are different.** A successful response with no player found is `data.value !== null` with an empty profile (e.g., `{ profile: null }`). The error branch is reserved for network failures and 5xx.
+- **Ignore `AbortError`.** When the task re-runs due to param change, the in-flight fetch aborts and throws `AbortError` — this is not a real error and should not populate `error.value`.
+- **Retry pattern.** A `refreshCounter` signal tracked by the task, incremented by the retry callback, gives you a "refetch" handle without exposing internal task state.
+- **Don't touch `DocumentHead` exports for bots.** Page titles and meta tags become static (or use route params like `params.steamId`). The crawler path in `entry.fastify.tsx` handles dynamic meta tags for bots independently.
+- **Extract the fetch function.** Put the actual `fetch()` call in a top-level `async function` that takes `(params..., signal)`. Keeps the component body small and makes the task body obvious.
+
+### 5.4 Why `useResource$` was rejected (learning)
+
+During the initial implementation, all four routes were converted to `useResource$ + <Resource>`. The HTML responses were then verified in the running Vite dev server (which runs `vite --mode ssr`), and the player/ELO/K-D values were still fully present in the initial HTML. Investigation showed:
+
+- Qwik City `useResource$` runs during server-side render
+- The SSR pipeline awaits the resource's promise before flushing HTML
+- `onResolved` is therefore rendered server-side in the common case
+- There is no `ssrSkip` / `clientOnly` option on `useResource$` in Qwik 1.5
+
+Attempted workaround: `if (isServer) { await new Promise(() => {}); }` inside the resource callback. This **hung the SSR pipeline** because Qwik awaits the promise indefinitely — timing out eventually or blocking the response entirely. Not viable.
+
+Working solution: swap `useResource$` → `useSignal + useVisibleTask$`. `useVisibleTask$` is guaranteed browser-only by construction (it runs after the component is visible in the DOM), so the signal stays `null` during SSR and the skeleton branch is what gets streamed. The eslint rule `qwik/no-use-visible-task` warns against overusing this primitive because it defeats resumability; in this case that's **exactly what we want**, and the disable comment documents the intent.
 
 ---
 

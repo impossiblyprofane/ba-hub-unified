@@ -1,4 +1,4 @@
-import { $, component$, useResource$, useSignal, Resource, Slot, type PropFunction } from '@builder.io/qwik';
+import { $, component$, useSignal, useVisibleTask$, Slot, type PropFunction } from '@builder.io/qwik';
 import { useLocation } from '@builder.io/qwik-city';
 import type { DocumentHead } from '@builder.io/qwik-city';
 import { useI18n, t, GAME_LOCALES, getGameLocaleValueOrKey } from '~/lib/i18n';
@@ -803,42 +803,53 @@ const FightContent = component$<{ data: FightPageData }>(({ data }) => {
   );
 });
 
-/* ─── Outer component: data fetching + resource wrapper ─── */
+/* ─── Outer component: client-only data fetching ───────── */
 
 export default component$(() => {
   const loc = useLocation();
+  const data = useSignal<FightPageData | null>(null);
+  const error = useSignal<unknown>(null);
   const refreshCounter = useSignal(0);
 
-  const fightResource = useResource$<FightPageData>(async ({ track, cleanup }) => {
+  // eslint-disable-next-line qwik/no-use-visible-task
+  useVisibleTask$(({ track, cleanup }) => {
     const fightId = track(() => loc.params.fightId);
     const fromPlayer = track(() => loc.url.searchParams.get('from'));
     track(() => refreshCounter.value);
     const abort = new AbortController();
     cleanup(() => abort.abort());
-    return fetchFightData(fightId, fromPlayer, abort.signal);
+    data.value = null;
+    error.value = null;
+    fetchFightData(fightId, fromPlayer, abort.signal)
+      .then((result) => {
+        data.value = result;
+      })
+      .catch((err) => {
+        if (err instanceof Error && err.name === 'AbortError') return;
+        error.value = err;
+      });
   });
 
   const retry$ = $(() => {
     refreshCounter.value++;
   });
 
-  return (
-    <Resource
-      value={fightResource}
-      onPending={() => <MatchDetailSkeleton />}
-      onRejected={(error) => (
-        <GenericErrorView
-          titleKey="errors.matchLoadFailed"
-          messageKey="errors.matchLoadMessage"
-          error={error}
-          retry$={retry$}
-          backHref="/stats"
-          backLabelKey="stats.player.backToStats"
-        />
-      )}
-      onResolved={(data) => <FightContent data={data} />}
-    />
-  );
+  if (error.value) {
+    return (
+      <GenericErrorView
+        titleKey="errors.matchLoadFailed"
+        messageKey="errors.matchLoadMessage"
+        error={error.value}
+        retry$={retry$}
+        backHref="/stats"
+        backLabelKey="stats.player.backToStats"
+      />
+    );
+  }
+  if (!data.value) {
+    return <MatchDetailSkeleton />;
+  }
+  return <FightContent data={data.value} />;
 });
 
 export const head: DocumentHead = () => {

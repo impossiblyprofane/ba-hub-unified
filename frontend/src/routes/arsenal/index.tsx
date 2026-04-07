@@ -1,4 +1,4 @@
-import { $, component$, useComputed$, useResource$, useSignal, useStore, useOnDocument, useVisibleTask$, Resource } from '@builder.io/qwik';
+import { $, component$, useComputed$, useSignal, useStore, useOnDocument, useVisibleTask$ } from '@builder.io/qwik';
 import type { DocumentHead } from '@builder.io/qwik-city';
 import { GAME_LOCALES, getGameLocaleValueOrKey, useI18n, t } from '~/lib/i18n';
 import { toCountryIconPath, toSpecializationIconPath, toUnitIconPath } from '~/lib/iconPaths';
@@ -773,34 +773,45 @@ const ArsenalContent = component$<{ data: ArsenalPageData }>(({ data: arsenalDat
 });
 
 export default component$(() => {
+  const data = useSignal<ArsenalPageData | null>(null);
+  const error = useSignal<unknown>(null);
   const refreshCounter = useSignal(0);
 
-  const arsenalResource = useResource$<ArsenalPageData>(async ({ track, cleanup }) => {
+  // eslint-disable-next-line qwik/no-use-visible-task
+  useVisibleTask$(({ track, cleanup }) => {
     track(() => refreshCounter.value);
     const abort = new AbortController();
     cleanup(() => abort.abort());
-    return fetchArsenalData(abort.signal);
+    data.value = null;
+    error.value = null;
+    fetchArsenalData(abort.signal)
+      .then((result) => {
+        data.value = result;
+      })
+      .catch((err) => {
+        if (err instanceof Error && err.name === 'AbortError') return;
+        error.value = err;
+      });
   });
 
   const retry$ = $(() => {
     refreshCounter.value++;
   });
 
-  return (
-    <Resource
-      value={arsenalResource}
-      onPending={() => <ArsenalSkeleton />}
-      onRejected={(error) => (
-        <GenericErrorView
-          titleKey="errors.arsenalLoadFailed"
-          messageKey="errors.arsenalLoadMessage"
-          error={error}
-          retry$={retry$}
-        />
-      )}
-      onResolved={(data) => <ArsenalContent data={data} />}
-    />
-  );
+  if (error.value) {
+    return (
+      <GenericErrorView
+        titleKey="errors.arsenalLoadFailed"
+        messageKey="errors.arsenalLoadMessage"
+        error={error.value}
+        retry$={retry$}
+      />
+    );
+  }
+  if (!data.value) {
+    return <ArsenalSkeleton />;
+  }
+  return <ArsenalContent data={data.value} />;
 });
 
 export const head: DocumentHead = {
