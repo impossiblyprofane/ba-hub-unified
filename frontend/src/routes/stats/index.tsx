@@ -1,6 +1,7 @@
-import { $, component$, useSignal, Slot } from '@builder.io/qwik';
-import { routeLoader$ } from '@builder.io/qwik-city';
+import { $, component$, useResource$, useSignal, Resource, Slot } from '@builder.io/qwik';
 import type { DocumentHead } from '@builder.io/qwik-city';
+import { StatsOverviewSkeleton } from '~/components/skeletons/StatsOverviewSkeleton';
+import { GenericErrorView } from '~/components/errors/GenericErrorView';
 import { useI18n, t, GAME_LOCALES, getGameLocaleValueOrKey } from '~/lib/i18n';
 import type {
   StatsOverviewData,
@@ -65,15 +66,22 @@ function formatFactionName(name: string): string {
   return name;
 }
 
-/* ─── Route loader: SSR overview + full 1000 leaderboard ───── */
+/* ─── Client-side data fetching ───────────────────────────── */
 
 type OverviewPayload = StatsOverviewData & {
   analyticsCountryStats: AnalyticsCountryStats;
 };
 
-export const useStatsOverview = routeLoader$(async () => {
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
+type StatsPageData = OverviewPayload & {
+  factionHistory: SnapshotFactionEntry[];
+  mapHistory: SnapshotMapEntry[];
+  crawlerFactionHistory: CrawlerFactionEntry[];
+  specHistory: SnapshotSpecEntry[];
+  unitPerformance: UnitPerformanceEntry[];
+};
 
+async function fetchStatsOverview(signal: AbortSignal): Promise<StatsPageData> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
   const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
   // Fetch main overview + snapshot data + crawler data in parallel
@@ -85,6 +93,7 @@ export const useStatsOverview = routeLoader$(async () => {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ query: STATS_OVERVIEW_QUERY }),
+      signal,
     }),
     fetch(apiUrl, {
       method: 'POST',
@@ -93,6 +102,7 @@ export const useStatsOverview = routeLoader$(async () => {
         query: SNAPSHOT_FACTION_HISTORY_QUERY,
         variables: { since: since30d },
       }),
+      signal,
     }).catch(() => null),
     fetch(apiUrl, {
       method: 'POST',
@@ -101,6 +111,7 @@ export const useStatsOverview = routeLoader$(async () => {
         query: SNAPSHOT_MAP_HISTORY_QUERY,
         variables: { since: since30d },
       }),
+      signal,
     }).catch(() => null),
     fetch(apiUrl, {
       method: 'POST',
@@ -109,6 +120,7 @@ export const useStatsOverview = routeLoader$(async () => {
         query: CRAWLER_FACTION_HISTORY_QUERY,
         variables: { since: since30d },
       }),
+      signal,
     }).catch(() => null),
     fetch(apiUrl, {
       method: 'POST',
@@ -117,6 +129,7 @@ export const useStatsOverview = routeLoader$(async () => {
         query: SNAPSHOT_SPEC_HISTORY_QUERY,
         variables: { since: since30d },
       }),
+      signal,
     }).catch(() => null),
     fetch(apiUrl, {
       method: 'POST',
@@ -125,6 +138,7 @@ export const useStatsOverview = routeLoader$(async () => {
         query: UNIT_PERFORMANCE_QUERY,
         variables: { since: '30d', limit: 100 },
       }),
+      signal,
     }).catch(() => null),
   ]);
 
@@ -178,7 +192,7 @@ export const useStatsOverview = routeLoader$(async () => {
     specHistory,
     unitPerformance,
   };
-});
+}
 
 /* ─── Chart config builders ──────────────────────────────── */
 
@@ -681,9 +695,8 @@ const UnitPerformanceSection = component$<{
 
 /* ─── Main component ─────────────────────────────────────── */
 
-export default component$(() => {
+const StatsContent = component$<{ data: StatsPageData }>(({ data }) => {
   const i18n = useI18n();
-  const overview = useStatsOverview();
 
   // ── Player lookup state ──
   const searchSteamId = useSignal('');
@@ -727,14 +740,14 @@ export default component$(() => {
   });
 
   // ── Derived chart configs ──
-  const mapChartConfig = buildMapChart(overview.value.analyticsMapRatings);
-  const specChartConfig = buildSpecChart(overview.value.analyticsSpecUsage);
-  const factionWinRateConfig = buildFactionWinRateChart(overview.value.analyticsCountryStats);
+  const mapChartConfig = buildMapChart(data.analyticsMapRatings);
+  const specChartConfig = buildSpecChart(data.analyticsSpecUsage);
+  const factionWinRateConfig = buildFactionWinRateChart(data.analyticsCountryStats);
   const mapTeamSidesConfig = buildMapTeamSidesChart(
-    overview.value.analyticsMapTeamSides.data,
+    data.analyticsMapTeamSides.data,
   );
 
-  const leaderboard = overview.value.analyticsLeaderboard;
+  const leaderboard = data.analyticsLeaderboard;
 
   // Client-side Steam profile resolution — doesn't block SSR.
   const steamProfiles = useSteamProfiles(leaderboard.map((e) => e.steamId ?? null));
@@ -914,16 +927,16 @@ export default component$(() => {
         <p class="text-xs text-[var(--text-dim)] mb-3">
           {t(i18n, 'stats.history.subtitle')}
         </p>
-        {overview.value.factionHistory.length > 0 || overview.value.mapHistory.length > 0 ? (
+        {data.factionHistory.length > 0 || data.mapHistory.length > 0 ? (
           <div class="grid grid-cols-1 xl:grid-cols-2 gap-3">
-            {overview.value.factionHistory.length > 0 && (
+            {data.factionHistory.length > 0 && (
               <Panel title={t(i18n, 'stats.overview.factionWinRates') + ' — ' + t(i18n, 'stats.history.timeRange.month')}>
-                <ChartCanvas config={buildFactionHistoryChart(overview.value.factionHistory)} height={300} crosshair />
+                <ChartCanvas config={buildFactionHistoryChart(data.factionHistory)} height={300} crosshair />
               </Panel>
             )}
-            {overview.value.mapHistory.length > 0 && (
+            {data.mapHistory.length > 0 && (
               <Panel title={t(i18n, 'stats.overview.mapPlayFrequency') + ' — ' + t(i18n, 'stats.history.timeRange.month')}>
-                <ChartCanvas config={buildMapHistoryChart(overview.value.mapHistory)} height={300} crosshair />
+                <ChartCanvas config={buildMapHistoryChart(data.mapHistory)} height={300} crosshair />
               </Panel>
             )}
           </div>
@@ -946,7 +959,7 @@ export default component$(() => {
         <p class="text-xs text-[var(--text-dim)] mb-3">
           {t(i18n, 'stats.topUnits.subtitle')}
         </p>
-        {overview.value.unitPerformance.length > 0 ? (
+        {data.unitPerformance.length > 0 ? (
           <Panel title={t(i18n, 'stats.topUnits.title')}>
             <div class="max-h-[500px] overflow-y-auto">
               <table class="w-full text-xs border-collapse">
@@ -962,7 +975,7 @@ export default component$(() => {
                   </tr>
                 </thead>
                 <tbody>
-                  {[...overview.value.unitPerformance]
+                  {[...data.unitPerformance]
                     .sort((a, b) => b.totalDamageDealt - a.totalDamageDealt)
                     .slice(0, 50)
                     .map((u, idx) => {
@@ -1016,9 +1029,9 @@ export default component$(() => {
         <p class="text-xs text-[var(--text-dim)] mb-3">
           {t(i18n, 'stats.specPopularity.subtitle')}
         </p>
-        {overview.value.specHistory.length > 0 ? (
+        {data.specHistory.length > 0 ? (
           <Panel title={t(i18n, 'stats.specPopularity.title')}>
-            <ChartCanvas config={buildSpecPopularityChart(overview.value.specHistory)} height={300} crosshair />
+            <ChartCanvas config={buildSpecPopularityChart(data.specHistory)} height={300} crosshair />
           </Panel>
         ) : (
           <Panel title={t(i18n, 'stats.specPopularity.title')}>
@@ -1039,8 +1052,8 @@ export default component$(() => {
         <p class="text-xs text-[var(--text-dim)] mb-3">
           {t(i18n, 'stats.unitPopularity.subtitle')}
         </p>
-        {overview.value.unitPerformance.length > 0 ? (
-          <UnitPerformanceSection entries={overview.value.unitPerformance} />
+        {data.unitPerformance.length > 0 ? (
+          <UnitPerformanceSection entries={data.unitPerformance} />
         ) : (
           <Panel title={t(i18n, 'stats.unitPopularity.title')}>
             <div class="py-6 text-center">
@@ -1055,10 +1068,43 @@ export default component$(() => {
       {/* Footer timestamp */}
       <p class="text-[10px] text-[var(--text-dim)]">
         {t(i18n, 'stats.maps.lastUpdated')}:{' '}
-        {overview.value.analyticsMapTeamSides.updateDate ??
+        {data.analyticsMapTeamSides.updateDate ??
           t(i18n, 'stats.unknown')}
       </p>
     </div>
+  );
+});
+
+/* ─── Outer component: data fetching + resource wrapper ─── */
+
+export default component$(() => {
+  const refreshCounter = useSignal(0);
+
+  const statsResource = useResource$<StatsPageData>(async ({ track, cleanup }) => {
+    track(() => refreshCounter.value);
+    const abort = new AbortController();
+    cleanup(() => abort.abort());
+    return fetchStatsOverview(abort.signal);
+  });
+
+  const retry$ = $(() => {
+    refreshCounter.value++;
+  });
+
+  return (
+    <Resource
+      value={statsResource}
+      onPending={() => <StatsOverviewSkeleton />}
+      onRejected={(error) => (
+        <GenericErrorView
+          titleKey="errors.statsLoadFailed"
+          messageKey="errors.statsLoadMessage"
+          error={error}
+          retry$={retry$}
+        />
+      )}
+      onResolved={(data) => <StatsContent data={data} />}
+    />
   );
 });
 
