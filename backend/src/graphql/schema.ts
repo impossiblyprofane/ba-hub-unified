@@ -232,7 +232,7 @@ export const schema = `
     ModelFileName: String
     HUDMultiplier: Float
     CriticMultiplier: Float
-    SupplyCost: Int
+    SupplyCost: Float
     ResupplyTime: Float
     Damage: Float
     StressDamage: Float
