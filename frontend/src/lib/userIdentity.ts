@@ -7,6 +7,7 @@
  */
 
 import { REGISTER_USER_MUTATION } from './queries/decks';
+import { graphqlFetch } from './graphqlClient';
 
 const USER_ID_KEY = 'ba_user_id';
 const USER_REGISTERED_KEY = 'ba_user_registered';
@@ -59,33 +60,12 @@ export async function ensureUserId(): Promise<{ userId: string; isNew: boolean }
   }
 
   // Register with backend
-  const apiUrl =
-    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) ||
-    'http://localhost:3001/graphql';
+  const data = await graphqlFetch<{ registerUser: { userId: string; isNew: boolean } }>(
+    REGISTER_USER_MUTATION,
+    { tentativeId: localId },
+  );
 
-  const resp = await fetch(apiUrl, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      query: REGISTER_USER_MUTATION,
-      variables: { tentativeId: localId },
-    }),
-  });
-
-  if (!resp.ok) {
-    throw new Error(`Registration failed: ${resp.status}`);
-  }
-
-  const payload = await resp.json() as {
-    data?: { registerUser: { userId: string; isNew: boolean } };
-    errors?: Array<{ message: string }>;
-  };
-
-  if (payload.errors?.length) {
-    throw new Error(payload.errors[0].message);
-  }
-
-  const result = payload.data!.registerUser;
+  const result = data.registerUser;
   localStorage.setItem(USER_ID_KEY, result.userId);
   localStorage.setItem(USER_REGISTERED_KEY, '1');
 

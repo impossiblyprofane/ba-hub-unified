@@ -6,6 +6,7 @@ import { toUnitIconPath, toCountryIconPath } from '~/lib/iconPaths';
 import { useI18n, t } from '~/lib/i18n';
 import { getCategoryById } from '~/lib/categories';
 import { SEARCH_UNITS_QUERY } from '~/lib/queries/search';
+import { graphqlFetchRaw } from '~/lib/graphqlClient';
 import type { SearchUnitResult } from '~/lib/graphql-types';
 
 type Props = {
@@ -17,19 +18,12 @@ const COUNTRY_FLAGS: Record<number, string> = {};
 
 async function fetchSearchResults(search: string): Promise<SearchUnitResult[]> {
   if (!search.trim()) return [];
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
   try {
-    const res = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        query: SEARCH_UNITS_QUERY,
-        variables: { search, limit: 30 },
-      }),
-    });
-    if (!res.ok) return [];
-    const json = await res.json() as { data?: { searchUnits: SearchUnitResult[] } };
-    return json.data?.searchUnits ?? [];
+    const result = await graphqlFetchRaw<{ searchUnits: SearchUnitResult[] }>(
+      SEARCH_UNITS_QUERY,
+      { search, limit: 30 },
+    );
+    return result.data?.searchUnits ?? [];
   } catch {
     return [];
   }
@@ -37,16 +31,11 @@ async function fetchSearchResults(search: string): Promise<SearchUnitResult[]> {
 
 async function fetchCountryFlags(): Promise<void> {
   if (Object.keys(COUNTRY_FLAGS).length > 0) return;
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
   try {
-    const res = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ query: '{ countries { Id FlagFileName } }' }),
-    });
-    if (!res.ok) return;
-    const json = await res.json() as { data?: { countries: Array<{ Id: number; FlagFileName: string }> } };
-    for (const c of json.data?.countries ?? []) {
+    const result = await graphqlFetchRaw<{ countries: Array<{ Id: number; FlagFileName: string }> }>(
+      '{ countries { Id FlagFileName } }',
+    );
+    for (const c of result.data?.countries ?? []) {
       COUNTRY_FLAGS[c.Id] = toCountryIconPath(c.FlagFileName);
     }
   } catch { /* ignore */ }

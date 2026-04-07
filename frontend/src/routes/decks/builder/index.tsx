@@ -26,6 +26,7 @@ import {
   UPDATE_PUBLISHED_DECK_MUTATION,
   CHALLENGE_QUERY,
 } from '~/lib/queries/decks';
+import { graphqlFetch, graphqlFetchRaw } from '~/lib/graphqlClient';
 import { getUserId, ensureUserId } from '~/lib/userIdentity';
 import { ToastContext, showToast } from '~/components/ui/Toast';
 import type { BuilderOption, BuilderSpecialization, BuilderCountry } from '~/lib/graphql-types';
@@ -67,20 +68,10 @@ export default component$(() => {
     if (!userId) return;
     publishedLoading.value = true;
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
-      const resp = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          query: PUBLISHED_DECKS_BY_AUTHOR_QUERY,
-          variables: { authorId: userId },
-        }),
-      });
-      if (!resp.ok) return;
-      const payload = await resp.json() as {
-        data?: { publishedDecksByAuthor: PublishedDeckSummary[] };
-      };
-      publishedDecks.value = payload.data?.publishedDecksByAuthor ?? [];
+      const result = await graphqlFetchRaw<{
+        publishedDecksByAuthor: PublishedDeckSummary[];
+      }>(PUBLISHED_DECKS_BY_AUTHOR_QUERY, { authorId: userId });
+      publishedDecks.value = result.data?.publishedDecksByAuthor ?? [];
     } catch {
       // Silently fail — published section just stays empty
     } finally {
@@ -91,19 +82,12 @@ export default component$(() => {
   /** Fetch a challenge question (needed for delete/update). */
   const fetchChallenge = $(async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
-      const resp = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ query: CHALLENGE_QUERY }),
-      });
-      if (!resp.ok) return;
-      const payload = await resp.json() as {
-        data?: { challenge: { challengeId: string; question: string } };
-      };
-      if (payload.data) {
-        challengeId.value = payload.data.challenge.challengeId;
-        challengeQuestion.value = payload.data.challenge.question;
+      const result = await graphqlFetchRaw<{
+        challenge: { challengeId: string; question: string };
+      }>(CHALLENGE_QUERY);
+      if (result.data) {
+        challengeId.value = result.data.challenge.challengeId;
+        challengeQuestion.value = result.data.challenge.question;
         challengeAnswer.value = '';
       }
     } catch { /* ignore */ }
@@ -158,25 +142,17 @@ export default component$(() => {
 
     try {
       const { userId } = await ensureUserId();
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
-      const resp = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          query: DELETE_PUBLISHED_DECK_MUTATION,
-          variables: {
-            deckId,
-            input: {
-              authorId: userId,
-              challengeId: challengeId.value,
-              challengeAnswer: parseInt(challengeAnswer.value, 10),
-            },
+      await graphqlFetch<{ deletePublishedDeck: boolean }>(
+        DELETE_PUBLISHED_DECK_MUTATION,
+        {
+          deckId,
+          input: {
+            authorId: userId,
+            challengeId: challengeId.value,
+            challengeAnswer: parseInt(challengeAnswer.value, 10),
           },
-        }),
-      });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const payload = await resp.json() as { errors?: Array<{ message: string }> };
-      if (payload.errors?.length) throw new Error(payload.errors[0].message);
+        },
+      );
 
       showToast(toast, t(i18n, 'decks.publish.deleteSuccess'), 'success');
 
@@ -214,40 +190,27 @@ export default component$(() => {
 
     editSaving.value = true;
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
-      const resp = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          query: UPDATE_PUBLISHED_DECK_MUTATION,
-          variables: {
-            deckId,
-            input: {
-              publisherName: editPublisherName.value.trim(),
-              name: editName.value.trim(),
-              description: editDescription.value.trim(),
-              tags: editTags.value,
-              challengeId: challengeId.value,
-              challengeAnswer: parseInt(challengeAnswer.value, 10),
-            },
+      const data = await graphqlFetch<{ updatePublishedDeck: PublishedDeckSummary }>(
+        UPDATE_PUBLISHED_DECK_MUTATION,
+        {
+          deckId,
+          input: {
+            publisherName: editPublisherName.value.trim(),
+            name: editName.value.trim(),
+            description: editDescription.value.trim(),
+            tags: editTags.value,
+            challengeId: challengeId.value,
+            challengeAnswer: parseInt(challengeAnswer.value, 10),
           },
-        }),
-      });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const payload = await resp.json() as {
-        data?: { updatePublishedDeck: PublishedDeckSummary };
-        errors?: Array<{ message: string }>;
-      };
-      if (payload.errors?.length) throw new Error(payload.errors[0].message);
+        },
+      );
 
       showToast(toast, t(i18n, 'decks.publish.updateSuccess'), 'success');
 
       // Refresh the published list
-      if (payload.data) {
-        publishedDecks.value = publishedDecks.value.map(d =>
-          d.id === deckId ? { ...d, ...payload.data!.updatePublishedDeck } : d
-        );
-      }
+      publishedDecks.value = publishedDecks.value.map(d =>
+        d.id === deckId ? { ...d, ...data.updatePublishedDeck } : d
+      );
       editingPublishedId.value = null;
       challengeAnswer.value = '';
     } catch (err) {
@@ -263,23 +226,11 @@ export default component$(() => {
   const finalizeImport = $(async (
     deck: import('@ba-hub/shared').Deck,
   ) => {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
+    const wizardData = await graphqlFetch<{
+      builderData: { countries: BuilderCountry[]; specializations: BuilderSpecialization[] };
+    }>(BUILDER_WIZARD_QUERY, { countryId: deck.country, spec1Id: deck.spec1, spec2Id: deck.spec2 });
 
-    const wizardResp = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        query: BUILDER_WIZARD_QUERY,
-        variables: { countryId: deck.country, spec1Id: deck.spec1, spec2Id: deck.spec2 },
-      }),
-    });
-    if (!wizardResp.ok) throw new Error(`Failed to fetch specializations: ${wizardResp.status}`);
-    const wizardPayload = await wizardResp.json() as {
-      data?: { builderData: { countries: BuilderCountry[]; specializations: BuilderSpecialization[] } };
-    };
-    if (!wizardPayload.data) throw new Error('No specialization data returned');
-
-    const { countries, specializations } = wizardPayload.data.builderData;
+    const { countries, specializations } = wizardData.builderData;
     const spec1 = specializations.find(s => s.Id === deck.spec1);
     const spec2 = specializations.find(s => s.Id === deck.spec2);
     if (!spec1 || !spec2) throw new Error('Could not find specializations for this deck');
@@ -332,22 +283,14 @@ export default component$(() => {
         }
       }
 
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
       let optionsById = new Map<number, BuilderOption>();
       if (optionIds.size > 0) {
-        const optResp = await fetch(apiUrl, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            query: OPTIONS_BY_IDS_QUERY,
-            variables: { ids: [...optionIds] },
-          }),
-        });
-        if (optResp.ok) {
-          const optPayload = await optResp.json() as { data?: { optionsByIds: BuilderOption[] } };
-          for (const opt of optPayload.data?.optionsByIds ?? []) {
-            optionsById.set(opt.Id, opt);
-          }
+        const optResult = await graphqlFetchRaw<{ optionsByIds: BuilderOption[] }>(
+          OPTIONS_BY_IDS_QUERY,
+          { ids: [...optionIds] },
+        );
+        for (const opt of optResult.data?.optionsByIds ?? []) {
+          optionsById.set(opt.Id, opt);
         }
       }
 

@@ -22,6 +22,7 @@ import {
   SNAPSHOT_SPEC_HISTORY_QUERY,
   UNIT_PERFORMANCE_QUERY,
 } from '~/lib/queries/stats';
+import { graphqlFetch, graphqlFetchRaw } from '~/lib/graphqlClient';
 import { ChartCanvas } from '~/components/stats/ChartCanvas';
 import { SteamAvatar } from '~/components/stats/SteamAvatar';
 import { useSteamProfiles } from '~/lib/stats/useSteamProfiles';
@@ -81,116 +82,53 @@ type StatsPageData = OverviewPayload & {
 };
 
 async function fetchStatsOverview(signal: AbortSignal): Promise<StatsPageData> {
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
   const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  // Fetch main overview + snapshot data + crawler data in parallel
+  // Fetch main overview + snapshot data + crawler data in parallel.
+  // Overview throws on error; the rest gracefully degrade to empty arrays.
   const [
-    overviewRes, factionHistoryRes, mapHistoryRes,
-    crawlerFactionRes, specHistoryRes, unitPerformanceRes,
+    overviewData,
+    factionHistoryRes,
+    mapHistoryRes,
+    crawlerFactionRes,
+    specHistoryRes,
+    unitPerformanceRes,
   ] = await Promise.all([
-    fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ query: STATS_OVERVIEW_QUERY }),
-      signal,
-    }),
-    fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        query: SNAPSHOT_FACTION_HISTORY_QUERY,
-        variables: { since: since30d },
-      }),
-      signal,
-    }).catch(() => null),
-    fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        query: SNAPSHOT_MAP_HISTORY_QUERY,
-        variables: { since: since30d },
-      }),
-      signal,
-    }).catch(() => null),
-    fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        query: CRAWLER_FACTION_HISTORY_QUERY,
-        variables: { since: since30d },
-      }),
-      signal,
-    }).catch(() => null),
-    fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        query: SNAPSHOT_SPEC_HISTORY_QUERY,
-        variables: { since: since30d },
-      }),
-      signal,
-    }).catch(() => null),
-    fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        query: UNIT_PERFORMANCE_QUERY,
-        variables: { since: '30d', limit: 100 },
-      }),
-      signal,
-    }).catch(() => null),
+    graphqlFetch<OverviewPayload>(STATS_OVERVIEW_QUERY, undefined, { signal }),
+    graphqlFetchRaw<{ snapshotFactionHistory: SnapshotFactionEntry[] }>(
+      SNAPSHOT_FACTION_HISTORY_QUERY,
+      { since: since30d },
+      { signal },
+    ).catch(() => null),
+    graphqlFetchRaw<{ snapshotMapHistory: SnapshotMapEntry[] }>(
+      SNAPSHOT_MAP_HISTORY_QUERY,
+      { since: since30d },
+      { signal },
+    ).catch(() => null),
+    graphqlFetchRaw<{ crawlerFactionHistory: CrawlerFactionEntry[] }>(
+      CRAWLER_FACTION_HISTORY_QUERY,
+      { since: since30d },
+      { signal },
+    ).catch(() => null),
+    graphqlFetchRaw<{ snapshotSpecHistory: SnapshotSpecEntry[] }>(
+      SNAPSHOT_SPEC_HISTORY_QUERY,
+      { since: since30d },
+      { signal },
+    ).catch(() => null),
+    graphqlFetchRaw<{ unitPerformance: UnitPerformanceEntry[] }>(
+      UNIT_PERFORMANCE_QUERY,
+      { since: '30d', limit: 100 },
+      { signal },
+    ).catch(() => null),
   ]);
 
-  if (!overviewRes.ok) {
-    throw new Error(`Failed to load stats overview: ${overviewRes.status}`);
-  }
-
-  const overviewPayload = (await overviewRes.json()) as {
-    data?: OverviewPayload;
-    errors?: Array<{ message: string }>;
-  };
-
-  if (!overviewPayload.data) {
-    const msg = overviewPayload.errors?.map((e) => e.message).join(', ') || 'Unknown error';
-    throw new Error(`Failed to load stats overview: ${msg}`);
-  }
-
-  // Parse snapshot data (graceful — empty arrays if unavailable)
-  let factionHistory: SnapshotFactionEntry[] = [];
-  let mapHistory: SnapshotMapEntry[] = [];
-  let crawlerFactionHistory: CrawlerFactionEntry[] = [];
-  let specHistory: SnapshotSpecEntry[] = [];
-  let unitPerformance: UnitPerformanceEntry[] = [];
-
-  if (factionHistoryRes?.ok) {
-    const d = (await factionHistoryRes.json()) as { data?: { snapshotFactionHistory: SnapshotFactionEntry[] } };
-    factionHistory = d.data?.snapshotFactionHistory ?? [];
-  }
-  if (mapHistoryRes?.ok) {
-    const d = (await mapHistoryRes.json()) as { data?: { snapshotMapHistory: SnapshotMapEntry[] } };
-    mapHistory = d.data?.snapshotMapHistory ?? [];
-  }
-  if (crawlerFactionRes?.ok) {
-    const d = (await crawlerFactionRes.json()) as { data?: { crawlerFactionHistory: CrawlerFactionEntry[] } };
-    crawlerFactionHistory = d.data?.crawlerFactionHistory ?? [];
-  }
-  if (specHistoryRes?.ok) {
-    const d = (await specHistoryRes.json()) as { data?: { snapshotSpecHistory: SnapshotSpecEntry[] } };
-    specHistory = d.data?.snapshotSpecHistory ?? [];
-  }
-  if (unitPerformanceRes?.ok) {
-    const d = (await unitPerformanceRes.json()) as { data?: { unitPerformance: UnitPerformanceEntry[] } };
-    unitPerformance = d.data?.unitPerformance ?? [];
-  }
-
   return {
-    ...overviewPayload.data,
-    factionHistory,
-    mapHistory,
-    crawlerFactionHistory,
-    specHistory,
-    unitPerformance,
+    ...overviewData,
+    factionHistory: factionHistoryRes?.data?.snapshotFactionHistory ?? [],
+    mapHistory: mapHistoryRes?.data?.snapshotMapHistory ?? [],
+    crawlerFactionHistory: crawlerFactionRes?.data?.crawlerFactionHistory ?? [],
+    specHistory: specHistoryRes?.data?.snapshotSpecHistory ?? [],
+    unitPerformance: unitPerformanceRes?.data?.unitPerformance ?? [],
   };
 }
 
@@ -711,23 +649,11 @@ const StatsContent = component$<{ data: StatsPageData }>(({ data }) => {
     searchError.value = '';
     searchResult.value = null;
     try {
-      const apiUrl =
-        import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
-      const res = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          query: STATS_USER_LOOKUP_QUERY,
-          variables: { steamId },
-        }),
-      });
-      if (!res.ok) throw new Error(`${res.status}`);
-      const payload = (await res.json()) as {
-        data?: { analyticsUserLookup: AnalyticsUserInfo | null };
-        errors?: Array<{ message: string }>;
-      };
-      if (payload.data?.analyticsUserLookup) {
-        searchResult.value = payload.data.analyticsUserLookup;
+      const result = await graphqlFetchRaw<{
+        analyticsUserLookup: AnalyticsUserInfo | null;
+      }>(STATS_USER_LOOKUP_QUERY, { steamId });
+      if (result.data?.analyticsUserLookup) {
+        searchResult.value = result.data.analyticsUserLookup;
       } else {
         searchError.value = t(i18n, 'stats.profile.notFound');
       }

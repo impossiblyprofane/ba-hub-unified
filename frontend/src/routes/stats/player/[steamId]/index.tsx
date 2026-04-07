@@ -16,6 +16,7 @@ import {
   STATS_USER_PROFILE_QUERY,
   STATS_RECENT_FIGHTS_QUERY,
 } from '~/lib/queries/stats';
+import { graphqlFetchRaw } from '~/lib/graphqlClient';
 import { ChartCanvas } from '~/components/stats/ChartCanvas';
 import { SteamAvatar } from '~/components/stats/SteamAvatar';
 import { useSteamProfiles } from '~/lib/stats/useSteamProfiles';
@@ -51,40 +52,20 @@ async function fetchPlayerProfile(
   steamId: string,
   signal: AbortSignal,
 ): Promise<PlayerProfileData> {
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
-
-  const [profileRes, fightsRes] = await Promise.all([
-    fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        query: STATS_USER_PROFILE_QUERY,
-        variables: { steamId },
-      }),
-      signal,
-    }),
-    fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        query: STATS_RECENT_FIGHTS_QUERY,
-        variables: { steamId },
-      }),
-      signal,
-    }),
+  const [profileResult, fightsResultEnv] = await Promise.all([
+    graphqlFetchRaw<{ analyticsUserProfile: AnalyticsUserProfile | null }>(
+      STATS_USER_PROFILE_QUERY,
+      { steamId },
+      { signal },
+    ),
+    graphqlFetchRaw<{ analyticsRecentFights: AnalyticsRecentFightsResult }>(
+      STATS_RECENT_FIGHTS_QUERY,
+      { steamId },
+      { signal },
+    ),
   ]);
 
-  if (!profileRes.ok) throw new Error(`Profile fetch failed: ${profileRes.status}`);
-  if (!fightsRes.ok) throw new Error(`Recent fights fetch failed: ${fightsRes.status}`);
-
-  const profilePayload = (await profileRes.json()) as {
-    data?: { analyticsUserProfile: AnalyticsUserProfile | null };
-  };
-  const fightsPayload = (await fightsRes.json()) as {
-    data?: { analyticsRecentFights: AnalyticsRecentFightsResult };
-  };
-
-  const fightsResult = fightsPayload.data?.analyticsRecentFights ?? {
+  const fightsResult = fightsResultEnv.data?.analyticsRecentFights ?? {
     fights: [],
     frequentTeammates: [],
     frequentOpponents: [],
@@ -98,7 +79,7 @@ async function fetchPlayerProfile(
   };
 
   return {
-    profile: profilePayload.data?.analyticsUserProfile ?? null,
+    profile: profileResult.data?.analyticsUserProfile ?? null,
     recentFights: fightsResult.fights,
     frequentTeammates: fightsResult.frequentTeammates,
     frequentOpponents: fightsResult.frequentOpponents,

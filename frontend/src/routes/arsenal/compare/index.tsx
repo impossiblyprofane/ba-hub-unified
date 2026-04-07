@@ -13,39 +13,35 @@ import { useI18n, t } from '~/lib/i18n';
 import type { UnitDetailData, UnitDetailModSlot, ArsenalCard } from '~/lib/graphql-types';
 import { UNIT_DETAIL_QUERY } from '~/lib/queries/unit-detail';
 import { ARSENAL_PAGE_QUERY } from '~/lib/queries/arsenal';
+import { graphqlFetch } from '~/lib/graphqlClient';
 import { CompareView } from '~/components/compare/CompareView';
 import { UnitSelector } from '~/components/compare/UnitSelector';
 
 /* ── Helpers ────────────────────────────────────────────────────── */
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
-
-async function fetchUnitDetail(id: number, optionIds: number[]): Promise<UnitDetailData> {
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      query: UNIT_DETAIL_QUERY,
-      variables: { id, optionIds: optionIds.length ? optionIds : null },
-    }),
-  });
-  if (!res.ok) throw new Error(`API error ${res.status}`);
-  const json = await res.json() as { data?: { unitDetail: UnitDetailData }; errors?: Array<{ message: string }> };
-  if (!json.data?.unitDetail) {
-    throw new Error(json.errors?.map(e => e.message).join(', ') || 'Unit not found');
+async function fetchUnitDetail(
+  id: number,
+  optionIds: number[],
+  signal?: AbortSignal,
+): Promise<UnitDetailData> {
+  const data = await graphqlFetch<{ unitDetail: UnitDetailData | null }>(
+    UNIT_DETAIL_QUERY,
+    { id, optionIds: optionIds.length ? optionIds : null },
+    { signal },
+  );
+  if (!data.unitDetail) {
+    throw new Error('Unit not found');
   }
-  return json.data.unitDetail;
+  return data.unitDetail;
 }
 
-async function fetchArsenalCards(): Promise<ArsenalCard[]> {
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ query: ARSENAL_PAGE_QUERY }),
-  });
-  if (!res.ok) throw new Error(`API error ${res.status}`);
-  const json = await res.json() as { data?: { arsenalUnitsCards: ArsenalCard[] } };
-  return json.data?.arsenalUnitsCards ?? [];
+async function fetchArsenalCards(signal?: AbortSignal): Promise<ArsenalCard[]> {
+  const data = await graphqlFetch<{ arsenalUnitsCards: ArsenalCard[] }>(
+    ARSENAL_PAGE_QUERY,
+    undefined,
+    { signal },
+  );
+  return data.arsenalUnitsCards ?? [];
 }
 
 function parseModIds(param: string | null): number[] {
@@ -73,7 +69,7 @@ export default component$(() => {
   useVisibleTask$(({ cleanup }) => {
     const ctrl = new AbortController();
     cleanup(() => ctrl.abort());
-    fetchArsenalCards()
+    fetchArsenalCards(ctrl.signal)
       .then((result) => { cards.value = result; })
       .catch((err) => {
         if (err instanceof Error && err.name === 'AbortError') return;
@@ -128,8 +124,8 @@ export default component$(() => {
     compareError.value = null;
 
     Promise.all([
-      fetchUnitDetail(idA, mA),
-      fetchUnitDetail(idB, mB),
+      fetchUnitDetail(idA, mA, ctrl.signal),
+      fetchUnitDetail(idB, mB, ctrl.signal),
     ])
       .then(([a, b]) => {
         compareData.value = { a, b };

@@ -5,6 +5,7 @@ import { useI18n, t, GAME_LOCALES, getGameLocaleValueOrKey } from '~/lib/i18n';
 import type { Locale } from '~/lib/i18n';
 import type { AnalyticsFightData, AnalyticsFightPlayer, AnalyticsFightUnit } from '~/lib/graphql-types';
 import { STATS_FIGHT_DATA_QUERY } from '~/lib/queries/stats';
+import { graphqlFetchRaw } from '~/lib/graphqlClient';
 import { toCountryIconPath, toSpecializationIconPath } from '~/lib/iconPaths';
 import { ReadonlyUnitPanel } from '~/components/decks/ReadonlyUnitPanel';
 import { SteamAvatar } from '~/components/stats/SteamAvatar';
@@ -43,25 +44,11 @@ async function fetchFightData(
   fromPlayer: string | null,
   signal: AbortSignal,
 ): Promise<FightPageData> {
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
+  const result = await graphqlFetchRaw<{
+    analyticsFightData: AnalyticsFightData | null;
+  }>(STATS_FIGHT_DATA_QUERY, { fightId }, { signal });
 
-  const response = await fetch(apiUrl, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      query: STATS_FIGHT_DATA_QUERY,
-      variables: { fightId },
-    }),
-    signal,
-  });
-
-  if (!response.ok) throw new Error(`Fight fetch failed: ${response.status}`);
-
-  const payload = (await response.json()) as {
-    data?: { analyticsFightData: AnalyticsFightData | null };
-  };
-
-  return { fight: payload.data?.analyticsFightData ?? null, fromPlayer };
+  return { fight: result.data?.analyticsFightData ?? null, fromPlayer };
 }
 
 /* ─── Helpers ─────────────────────────────────────────────── */

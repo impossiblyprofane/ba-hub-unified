@@ -4,29 +4,27 @@ import type { DocumentHead } from '@builder.io/qwik-city';
 import { useI18n, t } from '~/lib/i18n';
 import type { UnitDetailModSlot, UnitDetailData } from '~/lib/graphql-types';
 import { UNIT_DETAIL_QUERY } from '~/lib/queries/unit-detail';
+import { graphqlFetch } from '~/lib/graphqlClient';
 import { UnitDetailView } from '~/components/unit-detail/UnitDetailView';
 import { ShareButton } from '~/components/share/ShareButton';
 import { IconCompare } from '~/components/icons';
 
 /* ── Helpers ────────────────────────────────────────────────────── */
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
-
-async function fetchUnitDetail(id: number, optionIds: number[]): Promise<UnitDetailData> {
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      query: UNIT_DETAIL_QUERY,
-      variables: { id, optionIds: optionIds.length ? optionIds : null },
-    }),
-  });
-  if (!res.ok) throw new Error(`API error ${res.status}`);
-  const json = await res.json() as { data?: { unitDetail: UnitDetailData }; errors?: Array<{ message: string }> };
-  if (!json.data?.unitDetail) {
-    throw new Error(json.errors?.map(e => e.message).join(', ') || 'Unit not found');
+async function fetchUnitDetail(
+  id: number,
+  optionIds: number[],
+  signal?: AbortSignal,
+): Promise<UnitDetailData> {
+  const data = await graphqlFetch<{ unitDetail: UnitDetailData | null }>(
+    UNIT_DETAIL_QUERY,
+    { id, optionIds: optionIds.length ? optionIds : null },
+    { signal },
+  );
+  if (!data.unitDetail) {
+    throw new Error('Unit not found');
   }
-  return json.data.unitDetail;
+  return data.unitDetail;
 }
 
 /* ── Page Component ─────────────────────────────────────────────── */
@@ -63,7 +61,7 @@ export default component$(() => {
       cachedData.value = null;
     }
 
-    fetchUnitDetail(currentUnitId, optIds)
+    fetchUnitDetail(currentUnitId, optIds, ctrl.signal)
       .then((data) => {
         cachedData.value = data;
       })

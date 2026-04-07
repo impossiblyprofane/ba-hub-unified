@@ -284,9 +284,13 @@ async function buildServer() {
   });
 
   // ── API traffic encryption (surface-level anti-scraping) ──────
-  const encryptApi = process.env.ENCRYPT_API === 'true' && isEncryptionConfigured();
-  if (encryptApi) {
-    fastify.log.info('API traffic encryption enabled');
+  // Both hooks below are registered unconditionally and short-circuit on
+  // plaintext requests, so GraphiQL and any non-envelope client keep working
+  // even when ENCRYPTION_KEY/IV are configured. The frontend opts in by
+  // sending `{ e: ciphertext }` envelopes via `lib/graphqlClient.ts` when
+  // VITE_ENCRYPTION_KEY/IV are set at build time.
+  if (isEncryptionConfigured()) {
+    fastify.log.info('API traffic encryption keys detected — envelope mode active');
   }
 
   // Decrypt incoming GraphQL requests if encrypted (body has { e: "..." })

@@ -18,6 +18,7 @@ import {
   PUBLISH_DECK_MUTATION,
   UPDATE_PUBLISHED_DECK_MUTATION,
 } from '~/lib/queries/decks';
+import { graphqlFetch, graphqlFetchRaw } from '~/lib/graphqlClient';
 import { ToastContext, showToast } from '~/components/ui/Toast';
 
 /** Publish mode when the deck already has a publishedDeckId. */
@@ -67,19 +68,12 @@ export const PublishModal = component$<PublishModalProps>(({ deck, onClose$, onP
   // eslint-disable-next-line qwik/no-use-visible-task
   useVisibleTask$(async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
-      const resp = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ query: CHALLENGE_QUERY }),
-      });
-      if (!resp.ok) return;
-      const payload = await resp.json() as {
-        data?: { challenge: { challengeId: string; question: string } };
-      };
-      if (payload.data) {
-        state.challengeId = payload.data.challenge.challengeId;
-        state.challengeQuestion = payload.data.challenge.question;
+      const result = await graphqlFetchRaw<{
+        challenge: { challengeId: string; question: string };
+      }>(CHALLENGE_QUERY);
+      if (result.data) {
+        state.challengeId = result.data.challenge.challengeId;
+        state.challengeQuestion = result.data.challenge.question;
       }
     } catch {
       // Challenge fetch failed — user can still try, server will reject
@@ -121,86 +115,56 @@ export const PublishModal = component$<PublishModalProps>(({ deck, onClose$, onP
       const deckCode = encodeDeck(deck.deck);
       const deckData: CompressedDeck = deckToCompressedDeck(deck.deck);
 
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
-
       const isUpdate = state.mode === 'update' && hasPublished;
 
       if (isUpdate) {
         // ── Update existing published deck ──
-        const resp = await fetch(apiUrl, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            query: UPDATE_PUBLISHED_DECK_MUTATION,
-            variables: {
-              deckId: deck.publishedDeckId,
-              input: {
-                publisherName: state.publisherName.trim(),
-                name: state.name.trim(),
-                description: state.description.trim(),
-                deckCode,
-                deckData,
-                tags: state.tags,
-                challengeId: state.challengeId,
-                challengeAnswer: parseInt(state.challengeAnswer, 10),
-              },
+        const data = await graphqlFetch<{ updatePublishedDeck: { id: string } }>(
+          UPDATE_PUBLISHED_DECK_MUTATION,
+          {
+            deckId: deck.publishedDeckId,
+            input: {
+              publisherName: state.publisherName.trim(),
+              name: state.name.trim(),
+              description: state.description.trim(),
+              deckCode,
+              deckData,
+              tags: state.tags,
+              challengeId: state.challengeId,
+              challengeAnswer: parseInt(state.challengeAnswer, 10),
             },
-          }),
-        });
-
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const payload = await resp.json() as {
-          data?: { updatePublishedDeck: { id: string } };
-          errors?: Array<{ message: string }>;
-        };
-
-        if (payload.errors?.length) {
-          throw new Error(payload.errors[0].message);
-        }
+          },
+        );
 
         showToast(toast, t(i18n, 'decks.publish.updateSuccess'), 'success');
-        if (onPublished$ && payload.data) {
-          await onPublished$(payload.data.updatePublishedDeck.id);
+        if (onPublished$) {
+          await onPublished$(data.updatePublishedDeck.id);
         }
       } else {
         // ── Publish as new ──
-        const resp = await fetch(apiUrl, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            query: PUBLISH_DECK_MUTATION,
-            variables: {
-              input: {
-                authorId: userId,
-                publisherName: state.publisherName.trim(),
-                name: state.name.trim(),
-                description: state.description.trim(),
-                deckCode,
-                countryId: deck.deck.country,
-                spec1Id: deck.deck.spec1,
-                spec2Id: deck.deck.spec2,
-                deckData,
-                tags: state.tags,
-                challengeId: state.challengeId,
-                challengeAnswer: parseInt(state.challengeAnswer, 10),
-              },
+        const data = await graphqlFetch<{ publishDeck: { id: string } }>(
+          PUBLISH_DECK_MUTATION,
+          {
+            input: {
+              authorId: userId,
+              publisherName: state.publisherName.trim(),
+              name: state.name.trim(),
+              description: state.description.trim(),
+              deckCode,
+              countryId: deck.deck.country,
+              spec1Id: deck.deck.spec1,
+              spec2Id: deck.deck.spec2,
+              deckData,
+              tags: state.tags,
+              challengeId: state.challengeId,
+              challengeAnswer: parseInt(state.challengeAnswer, 10),
             },
-          }),
-        });
-
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const payload = await resp.json() as {
-          data?: { publishDeck: { id: string } };
-          errors?: Array<{ message: string }>;
-        };
-
-        if (payload.errors?.length) {
-          throw new Error(payload.errors[0].message);
-        }
+          },
+        );
 
         showToast(toast, t(i18n, 'decks.publish.success'), 'success');
-        if (onPublished$ && payload.data) {
-          await onPublished$(payload.data.publishDeck.id);
+        if (onPublished$) {
+          await onPublished$(data.publishDeck.id);
         }
       }
 

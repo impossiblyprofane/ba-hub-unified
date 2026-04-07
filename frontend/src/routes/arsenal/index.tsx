@@ -7,6 +7,7 @@ import { TooltipOverlay } from '~/components/ui/TooltipOverlay';
 import { SimpleTooltip } from '~/components/ui/SimpleTooltip';
 import type { ArsenalCard, ArsenalPageData } from '~/lib/graphql-types';
 import { ARSENAL_PAGE_QUERY } from '~/lib/queries/arsenal';
+import { graphqlFetch } from '~/lib/graphqlClient';
 import { ArsenalSkeleton } from '~/components/skeletons/ArsenalSkeleton';
 import { GenericErrorView } from '~/components/errors/GenericErrorView';
 
@@ -24,26 +25,7 @@ const CATEGORY_CODE = new Map(CATEGORY_DEFS.map(cat => [cat.id, cat.code]));
 
 
 async function fetchArsenalData(signal: AbortSignal): Promise<ArsenalPageData> {
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
-
-  const response = await fetch(apiUrl, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ query: ARSENAL_PAGE_QUERY }),
-    signal,
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to load arsenal data: ${response.status}`);
-  }
-
-  const payload = await response.json() as { data?: ArsenalPageData; errors?: Array<{ message: string }> };
-  if (!payload.data) {
-    const msg = payload.errors?.map(err => err.message).join(', ') || 'Unknown error';
-    throw new Error(`Failed to load arsenal data: ${msg}`);
-  }
-
-  return payload.data;
+  return graphqlFetch<ArsenalPageData>(ARSENAL_PAGE_QUERY, undefined, { signal });
 }
 
 const ArsenalContent = component$<{ data: ArsenalPageData }>(({ data: arsenalData }) => {

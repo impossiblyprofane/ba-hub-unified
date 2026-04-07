@@ -19,6 +19,7 @@ import type {
 import {
   UNIT_MODIFICATIONS_QUERY, BUILDER_UNIT_SUMMARY_QUERY,
 } from '~/lib/queries/builder';
+import { graphqlFetchRaw } from '~/lib/graphqlClient';
 import { toUnitIconPath, toWeaponIconPath, toPortraitIconPath, UtilIconPaths } from '~/lib/iconPaths';
 import { GameIcon } from '~/components/GameIcon';
 import { SimpleTooltip } from '~/components/ui/SimpleTooltip';
@@ -75,16 +76,12 @@ async function fetchModifications(
   unitId: number,
   signal: AbortSignal,
 ): Promise<UnitModificationsResponse[]> {
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
-  const resp = await fetch(apiUrl, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ query: UNIT_MODIFICATIONS_QUERY, variables: { unitId } }),
-    signal,
-  });
-  if (!resp.ok) throw new Error(`Failed: ${resp.status}`);
-  const payload = await resp.json() as { data?: { modifications: UnitModificationsResponse[] } };
-  return payload.data?.modifications ?? [];
+  const result = await graphqlFetchRaw<{ modifications: UnitModificationsResponse[] }>(
+    UNIT_MODIFICATIONS_QUERY,
+    { unitId },
+    { signal },
+  );
+  return result.data?.modifications ?? [];
 }
 
 async function fetchSummary(
@@ -92,16 +89,12 @@ async function fetchSummary(
   optionIds: number[],
   signal: AbortSignal,
 ): Promise<BuilderUnitSummary | null> {
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
-  const resp = await fetch(apiUrl, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ query: BUILDER_UNIT_SUMMARY_QUERY, variables: { id: unitId, optionIds } }),
-    signal,
-  });
-  if (!resp.ok) throw new Error(`Failed: ${resp.status}`);
-  const payload = await resp.json() as { data?: { unitDetail: BuilderUnitSummary } };
-  return payload.data?.unitDetail ?? null;
+  const result = await graphqlFetchRaw<{ unitDetail: BuilderUnitSummary }>(
+    BUILDER_UNIT_SUMMARY_QUERY,
+    { id: unitId, optionIds },
+    { signal },
+  );
+  return result.data?.unitDetail ?? null;
 }
 
 /* ═══════════════════ Shared sub-renderers ═══════════════════ */

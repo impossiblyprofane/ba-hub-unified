@@ -6,14 +6,11 @@ import { $, component$, useSignal, useComputed$, useVisibleTask$ } from '@builde
 import type { PropFunction, Signal } from '@builder.io/qwik';
 import type { ArsenalCard, ArsenalCountry } from '~/lib/graphql-types';
 import { ARSENAL_PAGE_QUERY } from '~/lib/queries/arsenal';
+import { graphqlFetchRaw } from '~/lib/graphqlClient';
 import { toUnitIconPath } from '~/lib/iconPaths';
 import { GameIcon } from '~/components/GameIcon';
 import { GAME_LOCALES, getGameLocaleValueOrKey, useI18n, t } from '~/lib/i18n';
 import type { Locale } from '~/lib/i18n';
-
-// ── Helpers ──
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
 
 /** Category labels (CategoryType → display label key) */
 const CATEGORY_LABELS: Record<number, string> = {
@@ -53,17 +50,11 @@ export const UnitLookupModal = component$<UnitLookupModalProps>(({ open, onSelec
     loading.value = true;
     error.value = '';
 
-    fetch(API_URL, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ query: ARSENAL_PAGE_QUERY }),
-    })
-      .then(r => {
-        if (!r.ok) throw new Error(`API error ${r.status}`);
-        return r.json();
-      })
-      .then((json: any) => {
-        const data = json?.data;
+    graphqlFetchRaw<{ arsenalUnitsCards: ArsenalCard[]; countries: ArsenalCountry[] }>(
+      ARSENAL_PAGE_QUERY,
+    )
+      .then((result) => {
+        const data = result.data;
         if (!data?.arsenalUnitsCards) throw new Error('No data received');
         cards.value = data.arsenalUnitsCards;
         countries.value = data.countries ?? [];
