@@ -10,12 +10,14 @@ interface CrawlerConfig {
   databaseServiceUrl: string;
   indexes: StaticIndexes;
   data: StaticData;
-  /** Concurrent S3 fetches per batch. Default 5. */
+  /** Concurrent S3 fetches per batch. Default 25. */
   batchSize?: number;
-  /** How many leaderboard players to scan for fights. Default 30. */
+  /** How many leaderboard players to scan for fights. Default 100. */
   playerCount?: number;
-  /** IDs to scan per hourly range-scan chunk. Default 25000. */
+  /** IDs to scan per range-scan chunk. Default 15000. */
   chunkSize?: number;
+  /** Milliseconds to wait between concurrent batches. Default 40. */
+  batchDelayMs?: number;
 }
 
 interface CollectResult {
@@ -102,6 +104,14 @@ export interface CrawlerAggregates {
   }>;
 }
 
+/** Thrown when a manual run is requested while a collection is already in progress. */
+export class CrawlerBusyError extends Error {
+  constructor() {
+    super('Crawler is already running');
+    this.name = 'CrawlerBusyError';
+  }
+}
+
 /** Derive ELO bracket from a player's rating. Buckets per 500. */
 function getEloBracket(rating?: number): string {
   if (rating === undefined || rating === null) return 'unranked';
@@ -119,18 +129,114 @@ export class MatchCrawler {
   private batchSize: number;
   private playerCount: number;
   private chunkSize: number;
+  private batchDelayMs: number;
 
   /** Reverse index: unitId → Set<specId> (built once on first use). */
   private unitIdToSpecIds: Map<number, Set<number>> | null = null;
+
+  /**
+   * Mutex guarding concurrent runs. Both the auto-tick in StatsCollector and
+   * the manual fire from the admin panel check this before starting so we
+   * never hit the partner API twice in parallel.
+   */
+  private busy = false;
+  private lastRunAt: number | null = null;
+  private lastRunDurationMs: number | null = null;
+  private lastRunResult: CollectResult | null = null;
+  private lastRunError: string | null = null;
 
   constructor(config: CrawlerConfig) {
     this.statsClient = config.statsClient;
     this.dbUrl = config.databaseServiceUrl.replace(/\/$/, '');
     this.indexes = config.indexes;
     this.data = config.data;
-    this.batchSize = config.batchSize ?? 20;
-    this.playerCount = config.playerCount ?? 30;
-    this.chunkSize = config.chunkSize ?? 5000;
+    this.batchSize = config.batchSize ?? 25;
+    this.playerCount = config.playerCount ?? 100;
+    this.chunkSize = config.chunkSize ?? 15000;
+    this.batchDelayMs = config.batchDelayMs ?? 40;
+  }
+
+  /** True when a collection run is currently in progress. */
+  isBusy(): boolean {
+    return this.busy;
+  }
+
+  /** Current configuration — surfaced on the admin panel for visibility. */
+  getConfig(): {
+    batchSize: number;
+    playerCount: number;
+    chunkSize: number;
+    batchDelayMs: number;
+    saveInterval: number;
+    errorBudget: number;
+    lastRunAt: number | null;
+    lastRunDurationMs: number | null;
+    lastRunResult: CollectResult | null;
+    lastRunError: string | null;
+  } {
+    return {
+      batchSize: this.batchSize,
+      playerCount: this.playerCount,
+      chunkSize: this.chunkSize,
+      batchDelayMs: this.batchDelayMs,
+      saveInterval: MatchCrawler.SAVE_INTERVAL,
+      errorBudget: MatchCrawler.ERROR_BUDGET,
+      lastRunAt: this.lastRunAt,
+      lastRunDurationMs: this.lastRunDurationMs,
+      lastRunResult: this.lastRunResult,
+      lastRunError: this.lastRunError,
+    };
+  }
+
+  /**
+   * Fire-and-forget wrapper for manual runs — acquires the mutex
+   * synchronously and returns immediately with `{ started: true }`. The
+   * actual work happens in the background; callers poll `isBusy()` and
+   * `getConfig().lastRunResult` to see progress.
+   */
+  startBackgroundRun(): { started: boolean } {
+    if (this.busy) return { started: false };
+    // Acquire the lock synchronously so a second caller in the same tick
+    // sees busy=true and gets { started: false }.
+    this.busy = true;
+    this.lastRunError = null;
+    this.lastRunResult = null;
+    const t0 = Date.now();
+    // Call the UNLOCKED internal — we already hold the mutex.
+    this.collectMatchesInternal()
+      .then((result) => {
+        this.lastRunResult = result;
+      })
+      .catch((err) => {
+        this.lastRunError = err instanceof Error ? err.message : String(err);
+        console.error('[MatchCrawler] Background run failed:', err);
+      })
+      .finally(() => {
+        this.lastRunAt = t0;
+        this.lastRunDurationMs = Date.now() - t0;
+        this.busy = false;
+      });
+    return { started: true };
+  }
+
+  /**
+   * Internal wrapper that acquires the mutex, runs an async task, records
+   * duration, and releases the mutex. Throws `CrawlerBusyError` if another
+   * run is already in progress.
+   */
+  private async withLock<T>(fn: () => Promise<T>): Promise<T> {
+    if (this.busy) {
+      throw new CrawlerBusyError();
+    }
+    this.busy = true;
+    const t0 = Date.now();
+    try {
+      return await fn();
+    } finally {
+      this.lastRunAt = t0;
+      this.lastRunDurationMs = Date.now() - t0;
+      this.busy = false;
+    }
   }
 
   // ── Spec reverse index ─────────────────────────────────────────
@@ -201,8 +307,15 @@ export class MatchCrawler {
   /**
    * Collect matches: player-based discovery + range scan chunk.
    * Called by StatsCollector each hourly/daily cycle.
+   *
+   * Mutex-guarded: concurrent callers get `CrawlerBusyError`.
    */
   async collectMatches(): Promise<CollectResult> {
+    return this.withLock(() => this.collectMatchesInternal());
+  }
+
+  /** Unlocked inner — callers must hold `this.busy` themselves. */
+  private async collectMatchesInternal(): Promise<CollectResult> {
     const state = await this.getState();
 
     // Phase 1: Initial setup (first run ever)
@@ -230,22 +343,26 @@ export class MatchCrawler {
   /**
    * Run only a range scan chunk — no player discovery.
    * Used by the dedicated fast crawler loop to avoid redundant player lookups.
+   *
+   * Mutex-guarded: concurrent callers get `CrawlerBusyError`.
    */
   async scanRangeChunk(): Promise<{ scanned: number; found: number; done: boolean }> {
-    const state = await this.getState();
-    if (!state.initialCollectionDone) {
-      return { scanned: 0, found: 0, done: false };
-    }
-    if (state.scanPosition >= state.scanCeiling) {
-      return { scanned: 0, found: 0, done: true };
-    }
-    const found = await this.rangeScanChunk(state);
-    const newState = await this.getState();
-    return {
-      scanned: newState.scanPosition - state.scanPosition,
-      found,
-      done: newState.scanPosition >= newState.scanCeiling,
-    };
+    return this.withLock(async () => {
+      const state = await this.getState();
+      if (!state.initialCollectionDone) {
+        return { scanned: 0, found: 0, done: false };
+      }
+      if (state.scanPosition >= state.scanCeiling) {
+        return { scanned: 0, found: 0, done: true };
+      }
+      const found = await this.rangeScanChunk(state);
+      const newState = await this.getState();
+      return {
+        scanned: newState.scanPosition - state.scanPosition,
+        found,
+        done: newState.scanPosition >= newState.scanCeiling,
+      };
+    });
   }
 
   /** Get scan progress for heartbeat/monitoring. */
@@ -379,7 +496,7 @@ export class MatchCrawler {
 
       // Small delay between batches
       if (i + this.batchSize < newIds.length) {
-        await new Promise((r) => setTimeout(r, MatchCrawler.BATCH_DELAY_MS));
+        await new Promise((r) => setTimeout(r, this.batchDelayMs));
       }
     }
 
@@ -429,8 +546,6 @@ export class MatchCrawler {
    * Keeps crash-recovery loss to ~SAVE_INTERVAL IDs max.
    */
   private static readonly SAVE_INTERVAL = 1000;
-  /** Pause (ms) between concurrent batches to avoid S3 rate-limits. */
-  private static readonly BATCH_DELAY_MS = 50;
   /** If this many errors accumulate in one sub-chunk without success, pause the chunk. */
   private static readonly ERROR_BUDGET = 50;
 
@@ -523,8 +638,8 @@ export class MatchCrawler {
       }
 
       // Small delay between batches to stay under rate limits
-      if (MatchCrawler.BATCH_DELAY_MS > 0) {
-        await new Promise((r) => setTimeout(r, MatchCrawler.BATCH_DELAY_MS));
+      if (this.batchDelayMs > 0) {
+        await new Promise((r) => setTimeout(r, this.batchDelayMs));
       }
     }
 

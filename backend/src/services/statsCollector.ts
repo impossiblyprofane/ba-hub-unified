@@ -24,8 +24,8 @@ import type { MatchCrawler, CrawlerAggregates } from './matchCrawler.js';
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
-/** How often the crawler range-scans when catching up. */
-const CRAWL_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
+/** Default for how often the crawler range-scans when catching up. */
+const DEFAULT_CRAWL_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
 
 interface CollectorConfig {
   statsClient: StatsClient;
@@ -34,6 +34,8 @@ interface CollectorConfig {
   enabled?: boolean;
   /** Optional match crawler for independent fight data collection. */
   matchCrawler?: MatchCrawler;
+  /** How often the crawler range-scans when catching up. Default 2 minutes. */
+  crawlIntervalMs?: number;
 }
 
 export class StatsCollector {
@@ -41,10 +43,10 @@ export class StatsCollector {
   private dbUrl: string;
   private enabled: boolean;
   private matchCrawler: MatchCrawler | null;
+  private crawlIntervalMs: number;
   private hourlyTimer: ReturnType<typeof setInterval> | null = null;
   private dailyTimer: ReturnType<typeof setInterval> | null = null;
   private crawlerTimer: ReturnType<typeof setInterval> | null = null;
-  private crawlerRunning = false;
   private lastHourly: number = 0;
   private lastDaily: number = 0;
 
@@ -53,6 +55,7 @@ export class StatsCollector {
     this.dbUrl = config.databaseServiceUrl.replace(/\/$/, '');
     this.enabled = config.enabled ?? true;
     this.matchCrawler = config.matchCrawler ?? null;
+    this.crawlIntervalMs = config.crawlIntervalMs ?? DEFAULT_CRAWL_INTERVAL_MS;
   }
 
   /** Start the periodic collection loops. */
@@ -89,12 +92,12 @@ export class StatsCollector {
       }, DAY_MS);
     }, 5 * 60 * 1000);
 
-    // Dedicated crawler loop — runs every 2 min, independent of hourly stats
+    // Dedicated crawler loop — runs on `crawlIntervalMs`, independent of hourly stats
     if (this.matchCrawler) {
       // Start first crawler tick 20s after boot (after initial hourly seeds it)
       setTimeout(() => {
         this.crawlerTick();
-        this.crawlerTimer = setInterval(() => this.crawlerTick(), CRAWL_INTERVAL_MS);
+        this.crawlerTimer = setInterval(() => this.crawlerTick(), this.crawlIntervalMs);
       }, 20_000);
     }
   }
@@ -113,9 +116,8 @@ export class StatsCollector {
   // ── Crawler tick (independent fast loop) ──────────────────
 
   private crawlerTick(): void {
-    if (this.crawlerRunning || !this.matchCrawler) return;
-    this.crawlerRunning = true;
-    this.runCrawlerScan().finally(() => { this.crawlerRunning = false; });
+    if (!this.matchCrawler || this.matchCrawler.isBusy()) return;
+    this.runCrawlerScan().catch(() => { /* swallowed by runCrawlerScan */ });
   }
 
   private async runCrawlerScan(): Promise<void> {
@@ -135,7 +137,11 @@ export class StatsCollector {
         );
       }
     } catch (err) {
-      console.error('[Crawler] Scan failed:', err);
+      // CrawlerBusyError is expected if a manual fire raced us — swallow quietly.
+      const name = err instanceof Error ? err.name : '';
+      if (name !== 'CrawlerBusyError') {
+        console.error('[Crawler] Scan failed:', err);
+      }
     }
   }
 

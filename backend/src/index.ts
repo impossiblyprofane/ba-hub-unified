@@ -23,6 +23,20 @@ const STATS_API_URL = process.env.STATS_API_URL || 'https://api.brokenarrowgame.
 const STATS_PARTNER_TOKEN = process.env.STATS_PARTNER_TOKEN || '';
 const STATS_COLLECTION_ENABLED = process.env.STATS_COLLECTION_ENABLED !== 'false';
 
+/** Parse an integer env var, returning `undefined` if unset/invalid. */
+function envInt(name: string): number | undefined {
+  const raw = process.env[name];
+  if (!raw) return undefined;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+}
+
+const CRAWLER_BATCH_SIZE = envInt('CRAWLER_BATCH_SIZE');
+const CRAWLER_PLAYER_COUNT = envInt('CRAWLER_PLAYER_COUNT');
+const CRAWLER_CHUNK_SIZE = envInt('CRAWLER_CHUNK_SIZE');
+const CRAWLER_BATCH_DELAY_MS = envInt('CRAWLER_BATCH_DELAY_MS');
+const CRAWLER_INTERVAL_MS = envInt('CRAWLER_INTERVAL_MS');
+
 async function buildServer() {
   const data = await loadStaticData();
   const indexes = buildIndexes(data);
@@ -33,6 +47,19 @@ async function buildServer() {
   // Keep mutable references for hot-reloading
   let currentData = data;
   let currentIndexes = indexes;
+
+  // Match crawler is built here (not in start()) so the /admin plugin can
+  // accept it and expose a manual-fire endpoint from the /sys panel.
+  const matchCrawler = new MatchCrawler({
+    statsClient,
+    databaseServiceUrl: DATABASE_SERVICE_URL,
+    indexes: currentIndexes,
+    data: currentData,
+    batchSize: CRAWLER_BATCH_SIZE,
+    playerCount: CRAWLER_PLAYER_COUNT,
+    chunkSize: CRAWLER_CHUNK_SIZE,
+    batchDelayMs: CRAWLER_BATCH_DELAY_MS,
+  });
 
   // In-memory log ring buffer — feeds the admin /sys panel.
   // The tee Writable forwards every Pino NDJSON line to both stdout and the
@@ -141,6 +168,7 @@ async function buildServer() {
     dbClient,
     getStaticData: () => currentData,
     startedAt,
+    matchCrawler,
   });
 
   // WebSocket support
@@ -204,32 +232,26 @@ async function buildServer() {
     return payload;
   });
 
-  return { fastify, data: currentData, indexes: currentIndexes, statsClient };
+  return { fastify, data: currentData, indexes: currentIndexes, statsClient, matchCrawler };
 }
 
 async function start() {
   try {
-    const { fastify, data, indexes, statsClient } = await buildServer();
+    const { fastify, statsClient, matchCrawler } = await buildServer();
 
     await fastify.listen({ port: PORT as number, host: '0.0.0.0' });
 
     console.log(`🚀 Backend server running on http://localhost:${PORT}`);
     console.log(`🎮 GraphiQL: http://localhost:${PORT}/graphiql`);
 
-    // Create match crawler for independent fight data collection
-    const matchCrawler = new MatchCrawler({
-      statsClient,
-      databaseServiceUrl: DATABASE_SERVICE_URL,
-      indexes,
-      data,
-    });
-
-    // Start periodic stats collection
+    // Start periodic stats collection. The MatchCrawler instance was built
+    // in buildServer() so the admin plugin could receive it too.
     const collector = new StatsCollector({
       statsClient,
       databaseServiceUrl: DATABASE_SERVICE_URL,
       enabled: STATS_COLLECTION_ENABLED,
       matchCrawler,
+      crawlIntervalMs: CRAWLER_INTERVAL_MS,
     });
     collector.start();
 

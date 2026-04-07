@@ -19,6 +19,27 @@ export interface DatabaseHealth {
   status?: string;
 }
 
+export interface FilesystemEntry {
+  mount: string;
+  totalBytes: number;
+  freeBytes: number;
+  usedBytes: number;
+  pctUsed: number;
+  error?: string;
+}
+
+export interface OsInfo {
+  hostname: string;
+  platform: string;
+  release: string;
+  arch: string;
+  cpus: number;
+  totalMemMb: number;
+  freeMemMb: number;
+  usedMemPct: number;
+  loadAvg: number[];
+}
+
 export interface HealthReport {
   backend: {
     uptimeSec: number;
@@ -30,6 +51,8 @@ export interface HealthReport {
   staticData: Record<string, number>;
   env: Record<string, string>;
   logBuffer: { size: number };
+  os: OsInfo;
+  filesystem: FilesystemEntry[];
 }
 
 export interface TableSummary {
@@ -109,11 +132,42 @@ export interface CrawlerRecentMatch {
   processed_at: string;
 }
 
+export interface CollectResult {
+  playerFights: number;
+  rangeScan: number;
+  newMatches: number;
+}
+
+export interface CrawlerConfig {
+  batchSize: number;
+  playerCount: number;
+  chunkSize: number;
+  batchDelayMs: number;
+  saveInterval: number;
+  errorBudget: number;
+  lastRunAt: number | null;
+  lastRunDurationMs: number | null;
+  lastRunResult: CollectResult | null;
+  lastRunError: string | null;
+}
+
 export interface CrawlerSummaryOk {
   available: true;
   stats: CrawlerSummaryStats;
   recent: CrawlerRecentMatch[];
   state: CrawlerStatusOk['state'] | null;
+  config: CrawlerConfig;
+  busy: boolean;
 }
 
-export type CrawlerSummary = CrawlerSummaryOk | CrawlerStatusUnavailable;
+export interface CrawlerSummaryUnavailable extends CrawlerStatusUnavailable {
+  config: CrawlerConfig;
+  busy: boolean;
+}
+
+export type CrawlerSummary = CrawlerSummaryOk | CrawlerSummaryUnavailable;
+
+export interface CrawlerRunStarted {
+  ok: true;
+  started: true;
+}

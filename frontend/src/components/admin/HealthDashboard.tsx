@@ -23,6 +23,26 @@ function fmtUptime(sec: number): string {
   return `${s}s`;
 }
 
+function fmtBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  if (n < 1024 * 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1)} MB`;
+  if (n < 1024 * 1024 * 1024 * 1024) return `${(n / 1024 / 1024 / 1024).toFixed(2)} GB`;
+  return `${(n / 1024 / 1024 / 1024 / 1024).toFixed(2)} TB`;
+}
+
+function pctColor(pct: number): string {
+  if (pct >= 90) return 'text-red-400';
+  if (pct >= 75) return 'text-yellow-400';
+  return 'text-green-400';
+}
+
+function barColor(pct: number): string {
+  if (pct >= 90) return 'bg-red-500';
+  if (pct >= 75) return 'bg-yellow-500';
+  return 'bg-green-500';
+}
+
 export const HealthDashboard = component$(() => {
   const data = useSignal<HealthReport | null>(null);
   const error = useSignal<string | null>(null);
@@ -146,6 +166,98 @@ export const HealthDashboard = component$(() => {
                   </span>
                 </span>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Storage — spans wider so the bar is readable */}
+      {data.value && data.value.filesystem && data.value.filesystem.length > 0 && (
+        <div class={PANEL}>
+          <div class={HEADER}>storage</div>
+          <div class="p-3 flex flex-col gap-3">
+            {data.value.filesystem.map((fs) => (
+              <div key={fs.mount} class="flex flex-col gap-1">
+                <div class="flex items-baseline justify-between font-mono text-xs flex-wrap gap-x-3">
+                  <span class="text-[var(--accent)]">{fs.mount}</span>
+                  {fs.error ? (
+                    <span class="text-red-400 break-all">{fs.error}</span>
+                  ) : (
+                    <>
+                      <span class="text-[var(--text)]">
+                        {fmtBytes(fs.usedBytes)} / {fmtBytes(fs.totalBytes)}
+                      </span>
+                      <span class={pctColor(fs.pctUsed)}>{fs.pctUsed}% used</span>
+                      <span class="text-[var(--text-dim)]">
+                        {fmtBytes(fs.freeBytes)} free
+                      </span>
+                    </>
+                  )}
+                </div>
+                {!fs.error && (
+                  <div class="relative h-2 bg-[rgba(26,26,26,0.6)] border border-[rgba(51,51,51,0.3)]">
+                    <div
+                      class={`absolute inset-y-0 left-0 ${barColor(fs.pctUsed)}`}
+                      style={{ width: `${Math.min(100, fs.pctUsed)}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+            <div class="text-[10px] font-mono text-[var(--text-dim)] mt-1">
+              Inside Docker this reflects the host's overlay2 storage area
+              (where containers, images, and the pgdata volume all live).
+              SSH: <code class="text-[var(--accent)]">df -h /</code> and
+              <code class="text-[var(--accent)]"> docker system df</code> for the full host picture.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* OS / host */}
+      {data.value && data.value.os && (
+        <div class={PANEL}>
+          <div class={HEADER}>host</div>
+          <div class="p-3 text-xs font-mono grid grid-cols-1 md:grid-cols-2 gap-y-1 gap-x-6">
+            <span class="contents">
+              <span class="text-[var(--text-dim)]">hostname</span>
+              <span class="text-[var(--text)] break-all">{data.value.os.hostname}</span>
+            </span>
+            <span class="contents">
+              <span class="text-[var(--text-dim)]">platform</span>
+              <span class="text-[var(--text)]">
+                {data.value.os.platform} {data.value.os.release} ({data.value.os.arch})
+              </span>
+            </span>
+            <span class="contents">
+              <span class="text-[var(--text-dim)]">cpus</span>
+              <span class="text-[var(--text)]">{data.value.os.cpus}</span>
+            </span>
+            <span class="contents">
+              <span class="text-[var(--text-dim)]">load avg</span>
+              <span class="text-[var(--text)]">
+                {data.value.os.loadAvg.join(' / ')}
+              </span>
+            </span>
+            <span class="contents">
+              <span class="text-[var(--text-dim)]">memory</span>
+              <span class={pctColor(data.value.os.usedMemPct)}>
+                {data.value.os.totalMemMb - data.value.os.freeMemMb} / {data.value.os.totalMemMb} MB
+                ({data.value.os.usedMemPct}%)
+              </span>
+            </span>
+            <span class="contents">
+              <span class="text-[var(--text-dim)]">free memory</span>
+              <span class="text-[var(--text)]">{data.value.os.freeMemMb} MB</span>
+            </span>
+          </div>
+          {/* Memory bar */}
+          <div class="px-3 pb-3">
+            <div class="relative h-2 bg-[rgba(26,26,26,0.6)] border border-[rgba(51,51,51,0.3)]">
+              <div
+                class={`absolute inset-y-0 left-0 ${barColor(data.value.os.usedMemPct)}`}
+                style={{ width: `${Math.min(100, data.value.os.usedMemPct)}%` }}
+              />
             </div>
           </div>
         </div>

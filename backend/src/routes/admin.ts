@@ -24,9 +24,12 @@
  */
 
 import type { FastifyInstance, FastifyPluginAsync, FastifyReply } from 'fastify';
+import { statfs } from 'node:fs/promises';
+import os from 'node:os';
 import type { DatabaseClient } from '../services/databaseClient.js';
 import type { LogBuffer, LogEntry } from '../services/logBuffer.js';
 import type { StaticData } from '../data/loader.js';
+import type { MatchCrawler } from '../services/matchCrawler.js';
 
 export interface AdminPluginOptions {
   logBuffer: LogBuffer;
@@ -34,6 +37,8 @@ export interface AdminPluginOptions {
   /** Mutable getter so the health endpoint sees hot-reloaded data. */
   getStaticData: () => StaticData;
   startedAt: number;
+  /** Exposed so the manual-fire button in /sys can trigger a run. */
+  matchCrawler: MatchCrawler;
 }
 
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
@@ -55,6 +60,87 @@ function maskEnv(): Record<string, string> {
     ENCRYPT_API: process.env.ENCRYPT_API ?? 'false',
     LOG_LEVEL: process.env.LOG_LEVEL ?? 'info',
     NODE_ENV: process.env.NODE_ENV ?? 'development',
+  };
+}
+
+interface FilesystemEntry {
+  mount: string;
+  totalBytes: number;
+  freeBytes: number;
+  usedBytes: number;
+  pctUsed: number;
+  error?: string;
+}
+
+/**
+ * Gather filesystem stats for the interesting mounts the backend process
+ * can see. Inside a Docker container this reflects the host's Docker
+ * storage area (overlay2), which is what we want when monitoring a VPS
+ * whose pgdata volume lives in /var/lib/docker.
+ */
+async function gatherFilesystemStats(): Promise<FilesystemEntry[]> {
+  // Collect a short list of mounts to probe. `/` always; process.cwd() if
+  // different (e.g. a separately mounted /app). We dedupe by same stat
+  // filesystem id implicitly via mount path string.
+  const candidates = new Set<string>(['/']);
+  try {
+    const cwd = process.cwd();
+    if (cwd && cwd !== '/') candidates.add(cwd);
+  } catch {
+    /* ignore */
+  }
+
+  const results: FilesystemEntry[] = [];
+  for (const mount of candidates) {
+    try {
+      const s = await statfs(mount);
+      const totalBytes = Number(s.blocks) * Number(s.bsize);
+      const freeBytes = Number(s.bavail) * Number(s.bsize);
+      const usedBytes = totalBytes - freeBytes;
+      const pctUsed = totalBytes > 0 ? Math.round((usedBytes / totalBytes) * 1000) / 10 : 0;
+      results.push({ mount, totalBytes, freeBytes, usedBytes, pctUsed });
+    } catch (err) {
+      results.push({
+        mount,
+        totalBytes: 0,
+        freeBytes: 0,
+        usedBytes: 0,
+        pctUsed: 0,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  // If both `/` and cwd resolved to identical numbers, drop the duplicate.
+  if (
+    results.length === 2 &&
+    results[0].totalBytes === results[1].totalBytes &&
+    results[0].freeBytes === results[1].freeBytes
+  ) {
+    return [results[0]];
+  }
+  return results;
+}
+
+/**
+ * Snapshot of the host OS / container from Node's perspective. Useful for
+ * spotting load spikes, memory pressure, and distinguishing dev vs prod at
+ * a glance.
+ */
+function gatherOsInfo() {
+  const totalMem = os.totalmem();
+  const freeMem = os.freemem();
+  return {
+    hostname: os.hostname(),
+    platform: os.platform(),
+    release: os.release(),
+    arch: os.arch(),
+    cpus: os.cpus().length,
+    totalMemMb: Math.round(totalMem / 1024 / 1024),
+    freeMemMb: Math.round(freeMem / 1024 / 1024),
+    usedMemPct:
+      totalMem > 0 ? Math.round(((totalMem - freeMem) / totalMem) * 1000) / 10 : 0,
+    loadAvg: os.loadavg().map((n) => Math.round(n * 100) / 100),
   };
 }
 
@@ -143,7 +229,7 @@ export const adminRoutesPlugin: FastifyPluginAsync<AdminPluginOptions> = async (
   app: FastifyInstance,
   opts,
 ) => {
-  const { logBuffer, dbClient, getStaticData, startedAt } = opts;
+  const { logBuffer, dbClient, getStaticData, startedAt, matchCrawler } = opts;
 
   // ── Auth gate ────────────────────────────────────────────────
   // Applies to every route in this plugin. Two failure modes:
@@ -182,7 +268,10 @@ export const adminRoutesPlugin: FastifyPluginAsync<AdminPluginOptions> = async (
   app.get('/health', async () => {
     const data = getStaticData();
     const mem = process.memoryUsage();
-    const db = await probeDatabaseService();
+    const [db, filesystem] = await Promise.all([
+      probeDatabaseService(),
+      gatherFilesystemStats(),
+    ]);
 
     const staticDataCounts: Record<string, number> = {};
     for (const [k, v] of Object.entries(data)) {
@@ -204,6 +293,8 @@ export const adminRoutesPlugin: FastifyPluginAsync<AdminPluginOptions> = async (
       staticData: staticDataCounts,
       env: maskEnv(),
       logBuffer: { size: logBuffer.size() },
+      os: gatherOsInfo(),
+      filesystem,
     };
   });
 
@@ -371,6 +462,8 @@ export const adminRoutesPlugin: FastifyPluginAsync<AdminPluginOptions> = async (
         stats,
         recent,
         state,
+        config: matchCrawler.getConfig(),
+        busy: matchCrawler.isBusy(),
       };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -378,8 +471,30 @@ export const adminRoutesPlugin: FastifyPluginAsync<AdminPluginOptions> = async (
         available: false,
         message: 'Crawler tables unavailable or pending stats rework — see docs/stats-rework-handoff.md',
         error: message,
+        config: matchCrawler.getConfig(),
+        busy: matchCrawler.isBusy(),
       };
     }
+  });
+
+  /**
+   * Manual fire — kicks off a collection cycle in the background and
+   * returns immediately. A full run (player discovery + range-scan chunk)
+   * can take 10+ minutes with default tuning, well past any reasonable
+   * HTTP timeout, so we do NOT await it here.
+   *
+   * The frontend polls `/admin/crawler/summary` for `busy` / `config.lastRunResult`
+   * to see progress and the final outcome.
+   *
+   * Returns `202 Accepted` on successful start, `409 Conflict` if a run is
+   * already in progress.
+   */
+  app.post('/crawler/run', async (_req, reply) => {
+    const { started } = matchCrawler.startBackgroundRun();
+    if (!started) {
+      return reply.status(409).send({ error: 'Crawler is already running', busy: true });
+    }
+    return reply.status(202).send({ ok: true, started: true });
   });
 
   app.get<{ Querystring: { steamId?: string; limit?: string } }>('/crawler/recent-matches', async (req) => {

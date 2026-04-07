@@ -1,6 +1,6 @@
 import { component$, useSignal, useVisibleTask$, $ } from '@builder.io/qwik';
-import { adminFetch } from '~/lib/admin/adminClient';
-import type { CrawlerSummary } from '~/lib/admin/types';
+import { adminFetch, AdminError } from '~/lib/admin/adminClient';
+import type { CrawlerSummary, CrawlerRunStarted } from '~/lib/admin/types';
 
 const PANEL = 'p-0 bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.7)] border border-[rgba(51,51,51,0.15)]';
 const HEADER = 'font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] text-[10px] px-3 py-2 border-b border-[rgba(51,51,51,0.3)]';
@@ -42,6 +42,8 @@ export const CrawlerPanel = component$(() => {
   const summary = useSignal<CrawlerSummary | null>(null);
   const error = useSignal<string | null>(null);
   const loading = useSignal(false);
+  const running = useSignal(false);
+  const runStatus = useSignal<string | null>(null);
 
   const refresh = $(async () => {
     loading.value = true;
@@ -55,6 +57,63 @@ export const CrawlerPanel = component$(() => {
     }
   });
 
+  /**
+   * Manual fire is fire-and-forget: the backend returns 202 Accepted
+   * immediately and the actual run (which can take 10+ minutes) happens in
+   * the background. We then poll the summary every 3s until `busy` flips
+   * false, and show the final result from `config.lastRunResult`.
+   */
+  const runNow = $(async () => {
+    running.value = true;
+    runStatus.value = 'starting…';
+    try {
+      await adminFetch<CrawlerRunStarted>('/admin/crawler/run', { method: 'POST' });
+      runStatus.value = 'running in background…';
+    } catch (err) {
+      if (err instanceof AdminError && err.status === 409) {
+        runStatus.value = 'already running';
+      } else {
+        runStatus.value = err instanceof Error ? `error: ${err.message}` : 'run failed';
+      }
+      running.value = false;
+      return;
+    }
+
+    // Poll summary every 3s until busy flips false, capped at 30 minutes.
+    const MAX_POLLS = 600; // 30 min
+    let polls = 0;
+    const tick = async () => {
+      polls++;
+      try {
+        const s = await adminFetch<CrawlerSummary>('/admin/crawler/summary');
+        summary.value = s;
+        if (s.busy && polls < MAX_POLLS) {
+          setTimeout(tick, 3000);
+        } else {
+          running.value = false;
+          const res = s.config.lastRunResult;
+          const err = s.config.lastRunError;
+          const dur = s.config.lastRunDurationMs;
+          if (err) {
+            runStatus.value = `run failed: ${err}`;
+          } else if (res) {
+            runStatus.value =
+              `done — +${res.newMatches} matches (${res.playerFights} players, ${res.rangeScan} scan)` +
+              (dur !== null ? ` in ${(dur / 1000).toFixed(1)}s` : '');
+          } else if (polls >= MAX_POLLS) {
+            runStatus.value = 'still running — stopped polling (check later)';
+          } else {
+            runStatus.value = 'done';
+          }
+        }
+      } catch {
+        running.value = false;
+        runStatus.value = 'poll failed — refresh manually';
+      }
+    };
+    setTimeout(tick, 3000);
+  });
+
   // eslint-disable-next-line qwik/no-use-visible-task
   useVisibleTask$(
     async () => {
@@ -65,16 +124,29 @@ export const CrawlerPanel = component$(() => {
 
   return (
     <div class="flex flex-col gap-3">
-      <div class="flex items-center justify-between">
+      <div class="flex items-center justify-between flex-wrap gap-2">
         <div class="font-mono tracking-[0.3em] uppercase text-[var(--accent)] text-xs">match crawler</div>
-        <button
-          type="button"
-          class="font-mono uppercase tracking-[0.2em] text-[10px] text-[var(--text-dim)] hover:text-[var(--text)] border border-[var(--border)] px-2 py-1"
-          onClick$={refresh}
-          disabled={loading.value}
-        >
-          {loading.value ? 'refreshing...' : 'refresh'}
-        </button>
+        <div class="flex items-center gap-2">
+          {runStatus.value && (
+            <span class="font-mono text-[10px] text-[var(--text-dim)]">{runStatus.value}</span>
+          )}
+          <button
+            type="button"
+            class="font-mono uppercase tracking-[0.2em] text-[10px] text-[var(--text-dim)] hover:text-[var(--text)] border border-[var(--border)] px-2 py-1 disabled:opacity-40"
+            onClick$={refresh}
+            disabled={loading.value || running.value}
+          >
+            {loading.value ? 'refreshing...' : 'refresh'}
+          </button>
+          <button
+            type="button"
+            class="font-mono uppercase tracking-[0.2em] text-[10px] text-[var(--accent)] hover:text-[var(--text)] border border-[var(--accent)] px-2 py-1 disabled:opacity-40"
+            onClick$={runNow}
+            disabled={running.value || summary.value?.busy === true}
+          >
+            {running.value ? 'running...' : summary.value?.busy ? 'busy' : 'run now'}
+          </button>
+        </div>
       </div>
 
       {error.value && (
@@ -152,6 +224,30 @@ export const CrawlerPanel = component$(() => {
               </div>
             </div>
           )}
+
+          {/* Config */}
+          <div class={PANEL}>
+            <div class={HEADER}>config</div>
+            <div class="p-3 font-mono text-xs flex flex-wrap gap-x-6 gap-y-1">
+              <span><span class="text-[var(--text-dim)]">player count</span> <span class="text-[var(--text)]">{summary.value.config.playerCount}</span></span>
+              <span><span class="text-[var(--text-dim)]">chunk size</span> <span class="text-[var(--text)]">{fmtNum(summary.value.config.chunkSize)}</span></span>
+              <span><span class="text-[var(--text-dim)]">batch size</span> <span class="text-[var(--text)]">{summary.value.config.batchSize}</span></span>
+              <span><span class="text-[var(--text-dim)]">batch delay</span> <span class="text-[var(--text)]">{summary.value.config.batchDelayMs}ms</span></span>
+              <span><span class="text-[var(--text-dim)]">save interval</span> <span class="text-[var(--text)]">{fmtNum(summary.value.config.saveInterval)}</span></span>
+              <span><span class="text-[var(--text-dim)]">error budget</span> <span class="text-[var(--text)]">{summary.value.config.errorBudget}</span></span>
+              {summary.value.config.lastRunAt && (
+                <span>
+                  <span class="text-[var(--text-dim)]">last manual run</span>{' '}
+                  <span class="text-[var(--text)]">
+                    {fmtRelative(new Date(summary.value.config.lastRunAt).toISOString())}
+                    {summary.value.config.lastRunDurationMs !== null
+                      ? ` (${(summary.value.config.lastRunDurationMs / 1000).toFixed(1)}s)`
+                      : ''}
+                  </span>
+                </span>
+              )}
+            </div>
+          </div>
 
           {/* Recent matches table */}
           <div class={PANEL}>
