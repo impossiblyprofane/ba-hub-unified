@@ -1,5 +1,6 @@
 import type { PageMeta } from '../types';
 import { fetchGraphQL } from '../utils/graphql';
+import { buildUnitSchema } from '../structured-data';
 
 const UNIT_EMBED_QUERY = `
   query UnitEmbed($id: Int!, $optionIds: [Int!]) {
@@ -54,11 +55,31 @@ function buildUnitDescription(unit: EmbedUnit): string {
   return parts.join(' · ');
 }
 
-export async function resolveArsenalMeta(unitId: number, optionIds: number[]): Promise<PageMeta> {
+export async function resolveArsenalMeta(
+  unitId: number,
+  optionIds: number[],
+  siteUrl: string,
+  pageUrl: string,
+): Promise<PageMeta> {
   const data = await fetchGraphQL<{ unitDetail: EmbedUnit }>(UNIT_EMBED_QUERY, { id: unitId, optionIds: optionIds.length ? optionIds : null });
   const unit = data?.unitDetail;
   if (unit) {
-    return { title: `BA HUB - ${unit.displayName}`, description: buildUnitDescription(unit), ogImage: buildUnitIconUrl(unit), twitterCard: 'summary' };
+    const description = buildUnitDescription(unit);
+    const ogImage = buildUnitIconUrl(unit);
+    return {
+      title: `BA HUB - ${unit.displayName}`,
+      description,
+      ogImage,
+      twitterCard: 'summary',
+      structuredData: buildUnitSchema({
+        unitId,
+        name: unit.displayName,
+        description,
+        pageUrl,
+        imageUrl: ogImage,
+        siteUrl,
+      }),
+    };
   }
   return { title: `BA HUB - Unit ${unitId}`, description: `Detailed stats for unit ${unitId} in Broken Arrow.` };
 }

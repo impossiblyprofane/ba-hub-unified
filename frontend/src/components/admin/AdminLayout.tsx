@@ -1,6 +1,6 @@
 import { component$, Slot, type Signal, type PropFunction } from '@builder.io/qwik';
 
-export type AdminSection = 'health' | 'db' | 'logs' | 'crawler';
+export type AdminSection = 'health' | 'db' | 'metrics' | 'logs' | 'crawler';
 
 interface Props {
   section: Signal<AdminSection>;
@@ -10,6 +10,7 @@ interface Props {
 const TABS: Array<{ id: AdminSection; label: string }> = [
   { id: 'health', label: 'health' },
   { id: 'db', label: 'database' },
+  { id: 'metrics', label: 'metrics' },
   { id: 'logs', label: 'logs' },
   { id: 'crawler', label: 'crawler' },
 ];

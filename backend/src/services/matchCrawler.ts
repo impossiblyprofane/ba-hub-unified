@@ -5,6 +5,17 @@ import { MAP_ID_TO_NAME } from '../data/constants.js';
 
 // ── Types ────────────────────────────────────────────────────────
 
+/**
+ * Minimal Pino-compatible logger shape. The crawler only needs these
+ * methods; accepting the structural type keeps the test fakes trivial.
+ */
+interface CrawlerLogger {
+  info(obj: Record<string, unknown> | string, msg?: string): void;
+  warn(obj: Record<string, unknown> | string, msg?: string): void;
+  error(obj: Record<string, unknown> | string, msg?: string): void;
+  child?(bindings: Record<string, unknown>): CrawlerLogger;
+}
+
 interface CrawlerConfig {
   statsClient: StatsClient;
   databaseServiceUrl: string;
@@ -18,6 +29,8 @@ interface CrawlerConfig {
   chunkSize?: number;
   /** Milliseconds to wait between concurrent batches. Default 40. */
   batchDelayMs?: number;
+  /** Optional logger — if provided, structured log lines land in the admin panel's log buffer. */
+  logger?: CrawlerLogger;
 }
 
 interface CollectResult {
@@ -130,6 +143,7 @@ export class MatchCrawler {
   private playerCount: number;
   private chunkSize: number;
   private batchDelayMs: number;
+  private log: CrawlerLogger;
 
   /** Reverse index: unitId → Set<specId> (built once on first use). */
   private unitIdToSpecIds: Map<number, Set<number>> | null = null;
@@ -154,6 +168,15 @@ export class MatchCrawler {
     this.playerCount = config.playerCount ?? 100;
     this.chunkSize = config.chunkSize ?? 15000;
     this.batchDelayMs = config.batchDelayMs ?? 40;
+    // Fall back to a console-backed shim if no logger is supplied — keeps
+    // tests and scripts that instantiate the crawler standalone working.
+    const fallback: CrawlerLogger = {
+      info: (obj, msg) => console.log('[MatchCrawler]', msg ?? obj),
+      warn: (obj, msg) => console.warn('[MatchCrawler]', msg ?? obj),
+      error: (obj, msg) => console.error('[MatchCrawler]', msg ?? obj),
+    };
+    const base = config.logger ?? fallback;
+    this.log = base.child ? base.child({ cat: 'crawler' }) : base;
   }
 
   /** True when a collection run is currently in progress. */
@@ -209,7 +232,7 @@ export class MatchCrawler {
       })
       .catch((err) => {
         this.lastRunError = err instanceof Error ? err.message : String(err);
-        console.error('[MatchCrawler] Background run failed:', err);
+        this.log.error({ err }, 'Background run failed');
       })
       .finally(() => {
         this.lastRunAt = t0;
@@ -291,13 +314,13 @@ export class MatchCrawler {
         return a + b;
       }
       if (!res.ok) {
-        console.warn(`[MatchCrawler] bulkInsert failed: ${res.status} (${matches.length} matches)`);
+        this.log.warn({ status: res.status, count: matches.length }, 'bulkInsert failed');
         return 0;
       }
       const result = (await res.json()) as { inserted: number; skipped: number };
       return result.inserted ?? 0;
     } catch (err) {
-      console.warn(`[MatchCrawler] bulkInsert error:`, err instanceof Error ? err.message : err);
+      this.log.warn({ err: err instanceof Error ? err.message : err }, 'bulkInsert error');
       return 0;
     }
   }
@@ -388,21 +411,21 @@ export class MatchCrawler {
   // ── Initial collection ─────────────────────────────────────────
 
   private async initialCollection(): Promise<CollectResult> {
-    console.log('[MatchCrawler] Running initial collection...');
+    this.log.info('Running initial collection');
 
     // Step 1: Get fight IDs from leaderboard players
     const fightIds = await this.discoverFightIds();
     if (fightIds.length === 0) {
-      console.warn('[MatchCrawler] No fight IDs found from players. Will retry next cycle.');
+      this.log.warn('No fight IDs found from players. Will retry next cycle.');
       return { playerFights: 0, rangeScan: 0, newMatches: 0 };
     }
 
     const maxId = Math.max(...fightIds);
-    console.log(`[MatchCrawler] Discovered ${fightIds.length} fight IDs from players (max=${maxId}).`);
+    this.log.info({ count: fightIds.length, maxId }, 'Discovered fight IDs from players');
 
     // Step 2: Binary search for S3 floor
     const floor = await this.findS3Floor(maxId);
-    console.log(`[MatchCrawler] S3 floor found at ~${floor}`);
+    this.log.info({ floor }, 'S3 floor found');
 
     // Step 3: Store state
     await this.updateState({
@@ -414,7 +437,7 @@ export class MatchCrawler {
 
     // Step 4: Process discovered player fights
     const newCount = await this.processDiscoveredFights(fightIds);
-    console.log(`[MatchCrawler] Initial collection complete: ${newCount} matches stored.`);
+    this.log.info({ newCount }, 'Initial collection complete');
 
     return { playerFights: newCount, rangeScan: 0, newMatches: newCount };
   }
@@ -447,7 +470,7 @@ export class MatchCrawler {
         }
       }
     } catch (err) {
-      console.error('[MatchCrawler] Failed to discover fight IDs:', err);
+      this.log.error({ err }, 'Failed to discover fight IDs');
     }
 
     return [...fightIdSet];
@@ -473,7 +496,7 @@ export class MatchCrawler {
     const newIds = fightIds.filter((id) => !existing.has(id));
     if (newIds.length === 0) return 0;
 
-    console.log(`[MatchCrawler] Processing ${newIds.length} new fights from player discovery...`);
+    this.log.info({ count: newIds.length }, 'Processing new fights from player discovery');
 
     // Fetch and process in batches
     let totalInserted = 0;
@@ -516,7 +539,7 @@ export class MatchCrawler {
 
     while (high - low > 1000) {
       if (consecutiveFailures >= MAX_BINARY_FAILURES) {
-        console.warn(`[MatchCrawler] Binary search aborted after ${MAX_BINARY_FAILURES} consecutive failures at low=${low} high=${high}`);
+        this.log.warn({ low, high, failures: MAX_BINARY_FAILURES }, 'Binary search aborted');
         break;
       }
       const mid = Math.floor((low + high) / 2);
@@ -553,7 +576,7 @@ export class MatchCrawler {
     const start = state.scanPosition;
     const end = Math.min(start + this.chunkSize, state.scanCeiling);
 
-    console.log(`[MatchCrawler] Range scan: ${start} → ${end} (ceiling=${state.scanCeiling})`);
+    this.log.info({ start, end, ceiling: state.scanCeiling }, 'Range scan');
 
     let totalInserted = 0;
     let totalHits = 0;
@@ -575,18 +598,24 @@ export class MatchCrawler {
 
       // If too many errors in this sub-chunk, stop and let the next cycle retry
       if (result.errors > MatchCrawler.ERROR_BUDGET) {
-        console.warn(
-          `[MatchCrawler] Error budget exceeded in sub-chunk ${subStart}→${subEnd} ` +
-          `(${result.errors} errors). Pausing scan — will resume next cycle.`,
+        this.log.warn(
+          { subStart, subEnd, errors: result.errors },
+          'Error budget exceeded — pausing scan',
         );
         break;
       }
     }
 
-    console.log(
-      `[MatchCrawler] Chunk ${start}→${state.scanPosition ?? end}: ` +
-      `${totalHits} fights found, ${totalInserted} ranked stored, ` +
-      `${totalMisses} empty IDs, ${totalErrors} fetch errors`,
+    this.log.info(
+      {
+        start,
+        end: state.scanPosition ?? end,
+        hits: totalHits,
+        inserted: totalInserted,
+        misses: totalMisses,
+        errors: totalErrors,
+      },
+      'Chunk complete',
     );
 
     return totalInserted;
@@ -858,7 +887,7 @@ export class MatchCrawler {
         unitPerformance: data.unitPerformance,
       };
     } catch (err) {
-      console.error(`[MatchCrawler] Failed to compute ${snapshotType} aggregates:`, err);
+      this.log.error({ err, snapshotType }, 'Failed to compute aggregates');
       return null;
     }
   }

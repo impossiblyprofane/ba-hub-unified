@@ -27,9 +27,13 @@ import type { FastifyInstance, FastifyPluginAsync, FastifyReply } from 'fastify'
 import { statfs } from 'node:fs/promises';
 import os from 'node:os';
 import type { DatabaseClient } from '../services/databaseClient.js';
-import type { LogBuffer, LogEntry } from '../services/logBuffer.js';
+import type { LogBuffer, LogEntry, LogLevelName } from '../services/logBuffer.js';
+import { LOG_LEVELS } from '../services/logBuffer.js';
 import type { StaticData } from '../data/loader.js';
 import type { MatchCrawler } from '../services/matchCrawler.js';
+import type { RequestMetrics } from '../services/requestMetrics.js';
+import type { OutboundMetrics } from '../services/outboundMetrics.js';
+import type { GraphqlMetrics } from '../services/graphqlMetrics.js';
 
 export interface AdminPluginOptions {
   logBuffer: LogBuffer;
@@ -39,6 +43,12 @@ export interface AdminPluginOptions {
   startedAt: number;
   /** Exposed so the manual-fire button in /sys can trigger a run. */
   matchCrawler: MatchCrawler;
+  requestMetrics: RequestMetrics;
+  outboundMetrics: OutboundMetrics;
+  graphqlMetrics: GraphqlMetrics;
+  slowRequestThresholdMs: number;
+  /** Returns the live Fastify instance (for runtime log level adjustment). */
+  getFastify: () => FastifyInstance;
 }
 
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
@@ -229,7 +239,18 @@ export const adminRoutesPlugin: FastifyPluginAsync<AdminPluginOptions> = async (
   app: FastifyInstance,
   opts,
 ) => {
-  const { logBuffer, dbClient, getStaticData, startedAt, matchCrawler } = opts;
+  const {
+    logBuffer,
+    dbClient,
+    getStaticData,
+    startedAt,
+    matchCrawler,
+    requestMetrics,
+    outboundMetrics,
+    graphqlMetrics,
+    slowRequestThresholdMs,
+    getFastify,
+  } = opts;
 
   // ── Auth gate ────────────────────────────────────────────────
   // Applies to every route in this plugin. Two failure modes:
@@ -292,7 +313,11 @@ export const adminRoutesPlugin: FastifyPluginAsync<AdminPluginOptions> = async (
       database: db,
       staticData: staticDataCounts,
       env: maskEnv(),
-      logBuffer: { size: logBuffer.size() },
+      logBuffer: {
+        size: logBuffer.size(),
+        errorSize: logBuffer.errorSize(),
+        slowSize: logBuffer.slowSize(),
+      },
       os: gatherOsInfo(),
       filesystem,
     };
@@ -329,12 +354,71 @@ export const adminRoutesPlugin: FastifyPluginAsync<AdminPluginOptions> = async (
 
   // ── Logs ─────────────────────────────────────────────────────
   app.get<{
-    Querystring: { limit?: string; sinceTs?: string; minLevel?: string };
+    Querystring: { limit?: string; sinceTs?: string; minLevel?: string; cat?: string };
   }>('/logs', async (req) => {
     const limit = Math.min(Math.max(Number(req.query.limit) || 200, 1), 1000);
     const sinceTs = req.query.sinceTs ? Number(req.query.sinceTs) : undefined;
     const minLevel = req.query.minLevel ? Number(req.query.minLevel) : undefined;
-    return { entries: logBuffer.getRecent({ limit, sinceTs, minLevel }) };
+    const cat = req.query.cat && req.query.cat.length > 0 ? req.query.cat : undefined;
+    return {
+      entries: logBuffer.getRecent({ limit, sinceTs, minLevel, cat }),
+      categories: logBuffer.categories(),
+      size: logBuffer.size(),
+      errorSize: logBuffer.errorSize(),
+      slowSize: logBuffer.slowSize(),
+    };
+  });
+
+  /** Warn+error+fatal ring, newest-first. */
+  app.get<{ Querystring: { limit?: string } }>('/logs/errors', async (req) => {
+    const limit = Math.min(Math.max(Number(req.query.limit) || 100, 1), 500);
+    return { entries: logBuffer.getErrors(limit) };
+  });
+
+  /** Slow-HTTP-request ring, newest-first. */
+  app.get<{ Querystring: { limit?: string } }>('/logs/slow', async (req) => {
+    const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 200);
+    return {
+      entries: logBuffer.getSlow(limit),
+      thresholdMs: slowRequestThresholdMs,
+    };
+  });
+
+  /**
+   * Runtime log level adjustment. Pino supports changing `logger.level` at
+   * runtime — subsequent log calls respect the new threshold.
+   *
+   * This does NOT persist across restarts (by design — prod env var stays
+   * authoritative).
+   */
+  app.post<{ Body: { level?: string } }>('/logs/level', async (req, reply) => {
+    const raw = (req.body?.level ?? '').toLowerCase();
+    if (!(raw in LOG_LEVELS)) {
+      return reply.status(400).send({
+        error: `Invalid level. Must be one of: ${Object.keys(LOG_LEVELS).join(', ')}`,
+      });
+    }
+    const fastify = getFastify();
+    const prior = fastify.log.level;
+    fastify.log.level = raw as LogLevelName;
+    fastify.log.info({ cat: 'admin', prior, next: raw }, 'Log level changed');
+    return { ok: true, previous: prior, current: fastify.log.level };
+  });
+
+  // ── Metrics endpoints ────────────────────────────────────────
+  app.get('/metrics/routes', async () => {
+    return {
+      routes: requestMetrics.snapshot(),
+      slowThresholdMs: slowRequestThresholdMs,
+    };
+  });
+
+  app.get('/metrics/outbound', async () => {
+    return { categories: outboundMetrics.snapshot() };
+  });
+
+  app.get('/metrics/graphql', async () => {
+    return { operations: graphqlMetrics.snapshot() };
   });
 
   app.get('/logs/stream', async (req, reply) => {

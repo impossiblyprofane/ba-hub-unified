@@ -20,12 +20,15 @@ import type {
   UserProfile,
   TrivialChallenge,
 } from '@ba-hub/shared';
+import type { OutboundMetrics } from './outboundMetrics.js';
 
 export class DatabaseClient {
   private baseUrl: string;
+  private metrics: OutboundMetrics | null;
 
-  constructor(baseUrl?: string) {
+  constructor(baseUrl?: string, metrics?: OutboundMetrics) {
     this.baseUrl = baseUrl ?? process.env.DATABASE_SERVICE_URL ?? 'http://localhost:3002';
+    this.metrics = metrics ?? null;
   }
 
   // ── Internal fetch helper ──────────────────────────────────
@@ -51,10 +54,25 @@ export class DatabaseClient {
       }
     }
 
-    const res = await fetch(url.toString(), {
-      method,
-      headers: body ? { 'Content-Type': 'application/json' } : undefined,
-      body: body ? JSON.stringify(body) : undefined,
+    const t0 = Date.now();
+    let res: Response;
+    try {
+      res = await fetch(url.toString(), {
+        method,
+        headers: body ? { 'Content-Type': 'application/json' } : undefined,
+        body: body ? JSON.stringify(body) : undefined,
+      });
+    } catch (err) {
+      this.metrics?.record('database-service', {
+        durationMs: Date.now() - t0,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
+    }
+
+    this.metrics?.record('database-service', {
+      durationMs: Date.now() - t0,
+      status: res.status,
     });
 
     if (!res.ok) {

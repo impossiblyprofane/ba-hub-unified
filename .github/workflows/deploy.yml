@@ -45,6 +45,7 @@ jobs:
           CRAWLER_BATCH_SIZE=${{ vars.CRAWLER_BATCH_SIZE }}
           CRAWLER_BATCH_DELAY_MS=${{ vars.CRAWLER_BATCH_DELAY_MS }}
           CRAWLER_INTERVAL_MS=${{ vars.CRAWLER_INTERVAL_MS }}
+          SLOW_REQUEST_THRESHOLD_MS=${{ vars.SLOW_REQUEST_THRESHOLD_MS }}
           ENVEOF
           sed -i 's/^[[:space:]]*//' docker/.env
 

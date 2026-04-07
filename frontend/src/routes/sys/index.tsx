@@ -4,6 +4,7 @@ import { AdminGate } from '~/components/admin/AdminGate';
 import { AdminLayout, type AdminSection } from '~/components/admin/AdminLayout';
 import { HealthDashboard } from '~/components/admin/HealthDashboard';
 import { DbInspector } from '~/components/admin/DbInspector';
+import { MetricsPanel } from '~/components/admin/MetricsPanel';
 import { LogStream } from '~/components/admin/LogStream';
 import { CrawlerPanel } from '~/components/admin/CrawlerPanel';
 import {
@@ -74,6 +75,7 @@ export default component$(() => {
     <AdminLayout section={section} onSignOut$={onSignOut$}>
       {section.value === 'health' && <HealthDashboard />}
       {section.value === 'db' && <DbInspector />}
+      {section.value === 'metrics' && <MetricsPanel />}
       {section.value === 'logs' && <LogStream />}
       {section.value === 'crawler' && <CrawlerPanel />}
     </AdminLayout>

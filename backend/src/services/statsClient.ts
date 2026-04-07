@@ -163,17 +163,22 @@ type RestUserInfo = {
   ratedGames?: number;
 };
 
+import type { OutboundMetrics } from './outboundMetrics.js';
+
 export class StatsClient {
   private readonly headers: Record<string, string>;
+  private readonly metrics: OutboundMetrics | null;
 
   constructor(
     private readonly baseUrl: string,
     partnerToken?: string,
+    metrics?: OutboundMetrics,
   ) {
     this.headers = { Accept: 'application/json' };
     if (partnerToken) {
       this.headers.partnerToken = partnerToken;
     }
+    this.metrics = metrics ?? null;
   }
 
   /**
@@ -192,6 +197,7 @@ export class StatsClient {
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeoutMs);
+      const t0 = Date.now();
 
       try {
         const response = await fetch(url, {
@@ -200,6 +206,10 @@ export class StatsClient {
         });
 
         clearTimeout(timer);
+        this.metrics?.record('stats-api', {
+          durationMs: Date.now() - t0,
+          status: response.status,
+        });
 
         // Success or client error (4xx except 429) — don't retry
         if (response.ok || (response.status >= 400 && response.status < 500 && response.status !== 429)) {
@@ -218,6 +228,10 @@ export class StatsClient {
       } catch (err) {
         clearTimeout(timer);
         lastError = err;
+        this.metrics?.record('stats-api', {
+          durationMs: Date.now() - t0,
+          error: err instanceof Error ? err.message : String(err),
+        });
 
         if (attempt < maxRetries) {
           const delay = (attempt + 1) * 2000;

@@ -27,6 +27,13 @@ const DAY_MS = 24 * HOUR_MS;
 /** Default for how often the crawler range-scans when catching up. */
 const DEFAULT_CRAWL_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
 
+interface CollectorLogger {
+  info(obj: Record<string, unknown> | string, msg?: string): void;
+  warn(obj: Record<string, unknown> | string, msg?: string): void;
+  error(obj: Record<string, unknown> | string, msg?: string): void;
+  child?(bindings: Record<string, unknown>): CollectorLogger;
+}
+
 interface CollectorConfig {
   statsClient: StatsClient;
   databaseServiceUrl: string;
@@ -36,6 +43,8 @@ interface CollectorConfig {
   matchCrawler?: MatchCrawler;
   /** How often the crawler range-scans when catching up. Default 2 minutes. */
   crawlIntervalMs?: number;
+  /** Optional structured logger — tags entries as `cat: 'collector'`. */
+  logger?: CollectorLogger;
 }
 
 export class StatsCollector {
@@ -44,6 +53,7 @@ export class StatsCollector {
   private enabled: boolean;
   private matchCrawler: MatchCrawler | null;
   private crawlIntervalMs: number;
+  private log: CollectorLogger;
   private hourlyTimer: ReturnType<typeof setInterval> | null = null;
   private dailyTimer: ReturnType<typeof setInterval> | null = null;
   private crawlerTimer: ReturnType<typeof setInterval> | null = null;
@@ -56,38 +66,45 @@ export class StatsCollector {
     this.enabled = config.enabled ?? true;
     this.matchCrawler = config.matchCrawler ?? null;
     this.crawlIntervalMs = config.crawlIntervalMs ?? DEFAULT_CRAWL_INTERVAL_MS;
+    const fallback: CollectorLogger = {
+      info: (obj, msg) => console.log('[StatsCollector]', msg ?? obj),
+      warn: (obj, msg) => console.warn('[StatsCollector]', msg ?? obj),
+      error: (obj, msg) => console.error('[StatsCollector]', msg ?? obj),
+    };
+    const base = config.logger ?? fallback;
+    this.log = base.child ? base.child({ cat: 'collector' }) : base;
   }
 
   /** Start the periodic collection loops. */
   start(): void {
     if (!this.enabled) {
-      console.log('[StatsCollector] Disabled — skipping scheduler start.');
+      this.log.info('Disabled — skipping scheduler start');
       return;
     }
 
-    console.log('[StatsCollector] Starting periodic data collection.');
+    this.log.info('Starting periodic data collection');
 
     // Delay initial collection by 10s to let sibling services (database) start first
     setTimeout(() => {
       this.collectHourly().catch((err) =>
-        console.error('[StatsCollector] Initial hourly collection failed:', err),
+        this.log.error({ err }, 'Initial hourly collection failed'),
       );
     }, 10_000);
 
     this.hourlyTimer = setInterval(() => {
       this.collectHourly().catch((err) =>
-        console.error('[StatsCollector] Hourly collection failed:', err),
+        this.log.error({ err }, 'Hourly collection failed'),
       );
     }, HOUR_MS);
 
     // Daily collection — offset by 5 minutes to avoid colliding with hourly
     setTimeout(() => {
       this.collectDaily().catch((err) =>
-        console.error('[StatsCollector] Initial daily collection failed:', err),
+        this.log.error({ err }, 'Initial daily collection failed'),
       );
       this.dailyTimer = setInterval(() => {
         this.collectDaily().catch((err) =>
-          console.error('[StatsCollector] Daily collection failed:', err),
+          this.log.error({ err }, 'Daily collection failed'),
         );
       }, DAY_MS);
     }, 5 * 60 * 1000);
@@ -110,7 +127,7 @@ export class StatsCollector {
     this.hourlyTimer = null;
     this.dailyTimer = null;
     this.crawlerTimer = null;
-    console.log('[StatsCollector] Stopped.');
+    this.log.info('Stopped');
   }
 
   // ── Crawler tick (independent fast loop) ──────────────────
@@ -125,22 +142,29 @@ export class StatsCollector {
       const result = await this.matchCrawler!.scanRangeChunk();
       const progress = await this.matchCrawler!.getProgress();
       if (result.done) {
-        console.log(`[Crawler] Range scan complete — ${progress.position} reached ceiling.`);
+        this.log.info({ position: progress.position }, 'Range scan complete');
         // Stop the fast loop once caught up
         if (this.crawlerTimer) {
           clearInterval(this.crawlerTimer);
           this.crawlerTimer = null;
         }
       } else if (result.scanned > 0) {
-        console.log(
-          `[Crawler] Scanned ${result.scanned} IDs, found ${result.found} ranked — ${progress.percentDone}% (${progress.position}/${progress.ceiling})`,
+        this.log.info(
+          {
+            scanned: result.scanned,
+            found: result.found,
+            percent: progress.percentDone,
+            position: progress.position,
+            ceiling: progress.ceiling,
+          },
+          'Scan tick',
         );
       }
     } catch (err) {
       // CrawlerBusyError is expected if a manual fire raced us — swallow quietly.
       const name = err instanceof Error ? err.name : '';
       if (name !== 'CrawlerBusyError') {
-        console.error('[Crawler] Scan failed:', err);
+        this.log.error({ err }, 'Scan failed');
       }
     }
   }
@@ -153,7 +177,7 @@ export class StatsCollector {
     if (now - this.lastHourly < HOUR_MS * 0.9) return;
     this.lastHourly = now;
 
-    console.log('[StatsCollector] Running hourly collection…');
+    this.log.info('Running hourly collection');
 
     const [leaderboard, mapRatings, countryStats] = await Promise.all([
       this.statsClient.getLeaderboard(0, 100).catch(() => []),
@@ -169,7 +193,7 @@ export class StatsCollector {
         // Player discovery (new fights from leaderboard players)
         const crawlResult = await this.matchCrawler.collectMatches();
         if (crawlResult.newMatches > 0) {
-          console.log(`[StatsCollector] Player discovery: +${crawlResult.playerFights} new matches.`);
+          this.log.info({ newMatches: crawlResult.playerFights }, 'Player discovery completed');
         }
         const agg = await this.matchCrawler.computeAggregates('hourly');
         if (agg) {
@@ -180,7 +204,7 @@ export class StatsCollector {
           };
         }
       } catch (err) {
-        console.error('[StatsCollector] Crawler hourly run failed:', err);
+        this.log.error({ err }, 'Crawler hourly run failed');
       }
     }
 
@@ -208,10 +232,14 @@ export class StatsCollector {
     };
 
     await this.postSnapshot(body);
-    console.log(
-      `[StatsCollector] Hourly snapshot saved: ${body.leaderboard.length} players, ` +
-      `${body.mapStats.length} maps, ${body.factionStats.length} factions` +
-      (crawlerAggregates.specStats ? `, ${crawlerAggregates.specStats.length} specs (crawler)` : '') + '.',
+    this.log.info(
+      {
+        players: body.leaderboard.length,
+        maps: body.mapStats.length,
+        factions: body.factionStats.length,
+        specs: crawlerAggregates.specStats?.length ?? 0,
+      },
+      'Hourly snapshot saved',
     );
   }
 
@@ -222,7 +250,7 @@ export class StatsCollector {
     if (now - this.lastDaily < DAY_MS * 0.9) return;
     this.lastDaily = now;
 
-    console.log('[StatsCollector] Running daily collection…');
+    this.log.info('Running daily collection');
 
     const [leaderboard, mapRatings, countryStats] = await Promise.all([
       this.statsClient.getLeaderboard(0, 100).catch(() => []),
@@ -244,7 +272,7 @@ export class StatsCollector {
           };
         }
       } catch (err) {
-        console.error('[StatsCollector] Crawler daily aggregation failed:', err);
+        this.log.error({ err }, 'Crawler daily aggregation failed');
       }
     }
 
@@ -272,10 +300,14 @@ export class StatsCollector {
     };
 
     await this.postSnapshot(body);
-    console.log(
-      `[StatsCollector] Daily snapshot saved: ${body.leaderboard.length} players, ` +
-      `${body.mapStats.length} maps, ${body.factionStats.length} factions` +
-      (crawlerAggregates.specStats ? `, ${crawlerAggregates.specStats.length} specs (crawler)` : '') + '.',
+    this.log.info(
+      {
+        players: body.leaderboard.length,
+        maps: body.mapStats.length,
+        factions: body.factionStats.length,
+        specs: crawlerAggregates.specStats?.length ?? 0,
+      },
+      'Daily snapshot saved',
     );
 
     // Prune old snapshots + old raw match data
@@ -321,10 +353,10 @@ export class StatsCollector {
         method: 'DELETE',
       });
       if (res.ok) {
-        console.log('[StatsCollector] Old snapshots pruned.');
+        this.log.info('Old snapshots pruned');
       }
     } catch (err) {
-      console.error('[StatsCollector] Prune failed:', err);
+      this.log.error({ err }, 'Prune failed');
     }
   }
 
@@ -337,11 +369,11 @@ export class StatsCollector {
       if (res.ok) {
         const data = (await res.json()) as { pruned: number };
         if (data.pruned > 0) {
-          console.log(`[StatsCollector] Pruned ${data.pruned} old match records.`);
+          this.log.info({ pruned: data.pruned }, 'Pruned old match records');
         }
       }
     } catch (err) {
-      console.error('[StatsCollector] Match prune failed:', err);
+      this.log.error({ err }, 'Match prune failed');
     }
   }
 }

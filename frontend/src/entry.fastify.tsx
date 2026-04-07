@@ -25,6 +25,7 @@ import { resolveDeckMeta } from '~/lib/meta/resolvers/deck';
 import { resolvePlayerMeta } from '~/lib/meta/resolvers/player';
 import { resolveMatchMeta } from '~/lib/meta/resolvers/match';
 import { resolveGuideMeta } from '~/lib/meta/resolvers/guide';
+import { buildSiteSchema } from '~/lib/meta/structured-data';
 
 declare global {
   type QwikCityPlatform = PlatformNode;
@@ -46,6 +47,20 @@ async function resolveRouteMeta(path: string): Promise<PageMeta> {
   const [pathname, queryString] = path.split('?');
   const route = (pathname || '/').replace(/\/$/, '') || '/';
   const params = new URLSearchParams(queryString || '');
+  const pageUrl = `${SITE_URL}${path}`;
+
+  // Home: static meta + WebSite/Organization JSON-LD
+  if (route === '/') {
+    const staticMeta = getStaticRouteMeta(route);
+    return {
+      ...(staticMeta ?? {
+        title: 'BA HUB - Broken Arrow Community Toolkit',
+        description:
+          'Lightweight stats viewer for Broken Arrow. Browse units, build decks, explore maps.',
+      }),
+      structuredData: buildSiteSchema(SITE_URL),
+    };
+  }
 
   const staticMeta = getStaticRouteMeta(route);
   if (staticMeta) return staticMeta;
@@ -57,7 +72,7 @@ async function resolveRouteMeta(path: string): Promise<PageMeta> {
     const optionIds = modParam
       ? modParam.split('-').map(Number).filter((n) => !isNaN(n) && n > 0)
       : [];
-    return resolveArsenalMeta(unitId, optionIds);
+    return resolveArsenalMeta(unitId, optionIds, SITE_URL, pageUrl);
   }
 
   const deckMatch = route.match(/^\/decks\/browse\/([a-f0-9-]{36})$/);
@@ -114,6 +129,9 @@ const qwikPlugin = fastifyPlugin(
     fastify.addHook('onRequest', async (request, reply) => {
       // Skip static assets
       if (request.url.startsWith('/build/') || request.url.startsWith('/assets/') || request.url.startsWith('/images/')) return;
+      // SEO endpoints are served by the Qwik City router (routes/robots.txt, routes/sitemap.xml)
+      // — don't hijack them with a stub HTML.
+      if (request.url === '/robots.txt' || request.url === '/sitemap.xml') return;
 
       const userAgent = request.headers['user-agent'] || '';
       const isCrawler = /bot|crawler|spider|discord|twitter|facebook|linkedin|whatsapp|telegram|slack/i.test(userAgent);

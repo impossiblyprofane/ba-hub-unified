@@ -11,6 +11,14 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;');
 }
 
+function renderStructuredData(raw: PageMeta['structuredData']): string {
+  if (!raw) return '';
+  const entries = Array.isArray(raw) ? raw : [raw];
+  return entries
+    .map((body) => `\n  <script type="application/ld+json">${body}</script>`)
+    .join('');
+}
+
 export function renderMetaHtml(meta: PageMeta, url: string, siteUrl: string): string {
   const ogType = meta.ogType || 'website';
   // Default to small twitter card unless caller explicitly opts into the large variant.
@@ -24,6 +32,7 @@ export function renderMetaHtml(meta: PageMeta, url: string, siteUrl: string): st
   const title = escapeHtml(meta.title);
   const description = escapeHtml(meta.description);
   const safeUrl = escapeHtml(url);
+  const jsonLd = renderStructuredData(meta.structuredData);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -39,7 +48,7 @@ export function renderMetaHtml(meta: PageMeta, url: string, siteUrl: string): st
   <meta name="twitter:title" content="${title}">
   <meta name="twitter:description" content="${description}">
   <link rel="canonical" href="${safeUrl}">
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">${jsonLd}
 </head>
 <body>
   <h1>${title}</h1>

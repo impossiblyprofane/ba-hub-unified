@@ -9,6 +9,8 @@ export interface LogEntry {
   level: number;
   levelName: 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal' | 'unknown';
   msg: string;
+  /** Category tag auto-derived on the backend (http, crawler, collector, …) */
+  cat?: string;
   extra?: Record<string, unknown>;
 }
 
@@ -50,9 +52,100 @@ export interface HealthReport {
   database: DatabaseHealth;
   staticData: Record<string, number>;
   env: Record<string, string>;
-  logBuffer: { size: number };
+  logBuffer: { size: number; errorSize: number; slowSize: number };
   os: OsInfo;
   filesystem: FilesystemEntry[];
+}
+
+// ── Metrics ────────────────────────────────────────────────
+export interface RouteMetric {
+  key: string;
+  method: string;
+  route: string;
+  total: number;
+  count2xx: number;
+  count3xx: number;
+  count4xx: number;
+  count5xx: number;
+  avgDurationMs: number;
+  p50DurationMs: number;
+  p95DurationMs: number;
+  p99DurationMs: number;
+  maxDurationMs: number;
+  lastStatus: number;
+  lastDurationMs: number;
+  lastAt: number;
+}
+
+export interface RoutesResponse {
+  routes: RouteMetric[];
+  slowThresholdMs: number;
+}
+
+export interface OutboundCategoryMetric {
+  category: string;
+  calls: number;
+  errors: number;
+  errorRate: number;
+  avgDurationMs: number;
+  maxDurationMs: number;
+  lastStatus: number;
+  lastDurationMs: number;
+  lastError: string | null;
+  lastAt: number;
+  lastErrorAt: number | null;
+}
+
+export interface OutboundResponse {
+  categories: OutboundCategoryMetric[];
+}
+
+export interface GraphqlOperationMetric {
+  name: string;
+  calls: number;
+  errors: number;
+  errorRate: number;
+  avgDurationMs: number;
+  maxDurationMs: number;
+  lastAt: number;
+  lastErrorAt: number | null;
+  lastError: string | null;
+}
+
+export interface GraphqlResponse {
+  operations: GraphqlOperationMetric[];
+}
+
+export interface SlowRequestEntry {
+  ts: number;
+  method: string;
+  url: string;
+  status: number;
+  durationMs: number;
+  reqId?: string;
+}
+
+export interface SlowRequestsResponse {
+  entries: SlowRequestEntry[];
+  thresholdMs: number;
+}
+
+export interface LogsResponse {
+  entries: LogEntry[];
+  categories: string[];
+  size: number;
+  errorSize: number;
+  slowSize: number;
+}
+
+export interface LogErrorsResponse {
+  entries: LogEntry[];
+}
+
+export interface LogLevelResponse {
+  ok: true;
+  previous: string;
+  current: string;
 }
 
 export interface TableSummary {

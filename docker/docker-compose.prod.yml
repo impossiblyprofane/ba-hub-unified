@@ -59,6 +59,7 @@ services:
       - CRAWLER_BATCH_SIZE=${CRAWLER_BATCH_SIZE:-}
       - CRAWLER_BATCH_DELAY_MS=${CRAWLER_BATCH_DELAY_MS:-}
       - CRAWLER_INTERVAL_MS=${CRAWLER_INTERVAL_MS:-}
+      - SLOW_REQUEST_THRESHOLD_MS=${SLOW_REQUEST_THRESHOLD_MS:-}
     depends_on:
       - database
     restart: unless-stopped
