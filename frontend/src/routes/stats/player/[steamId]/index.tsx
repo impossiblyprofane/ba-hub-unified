@@ -1,5 +1,5 @@
-import { component$, useSignal, useStore, Slot, type Signal } from '@builder.io/qwik';
-import { routeLoader$, useLocation } from '@builder.io/qwik-city';
+import { $, component$, useResource$, useSignal, useStore, Resource, Slot, type Signal } from '@builder.io/qwik';
+import { useLocation } from '@builder.io/qwik-city';
 import type { DocumentHead } from '@builder.io/qwik-city';
 import { useI18n, t, GAME_LOCALES, getGameLocaleValueOrKey } from '~/lib/i18n';
 import type {
@@ -9,6 +9,8 @@ import type {
   FrequentPlayer,
   UnitPerformance,
   FactionCount,
+  SpecCount,
+  SpecCombo,
 } from '~/lib/graphql-types';
 import {
   STATS_USER_PROFILE_QUERY,
@@ -20,6 +22,8 @@ import { useSteamProfiles } from '~/lib/stats/useSteamProfiles';
 import type { SteamProfile } from '~/lib/graphql-types';
 import { toCountryIconPath, toSpecializationIconPath } from '~/lib/iconPaths';
 import type { ChartConfiguration } from 'chart.js';
+import { PlayerDetailSkeleton } from '~/components/skeletons/PlayerDetailSkeleton';
+import { GenericErrorView } from '~/components/errors/GenericErrorView';
 
 /** Canonical "is this fight ranked?" check.
  *  A fight is ranked iff the backend marked it ranked AND we have a usable rating delta.
@@ -27,10 +31,26 @@ import type { ChartConfiguration } from 'chart.js';
 const isRankedFight = (f: AnalyticsRecentFight): boolean =>
   f.isRanked === true && f.ratingChange != null && f.oldRating != null;
 
-/* ─── Route loader: SSR profile data ─────────────────────── */
+/* ─── Client-side data shape ─────────────────────────────── */
 
-export const usePlayerProfile = routeLoader$(async (requestEvent) => {
-  const steamId = requestEvent.params.steamId;
+interface PlayerProfileData {
+  profile: AnalyticsUserProfile | null;
+  recentFights: AnalyticsRecentFight[];
+  frequentTeammates: FrequentPlayer[];
+  frequentOpponents: FrequentPlayer[];
+  mostUsedUnits: UnitPerformance[];
+  topKillerUnits: UnitPerformance[];
+  topDamageUnits: UnitPerformance[];
+  topDamageReceivedUnits: UnitPerformance[];
+  factionBreakdown: FactionCount[];
+  specUsage: SpecCount[];
+  specCombos: SpecCombo[];
+}
+
+async function fetchPlayerProfile(
+  steamId: string,
+  signal: AbortSignal,
+): Promise<PlayerProfileData> {
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
 
   const [profileRes, fightsRes] = await Promise.all([
@@ -41,6 +61,7 @@ export const usePlayerProfile = routeLoader$(async (requestEvent) => {
         query: STATS_USER_PROFILE_QUERY,
         variables: { steamId },
       }),
+      signal,
     }),
     fetch(apiUrl, {
       method: 'POST',
@@ -49,8 +70,12 @@ export const usePlayerProfile = routeLoader$(async (requestEvent) => {
         query: STATS_RECENT_FIGHTS_QUERY,
         variables: { steamId },
       }),
+      signal,
     }),
   ]);
+
+  if (!profileRes.ok) throw new Error(`Profile fetch failed: ${profileRes.status}`);
+  if (!fightsRes.ok) throw new Error(`Recent fights fetch failed: ${fightsRes.status}`);
 
   const profilePayload = (await profileRes.json()) as {
     data?: { analyticsUserProfile: AnalyticsUserProfile | null };
@@ -85,7 +110,7 @@ export const usePlayerProfile = routeLoader$(async (requestEvent) => {
     specUsage: fightsResult.specUsage ?? [],
     specCombos: fightsResult.specCombos ?? [],
   };
-});
+}
 
 /* ─── Chart builders ──────────────────────────────────────── */
 
@@ -732,21 +757,20 @@ const UnitRankingPanel = component$<{
 
 /* ─── Main component ─────────────────────────────────────── */
 
-export default component$(() => {
+const PlayerContent = component$<{ data: PlayerProfileData }>(({ data }) => {
   const i18n = useI18n();
   const loc = useLocation();
-  const data = usePlayerProfile();
-  const profile = data.value.profile;
-  const fights = data.value.recentFights;
-  const frequentTeammates = data.value.frequentTeammates;
-  const frequentOpponents = data.value.frequentOpponents;
-  const mostUsedUnits = data.value.mostUsedUnits;
-  const topKillerUnits = data.value.topKillerUnits;
-  const topDamageUnits = data.value.topDamageUnits;
-  const topDamageReceivedUnits = data.value.topDamageReceivedUnits;
-  const factionBreakdown = data.value.factionBreakdown;
-  const specUsage = data.value.specUsage;
-  const specCombos = data.value.specCombos;
+  const profile = data.profile;
+  const fights = data.recentFights;
+  const frequentTeammates = data.frequentTeammates;
+  const frequentOpponents = data.frequentOpponents;
+  const mostUsedUnits = data.mostUsedUnits;
+  const topKillerUnits = data.topKillerUnits;
+  const topDamageUnits = data.topDamageUnits;
+  const topDamageReceivedUnits = data.topDamageReceivedUnits;
+  const factionBreakdown = data.factionBreakdown;
+  const specUsage = data.specUsage;
+  const specCombos = data.specCombos;
   const activeSection = useSignal<'overview' | 'matches'>('overview');
 
   // Unit panel shared state
@@ -1512,25 +1536,47 @@ export default component$(() => {
   );
 });
 
-export const head: DocumentHead = ({ resolveValue }) => {
-  const data = resolveValue(usePlayerProfile);
-  const user = data?.profile?.user;
-  const stats = data?.profile?.stats;
-  const name = user?.name ?? 'Player';
+/* ─── Outer component: data fetching + resource wrapper ─── */
 
-  const parts: string[] = [];
-  if (user?.rank) parts.push(`#${user.rank}`);
-  if (user?.rating) parts.push(`${Math.round(user.rating)} ELO`);
-  if (stats?.fightsCount && stats?.winsCount) {
-    parts.push(`${Math.round((stats.winsCount / stats.fightsCount) * 100)}% Win Rate`);
-  }
-  if (stats?.kdRatio) parts.push(`${stats.kdRatio.toFixed(2)} K/D`);
-  if (stats?.fightsCount) parts.push(`${stats.fightsCount} Matches`);
-  const description = parts.length
-    ? `${name} — ${parts.join(' · ')}`
-    : `View ${name}'s Broken Arrow statistics, match history, and performance data.`;
+export default component$(() => {
+  const loc = useLocation();
+  const refreshCounter = useSignal(0);
 
-  const title = `BA HUB - ${name}`;
+  const profileResource = useResource$<PlayerProfileData>(async ({ track, cleanup }) => {
+    const steamId = track(() => loc.params.steamId);
+    track(() => refreshCounter.value);
+    const abort = new AbortController();
+    cleanup(() => abort.abort());
+    return fetchPlayerProfile(steamId, abort.signal);
+  });
+
+  const retry$ = $(() => {
+    refreshCounter.value++;
+  });
+
+  return (
+    <Resource
+      value={profileResource}
+      onPending={() => <PlayerDetailSkeleton />}
+      onRejected={(error) => (
+        <GenericErrorView
+          titleKey="errors.playerLoadFailed"
+          messageKey="errors.playerLoadMessage"
+          error={error}
+          retry$={retry$}
+          backHref="/stats"
+          backLabelKey="stats.player.backToStats"
+        />
+      )}
+      onResolved={(data) => <PlayerContent data={data} />}
+    />
+  );
+});
+
+export const head: DocumentHead = ({ params }) => {
+  const steamId = params.steamId ?? '';
+  const title = 'BA HUB - Player Profile';
+  const description = `View player statistics, match history, and performance data for Broken Arrow (Steam ${steamId}).`;
 
   return {
     title,

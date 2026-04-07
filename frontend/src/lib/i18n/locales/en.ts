@@ -1070,6 +1070,19 @@ const en: TranslationDict = {
   'common.returnToArsenal': 'Return to Arsenal',
   'common.comingSoon': 'Coming Soon',
   'common.underConstruction': 'Under Construction',
+
+  // ── Errors (client-side data fetch failures) ──
+  'errors.retry': 'Retry',
+  'errors.genericTitle': 'Load failed',
+  'errors.genericMessage': 'Could not load data from the server.',
+  'errors.playerLoadFailed': 'Could not load player',
+  'errors.playerLoadMessage': 'Failed to fetch player profile data. Check your connection and try again.',
+  'errors.matchLoadFailed': 'Could not load match',
+  'errors.matchLoadMessage': 'Failed to fetch match data. Check your connection and try again.',
+  'errors.statsLoadFailed': 'Could not load statistics',
+  'errors.statsLoadMessage': 'Failed to fetch statistics data. Check your connection and try again.',
+  'errors.arsenalLoadFailed': 'Could not load arsenal',
+  'errors.arsenalLoadMessage': 'Failed to fetch unit catalogue. Check your connection and try again.',
 };
 
 export default en;
