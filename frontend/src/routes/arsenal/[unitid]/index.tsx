@@ -1,4 +1,4 @@
-import { component$, useSignal, useResource$, Resource, $, useVisibleTask$ } from '@builder.io/qwik';
+import { component$, useSignal, $, useVisibleTask$ } from '@builder.io/qwik';
 import { useLocation, Link } from '@builder.io/qwik-city';
 import type { DocumentHead } from '@builder.io/qwik-city';
 import { useI18n, t } from '~/lib/i18n';
@@ -39,11 +39,14 @@ export default component$(() => {
   const selectedOptionIds = useSignal<number[]>([]);
   const isRefetching = useSignal(false);
   const cachedData = useSignal<UnitDetailData | null>(null);
+  const unitError = useSignal<unknown>(null);
 
-  // Reactive data resource — tracks route param + selected options.
+  // Client-only data fetching via useVisibleTask$ — tracks route param + selected options.
   // Tracking loc.params.unitid ensures re-fetch on same-route navigation
-  // (e.g. clicking a transport link from one unit to another).
-  const unitResource = useResource$<UnitDetailData>(async ({ track, cleanup }) => {
+  // (e.g. clicking a transport link from one unit to another). The task is
+  // browser-only so the initial HTML response contains no unit data.
+  // eslint-disable-next-line qwik/no-use-visible-task
+  useVisibleTask$(({ track, cleanup }) => {
     const unitIdParam = track(() => loc.params.unitid);
     const optIds = track(() => selectedOptionIds.value);
 
@@ -52,12 +55,25 @@ export default component$(() => {
     cleanup(() => ctrl.abort());
 
     isRefetching.value = optIds.length > 0;
-    try {
-      const data = await fetchUnitDetail(currentUnitId, optIds);
-      return data;
-    } finally {
-      isRefetching.value = false;
+    unitError.value = null;
+    // Only null the cache on fresh unit loads, not on option swaps —
+    // that way mod swaps show the stale-with-overlay state instead of
+    // a full "loading…" flash.
+    if (optIds.length === 0) {
+      cachedData.value = null;
     }
+
+    fetchUnitDetail(currentUnitId, optIds)
+      .then((data) => {
+        cachedData.value = data;
+      })
+      .catch((err) => {
+        if (err instanceof Error && err.name === 'AbortError') return;
+        unitError.value = err;
+      })
+      .finally(() => {
+        isRefetching.value = false;
+      });
   });
 
   // On mount: read URL params and apply.
@@ -133,46 +149,33 @@ export default component$(() => {
         </div>
       </div>
 
-      <Resource
-        value={unitResource}
-        onPending={() => {
-          if (cachedData.value) {
-            return (
-              <div class="relative">
-                <UnitDetailView
-                  data={cachedData.value}
-                  isRefetching={true}
-                  onOptionChange$={handleOptionChange$}
-                />
-                <div class="absolute inset-0 bg-black/10 backdrop-blur-[1px] pointer-events-none" />
-              </div>
-            );
-          }
-          return (
-            <div class="p-8">
-              <div class="text-sm font-mono text-[var(--text-dim)] animate-pulse">Loading unit data…</div>
-            </div>
-          );
-        }}
-        onRejected={(err) => (
-          <div class="p-8">
-            <p class="text-[var(--red)] text-sm font-mono">Error: {(err as Error).message}</p>
-            <Link href="/arsenal" class="text-xs text-[var(--accent)] mt-4 inline-block">
-              Return to Arsenal
-            </Link>
+      {unitError.value ? (
+        <div class="p-8">
+          <p class="text-[var(--red)] text-sm font-mono">
+            Error: {(unitError.value as Error).message}
+          </p>
+          <Link href="/arsenal" class="text-xs text-[var(--accent)] mt-4 inline-block">
+            Return to Arsenal
+          </Link>
+        </div>
+      ) : cachedData.value ? (
+        <div class={isRefetching.value ? 'relative' : ''}>
+          <UnitDetailView
+            data={cachedData.value}
+            isRefetching={isRefetching.value}
+            onOptionChange$={handleOptionChange$}
+          />
+          {isRefetching.value && (
+            <div class="absolute inset-0 bg-black/10 backdrop-blur-[1px] pointer-events-none" />
+          )}
+        </div>
+      ) : (
+        <div class="p-8">
+          <div class="text-sm font-mono text-[var(--text-dim)] animate-pulse">
+            Loading unit data…
           </div>
-        )}
-        onResolved={(data) => {
-          cachedData.value = data;
-          return (
-            <UnitDetailView
-              data={data}
-              isRefetching={isRefetching.value}
-              onOptionChange$={handleOptionChange$}
-            />
-          );
-        }}
-      />
+        </div>
+      )}
     </div>
   );
 });

@@ -6,7 +6,7 @@
  * full UnitDetailView instances side-by-side with independent mod controls.
  */
 
-import { component$, useSignal, useResource$, Resource, $, useVisibleTask$ } from '@builder.io/qwik';
+import { component$, useSignal, $, useVisibleTask$ } from '@builder.io/qwik';
 import { Link } from '@builder.io/qwik-city';
 import type { DocumentHead } from '@builder.io/qwik-city';
 import { useI18n, t } from '~/lib/i18n';
@@ -66,12 +66,24 @@ export default component$(() => {
   const isRefetchingA = useSignal(false);
   const isRefetchingB = useSignal(false);
 
-  // Arsenal cards for the selector
-  const cardsResource = useResource$<ArsenalCard[]>(async ({ cleanup }) => {
+  // Arsenal cards for the selector — client-only fetch, never touches SSR
+  const cards = useSignal<ArsenalCard[] | null>(null);
+  const cardsError = useSignal<unknown>(null);
+  // eslint-disable-next-line qwik/no-use-visible-task
+  useVisibleTask$(({ cleanup }) => {
     const ctrl = new AbortController();
     cleanup(() => ctrl.abort());
-    return fetchArsenalCards();
+    fetchArsenalCards()
+      .then((result) => { cards.value = result; })
+      .catch((err) => {
+        if (err instanceof Error && err.name === 'AbortError') return;
+        cardsError.value = err;
+      });
   });
+
+  // Fetched compare result — client-only via useVisibleTask$
+  const compareData = useSignal<{ a: UnitDetailData; b: UnitDetailData } | null>(null);
+  const compareError = useSignal<unknown>(null);
 
   // Read URL params on mount
   useVisibleTask$(() => {
@@ -98,23 +110,34 @@ export default component$(() => {
     window.history.replaceState({}, '', url.toString());
   });
 
-  // Fetch both units when IDs are set
-  const compareResource = useResource$<{ a: UnitDetailData; b: UnitDetailData } | null>(async ({ track, cleanup }) => {
+  // Fetch both units when IDs are set — client-only via useVisibleTask$
+  // eslint-disable-next-line qwik/no-use-visible-task
+  useVisibleTask$(({ track, cleanup }) => {
     const idA = track(() => unitIdA.value);
     const idB = track(() => unitIdB.value);
     const mA = track(() => modsA.value);
     const mB = track(() => modsB.value);
 
-    if (!idA || !idB) return null;
+    if (!idA || !idB) {
+      compareData.value = null;
+      return;
+    }
 
     const ctrl = new AbortController();
     cleanup(() => ctrl.abort());
+    compareError.value = null;
 
-    const [a, b] = await Promise.all([
+    Promise.all([
       fetchUnitDetail(idA, mA),
       fetchUnitDetail(idB, mB),
-    ]);
-    return { a, b };
+    ])
+      .then(([a, b]) => {
+        compareData.value = { a, b };
+      })
+      .catch((err) => {
+        if (err instanceof Error && err.name === 'AbortError') return;
+        compareError.value = err;
+      });
   });
 
   const handleSelectA$ = $((id: number) => { unitIdA.value = id; modsA.value = []; });
@@ -161,52 +184,47 @@ export default component$(() => {
       </div>
 
       {/* Unit selectors */}
-      <Resource
-        value={cardsResource}
-        onPending={() => (
-          <div class="text-sm font-mono text-[var(--text-dim)] animate-pulse py-4">{t(i18n, 'common.loading')}</div>
-        )}
-        onRejected={(err) => (
-          <div class="text-sm text-[var(--red)] font-mono py-4">Error: {(err as Error).message}</div>
-        )}
-        onResolved={(cards) => (
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div>
-              <p class="text-[9px] font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] mb-1">UNIT A</p>
-              <UnitSelector cards={cards} selectedUnitId={unitIdA.value} onSelect$={handleSelectA$} />
-            </div>
-            <div>
-              <p class="text-[9px] font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] mb-1">UNIT B</p>
-              <UnitSelector cards={cards} selectedUnitId={unitIdB.value} onSelect$={handleSelectB$} />
-            </div>
+      {cardsError.value ? (
+        <div class="text-sm text-[var(--red)] font-mono py-4">
+          Error: {(cardsError.value as Error).message}
+        </div>
+      ) : !cards.value ? (
+        <div class="text-sm font-mono text-[var(--text-dim)] animate-pulse py-4">
+          {t(i18n, 'common.loading')}
+        </div>
+      ) : (
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div>
+            <p class="text-[9px] font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] mb-1">UNIT A</p>
+            <UnitSelector cards={cards.value} selectedUnitId={unitIdA.value} onSelect$={handleSelectA$} />
           </div>
-        )}
-      />
+          <div>
+            <p class="text-[9px] font-mono tracking-[0.3em] uppercase text-[var(--text-dim)] mb-1">UNIT B</p>
+            <UnitSelector cards={cards.value} selectedUnitId={unitIdB.value} onSelect$={handleSelectB$} />
+          </div>
+        </div>
+      )}
 
       {/* Comparison results */}
       {unitIdA.value && unitIdB.value ? (
-        <Resource
-          value={compareResource}
-          onPending={() => (
-            <div class="text-sm font-mono text-[var(--text-dim)] animate-pulse py-8">{t(i18n, 'common.loading')}</div>
-          )}
-          onRejected={(err) => (
-            <div class="text-sm text-[var(--red)] font-mono py-8">Error: {(err as Error).message}</div>
-          )}
-          onResolved={(result) => {
-            if (!result) return null;
-            return (
-              <CompareView
-                dataA={result.a}
-                dataB={result.b}
-                onOptionChangeA$={handleOptionChangeA$}
-                onOptionChangeB$={handleOptionChangeB$}
-                isRefetchingA={isRefetchingA.value}
-                isRefetchingB={isRefetchingB.value}
-              />
-            );
-          }}
-        />
+        compareError.value ? (
+          <div class="text-sm text-[var(--red)] font-mono py-8">
+            Error: {(compareError.value as Error).message}
+          </div>
+        ) : !compareData.value ? (
+          <div class="text-sm font-mono text-[var(--text-dim)] animate-pulse py-8">
+            {t(i18n, 'common.loading')}
+          </div>
+        ) : (
+          <CompareView
+            dataA={compareData.value.a}
+            dataB={compareData.value.b}
+            onOptionChangeA$={handleOptionChangeA$}
+            onOptionChangeB$={handleOptionChangeB$}
+            isRefetchingA={isRefetchingA.value}
+            isRefetchingB={isRefetchingB.value}
+          />
+        )
       ) : (
         <div class="text-center py-12 bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.7)] border border-[rgba(51,51,51,0.15)]">
           <p class="text-sm font-mono text-[var(--text-dim)]">{t(i18n, 'compare.selectUnit')}</p>

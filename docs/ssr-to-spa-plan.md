@@ -64,6 +64,21 @@ These rules define the target state. Every route decision below is derived from 
 
 ---
 
+## 2.5 Execution update (2026-04-07)
+
+During execution, two additional routes previously flagged as "already correct SPA" in §3 were found to have the same SSR leak as the stats routes. Both use `useResource$` with no SSR guard, so their HTML responses contain full unit data.
+
+Fix: same `useSignal + useVisibleTask$` pattern as the stats routes. Both routes now converted.
+
+| Route | Status |
+|---|---|
+| `arsenal/[unitid]` | **Converted** — uses single `useVisibleTask$` for the unit fetch, reuses the existing two tasks for URL param sync |
+| `arsenal/compare` | **Converted** — two `useVisibleTask$` blocks, one for the arsenal card list, one for the compared-pair fetch |
+
+Lesson: **if a route's HTML response contains any content that isn't from a local static file or the component's own layout/chrome, it's SSR'ing data and needs conversion** — regardless of whether it uses `routeLoader$` or `useResource$`. Both primitives resolve server-side in Qwik City SSR.
+
+One caveat discovered during testing: after swapping `useResource$ → useVisibleTask$` in the dev server, Vite's HMR cache served stale compiled chunks and the new tasks never fired in the browser. Verification gave misleading "no GraphQL calls in Network" results until the dev server was restarted. **Restart Vite after this kind of primitive swap.**
+
 ## 3. Current state — full route inventory
 
 Every route file under `frontend/src/routes/` classified by its current data-fetching posture. "SSR data" = the route currently ships bulk data inside the initial HTML response via `routeLoader$`.
@@ -73,8 +88,8 @@ Every route file under `frontend/src/routes/` classified by its current data-fet
 | 1 | `index.tsx` (home) | Pure static shell | No | None | **No change** |
 | 2 | `layout.tsx` (root layout) | Pure static shell + nav | No | None | **No change** |
 | 3 | `arsenal/index.tsx` | **SSR data** | `useArsenalData` (1 query: full unit list) | GraphQL | **Convert to `useResource$`** |
-| 4 | `arsenal/[unitid]/index.tsx` | Already SPA | No | GraphQL (`useResource$`) | **No change** — already correct |
-| 5 | `arsenal/compare/index.tsx` | Already SPA | No | GraphQL (`useResource$`) | **No change** — already correct |
+| 4 | `arsenal/[unitid]/index.tsx` | **SSR data (hidden)** ← originally mislabeled | No `routeLoader$` but `useResource$` leaks | GraphQL | **Converted** (see §2.5) |
+| 5 | `arsenal/compare/index.tsx` | **SSR data (hidden)** ← originally mislabeled | No `routeLoader$` but `useResource$` leaks | GraphQL | **Converted** (see §2.5) |
 | 6 | `stats/index.tsx` | **SSR data** | `useStatsOverview` (6 queries) | GraphQL | **Convert to `useResource$`** |
 | 7 | `stats/player/[steamId]/index.tsx` | **SSR data** | `usePlayerProfile` (2 queries) | GraphQL | **Convert to `useResource$`** |
 | 8 | `stats/match/[fightId]/index.tsx` | **SSR data** | `useFightData` (1 query) | GraphQL | **Convert to `useResource$`** |
