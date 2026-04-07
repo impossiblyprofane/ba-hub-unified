@@ -1,5 +1,5 @@
-import { component$, useSignal, Slot, type PropFunction } from '@builder.io/qwik';
-import { routeLoader$ } from '@builder.io/qwik-city';
+import { $, component$, useResource$, useSignal, Resource, Slot, type PropFunction } from '@builder.io/qwik';
+import { useLocation } from '@builder.io/qwik-city';
 import type { DocumentHead } from '@builder.io/qwik-city';
 import { useI18n, t, GAME_LOCALES, getGameLocaleValueOrKey } from '~/lib/i18n';
 import type { Locale } from '~/lib/i18n';
@@ -11,6 +11,8 @@ import { SteamAvatar } from '~/components/stats/SteamAvatar';
 import { useSteamProfiles } from '~/lib/stats/useSteamProfiles';
 import { getMapBackgroundByName } from '~/lib/maps/mapData';
 import type { UnitConfig } from '@ba-hub/shared';
+import { MatchDetailSkeleton } from '~/components/skeletons/MatchDetailSkeleton';
+import { GenericErrorView } from '~/components/errors/GenericErrorView';
 
 /** Resolve raw option UIName through the game locale system, with fallback cleanup */
 function resolveOptionName(uiName: string, locale: string): string {
@@ -29,10 +31,18 @@ function resolveOptionNames(rawNames: string[], locale: string): string[] {
     .filter((n) => n !== 'None' && n !== 'Default' && n !== 'Empty');
 }
 
-/* ─── Route loader: SSR match data ────────────────────────── */
+/* ─── Client-side data fetching ───────────────────────────── */
 
-export const useFightData = routeLoader$(async (requestEvent) => {
-  const fightId = requestEvent.params.fightId;
+interface FightPageData {
+  fight: AnalyticsFightData | null;
+  fromPlayer: string | null;
+}
+
+async function fetchFightData(
+  fightId: string,
+  fromPlayer: string | null,
+  signal: AbortSignal,
+): Promise<FightPageData> {
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
 
   const response = await fetch(apiUrl, {
@@ -42,15 +52,17 @@ export const useFightData = routeLoader$(async (requestEvent) => {
       query: STATS_FIGHT_DATA_QUERY,
       variables: { fightId },
     }),
+    signal,
   });
+
+  if (!response.ok) throw new Error(`Fight fetch failed: ${response.status}`);
 
   const payload = (await response.json()) as {
     data?: { analyticsFightData: AnalyticsFightData | null };
   };
 
-  const fromPlayer = requestEvent.url.searchParams.get('from') ?? null;
   return { fight: payload.data?.analyticsFightData ?? null, fromPlayer };
-});
+}
 
 /* ─── Helpers ─────────────────────────────────────────────── */
 
@@ -386,11 +398,10 @@ const UnitInspectPanel = component$<{
 
 /* ─── Main component ─────────────────────────────────────── */
 
-export default component$(() => {
+const FightContent = component$<{ data: FightPageData }>(({ data }) => {
   const i18n = useI18n();
-  const data = useFightData();
-  const fight = data.value.fight;
-  const fromPlayer = data.value.fromPlayer;
+  const fight = data.fight;
+  const fromPlayer = data.fromPlayer;
 
   // Client-side Steam profile resolution for all players in the match.
   const steamProfiles = useSteamProfiles(
@@ -792,18 +803,47 @@ export default component$(() => {
   );
 });
 
-export const head: DocumentHead = ({ resolveValue }) => {
-  const data = resolveValue(useFightData);
-  const fight = data?.fight;
-  const mapName = fight?.mapName ?? 'Match';
-  const pc = fight?.players?.length ?? 0;
-  const teamSize = pc >= 2 ? `${Math.ceil(pc / 2)}v${Math.floor(pc / 2)}` : '';
-  const duration = fight?.totalPlayTimeSec ? `${Math.floor(fight.totalPlayTimeSec / 60)}m` : '';
-  const descParts = [mapName, teamSize, duration].filter(Boolean);
-  const description = descParts.length > 1
-    ? descParts.join(' · ')
-    : `View detailed match statistics for ${mapName} in Broken Arrow.`;
-  const title = `BA HUB - Match on ${mapName}`;
+/* ─── Outer component: data fetching + resource wrapper ─── */
+
+export default component$(() => {
+  const loc = useLocation();
+  const refreshCounter = useSignal(0);
+
+  const fightResource = useResource$<FightPageData>(async ({ track, cleanup }) => {
+    const fightId = track(() => loc.params.fightId);
+    const fromPlayer = track(() => loc.url.searchParams.get('from'));
+    track(() => refreshCounter.value);
+    const abort = new AbortController();
+    cleanup(() => abort.abort());
+    return fetchFightData(fightId, fromPlayer, abort.signal);
+  });
+
+  const retry$ = $(() => {
+    refreshCounter.value++;
+  });
+
+  return (
+    <Resource
+      value={fightResource}
+      onPending={() => <MatchDetailSkeleton />}
+      onRejected={(error) => (
+        <GenericErrorView
+          titleKey="errors.matchLoadFailed"
+          messageKey="errors.matchLoadMessage"
+          error={error}
+          retry$={retry$}
+          backHref="/stats"
+          backLabelKey="stats.player.backToStats"
+        />
+      )}
+      onResolved={(data) => <FightContent data={data} />}
+    />
+  );
+});
+
+export const head: DocumentHead = () => {
+  const title = 'BA HUB - Match Detail';
+  const description = 'View detailed match statistics for Broken Arrow.';
 
   return {
     title,
