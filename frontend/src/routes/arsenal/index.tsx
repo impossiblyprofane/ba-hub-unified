@@ -1,5 +1,4 @@
-import { $, component$, useComputed$, useSignal, useStore, useOnDocument, useVisibleTask$ } from '@builder.io/qwik';
-import { routeLoader$ } from '@builder.io/qwik-city';
+import { $, component$, useComputed$, useResource$, useSignal, useStore, useOnDocument, useVisibleTask$, Resource } from '@builder.io/qwik';
 import type { DocumentHead } from '@builder.io/qwik-city';
 import { GAME_LOCALES, getGameLocaleValueOrKey, useI18n, t } from '~/lib/i18n';
 import { toCountryIconPath, toSpecializationIconPath, toUnitIconPath } from '~/lib/iconPaths';
@@ -8,6 +7,8 @@ import { TooltipOverlay } from '~/components/ui/TooltipOverlay';
 import { SimpleTooltip } from '~/components/ui/SimpleTooltip';
 import type { ArsenalCard, ArsenalPageData } from '~/lib/graphql-types';
 import { ARSENAL_PAGE_QUERY } from '~/lib/queries/arsenal';
+import { ArsenalSkeleton } from '~/components/skeletons/ArsenalSkeleton';
+import { GenericErrorView } from '~/components/errors/GenericErrorView';
 
 const CATEGORY_DEFS = [
   { id: 0, code: 'REC', label: 'Recon', i18nKey: 'arsenal.category.rec' },
@@ -22,13 +23,14 @@ const CATEGORY_DEFS = [
 const CATEGORY_CODE = new Map(CATEGORY_DEFS.map(cat => [cat.id, cat.code]));
 
 
-export const useArsenalData = routeLoader$(async () => {
+async function fetchArsenalData(signal: AbortSignal): Promise<ArsenalPageData> {
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
 
   const response = await fetch(apiUrl, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ query: ARSENAL_PAGE_QUERY }),
+    signal,
   });
 
   if (!response.ok) {
@@ -42,11 +44,11 @@ export const useArsenalData = routeLoader$(async () => {
   }
 
   return payload.data;
-});
+}
 
-export default component$(() => {
+const ArsenalContent = component$<{ data: ArsenalPageData }>(({ data: arsenalData }) => {
   const i18n = useI18n();
-  const dataSignal = useArsenalData();
+  const dataSignal = useSignal<ArsenalPageData>(arsenalData);
   const search = useSignal('');
   const selectedCountries = useSignal<number[]>([]);
   const selectedCategories = useSignal<number[]>([]);
@@ -767,6 +769,37 @@ export default component$(() => {
         visible={tooltipVisible.value}
       />
     </div>
+  );
+});
+
+export default component$(() => {
+  const refreshCounter = useSignal(0);
+
+  const arsenalResource = useResource$<ArsenalPageData>(async ({ track, cleanup }) => {
+    track(() => refreshCounter.value);
+    const abort = new AbortController();
+    cleanup(() => abort.abort());
+    return fetchArsenalData(abort.signal);
+  });
+
+  const retry$ = $(() => {
+    refreshCounter.value++;
+  });
+
+  return (
+    <Resource
+      value={arsenalResource}
+      onPending={() => <ArsenalSkeleton />}
+      onRejected={(error) => (
+        <GenericErrorView
+          titleKey="errors.arsenalLoadFailed"
+          messageKey="errors.arsenalLoadMessage"
+          error={error}
+          retry$={retry$}
+        />
+      )}
+      onResolved={(data) => <ArsenalContent data={data} />}
+    />
   );
 });
 
