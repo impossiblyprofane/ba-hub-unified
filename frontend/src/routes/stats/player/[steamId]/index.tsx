@@ -1,6 +1,11 @@
-import { component$, useSignal, useStore, Slot } from '@builder.io/qwik';
+import { component$, useSignal, useStore, useVisibleTask$, Slot, type Signal } from '@builder.io/qwik';
 import { routeLoader$, useLocation } from '@builder.io/qwik-city';
 import type { DocumentHead } from '@builder.io/qwik-city';
+import {
+  encryptPayload,
+  decryptPayload,
+  isEncryptionConfigured,
+} from '@ba-hub/shared';
 import { useI18n, t, GAME_LOCALES, getGameLocaleValueOrKey } from '~/lib/i18n';
 import type {
   AnalyticsUserProfile,
@@ -9,71 +14,118 @@ import type {
   FrequentPlayer,
   UnitPerformance,
   FactionCount,
+  SpecCount,
+  SpecCombo,
 } from '~/lib/graphql-types';
 import {
   STATS_USER_PROFILE_QUERY,
   STATS_RECENT_FIGHTS_QUERY,
 } from '~/lib/queries/stats';
+import { graphqlFetchRaw } from '~/lib/graphqlClient';
 import { ChartCanvas } from '~/components/stats/ChartCanvas';
+import { SteamAvatar } from '~/components/stats/SteamAvatar';
+import { useSteamProfiles } from '~/lib/stats/useSteamProfiles';
+import type { SteamProfile } from '~/lib/graphql-types';
+import { toCountryIconPath, toSpecializationIconPath } from '~/lib/iconPaths';
 import type { ChartConfiguration } from 'chart.js';
+import { PlayerDetailSkeleton } from '~/components/skeletons/PlayerDetailSkeleton';
 
-/* ─── Route loader: SSR profile data ─────────────────────── */
+/** Canonical "is this fight ranked?" check.
+ *  A fight is ranked iff the backend marked it ranked AND we have a usable rating delta.
+ *  This is the single source of truth — use it everywhere instead of ad-hoc ratingChange checks. */
+const isRankedFight = (f: AnalyticsRecentFight): boolean =>
+  f.isRanked === true && f.ratingChange != null && f.oldRating != null;
 
-export const usePlayerProfile = routeLoader$(async (requestEvent) => {
-  const steamId = requestEvent.params.steamId;
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
+/* ─── Client-side data shape ─────────────────────────────── */
 
-  const [profileRes, fightsRes] = await Promise.all([
-    fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        query: STATS_USER_PROFILE_QUERY,
-        variables: { steamId },
-      }),
-    }),
-    fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        query: STATS_RECENT_FIGHTS_QUERY,
-        variables: { steamId },
-      }),
-    }),
+interface PlayerProfileData {
+  profile: AnalyticsUserProfile | null;
+  recentFights: AnalyticsRecentFight[];
+  frequentTeammates: FrequentPlayer[];
+  frequentOpponents: FrequentPlayer[];
+  mostUsedUnits: UnitPerformance[];
+  topKillerUnits: UnitPerformance[];
+  topDamageUnits: UnitPerformance[];
+  topDamageReceivedUnits: UnitPerformance[];
+  factionBreakdown: FactionCount[];
+  specUsage: SpecCount[];
+  specCombos: SpecCombo[];
+}
+
+async function fetchPlayerProfile(
+  steamId: string,
+  signal: AbortSignal,
+): Promise<PlayerProfileData> {
+  const [profileResult, fightsResultEnv] = await Promise.all([
+    graphqlFetchRaw<{ analyticsUserProfile: AnalyticsUserProfile | null }>(
+      STATS_USER_PROFILE_QUERY,
+      { steamId },
+      { signal },
+    ),
+    graphqlFetchRaw<{ analyticsRecentFights: AnalyticsRecentFightsResult }>(
+      STATS_RECENT_FIGHTS_QUERY,
+      { steamId },
+      { signal },
+    ),
   ]);
 
-  const profilePayload = (await profileRes.json()) as {
-    data?: { analyticsUserProfile: AnalyticsUserProfile | null };
-  };
-  const fightsPayload = (await fightsRes.json()) as {
-    data?: { analyticsRecentFights: AnalyticsRecentFightsResult };
-  };
-
-  const fightsResult = fightsPayload.data?.analyticsRecentFights ?? {
+  const fightsResult = fightsResultEnv.data?.analyticsRecentFights ?? {
     fights: [],
     frequentTeammates: [],
     frequentOpponents: [],
     mostUsedUnits: [],
     topKillerUnits: [],
     topDamageUnits: [],
+    topDamageReceivedUnits: [],
     factionBreakdown: [],
     specUsage: [],
     specCombos: [],
   };
 
   return {
-    profile: profilePayload.data?.analyticsUserProfile ?? null,
+    profile: profileResult.data?.analyticsUserProfile ?? null,
     recentFights: fightsResult.fights,
     frequentTeammates: fightsResult.frequentTeammates,
     frequentOpponents: fightsResult.frequentOpponents,
     mostUsedUnits: fightsResult.mostUsedUnits ?? [],
     topKillerUnits: fightsResult.topKillerUnits ?? [],
     topDamageUnits: fightsResult.topDamageUnits ?? [],
+    topDamageReceivedUnits: fightsResult.topDamageReceivedUnits ?? [],
     factionBreakdown: fightsResult.factionBreakdown ?? [],
     specUsage: fightsResult.specUsage ?? [],
     specCombos: fightsResult.specCombos ?? [],
   };
-});
+}
+
+/* ─── SSR loader (encrypted envelope) ─────────────────────── */
+
+/** Envelope returned by the loader.
+ *  When encryption is configured, only `cipher` is present — plain data is
+ *  never serialized into the HTML, so scrapers see only a ciphertext blob.
+ *  When not configured (dev without env vars), plain data is returned. */
+type PlayerProfileEnvelope =
+  | { cipher: string; plain?: undefined }
+  | { cipher?: undefined; plain: PlayerProfileData };
+
+/** Runs on the Qwik City server. Fetches via `graphqlFetchRaw` (which
+ *  transparently handles wire encryption on the localhost hop to the backend)
+ *  and wraps the result for transport to the client as encrypted ciphertext
+ *  when keys are configured. */
+export const usePlayerProfile = routeLoader$<PlayerProfileEnvelope>(
+  async (requestEvent) => {
+    const steamId = requestEvent.params.steamId;
+    // Reuse the same fetcher the client-side version used. Server-side, the
+    // AbortController is a no-op (requestEvent doesn't expose one cleanly)
+    // — the fetch will complete or the loader will fail out.
+    const ctrl = new AbortController();
+    const data = await fetchPlayerProfile(steamId, ctrl.signal);
+
+    if (isEncryptionConfigured()) {
+      return { cipher: encryptPayload(data) };
+    }
+    return { plain: data };
+  },
+);
 
 /* ─── Chart builders ──────────────────────────────────────── */
 
@@ -220,7 +272,7 @@ function buildEloProgressionChart(
 ): ChartConfiguration<'line'> {
   // Only ranked fights for all chart data
   const ranked = [...fights]
-    .filter((f) => f.ratingChange != null && f.ratingChange !== 0)
+    .filter(isRankedFight)
     .reverse(); // chronological
 
   if (ranked.length === 0 || currentRating == null) {
@@ -474,7 +526,7 @@ const StatRow = component$<{
 
 const RecentFormDots = component$<{ fights: AnalyticsRecentFight[] }>((props) => {
   // Only show ranked matches (those with ELO change)
-  const ranked = props.fights.filter((f) => f.ratingChange != null && f.ratingChange !== 0);
+  const ranked = props.fights.filter(isRankedFight);
   const recent = ranked.slice(0, 10);
   if (recent.length === 0) return null;
 
@@ -511,7 +563,8 @@ const RecentFormDots = component$<{ fights: AnalyticsRecentFight[] }>((props) =>
 const FrequentPlayersList = component$<{
   players: FrequentPlayer[];
   title: string;
-}>(({ players, title }) => {
+  profiles: Record<string, SteamProfile>;
+}>(({ players, title, profiles }) => {
   if (players.length === 0) return null;
   return (
     <Panel title={title} fill>
@@ -521,18 +574,26 @@ const FrequentPlayersList = component$<{
             key={`fp-${i}`}
             class="flex items-center justify-between py-1 border-b border-[rgba(51,51,51,0.1)] last:border-0"
           >
-            {p.steamId ? (
-              <a
-                href={`/stats/player/${p.steamId}/`}
-                class="text-xs text-[var(--accent)] hover:underline truncate max-w-[160px]"
-              >
-                {p.name ?? 'Unknown'}
-              </a>
-            ) : (
-              <span class="text-xs text-[var(--text)] truncate max-w-[160px]">
-                {p.name ?? 'Unknown'}
-              </span>
-            )}
+            <div class="flex items-center gap-2 min-w-0">
+              <SteamAvatar
+                size="sm"
+                steamId={p.steamId}
+                profile={p.steamId ? profiles[p.steamId] : null}
+                name={p.name}
+              />
+              {p.steamId ? (
+                <a
+                  href={`/stats/player/${p.steamId}/`}
+                  class="text-xs text-[var(--accent)] hover:underline truncate max-w-[140px]"
+                >
+                  {p.name ?? 'Unknown'}
+                </a>
+              ) : (
+                <span class="text-xs text-[var(--text)] truncate max-w-[140px]">
+                  {p.name ?? 'Unknown'}
+                </span>
+              )}
+            </div>
             <div class="flex gap-2 text-[10px] font-mono">
               <span class="text-[var(--text-dim)]">×{p.count}</span>
               <span class="text-[var(--green)]">{p.wins}W</span>
@@ -550,12 +611,12 @@ const FrequentPlayersList = component$<{
 const UnitRankingPanel = component$<{
   units: UnitPerformance[];
   title: string;
-  category: 'count' | 'kills' | 'damage';
+  category: 'count' | 'kills' | 'damage' | 'damageReceived';
   totalGames?: number;
-}>(({ units, title, category, totalGames }) => {
+  expanded: Signal<boolean>;
+}>(({ units, title, category, totalGames, expanded }) => {
   if (units.length === 0) return null;
   const i18n = useI18n();
-  // Toggleable sort mode for kills/damage panels
   const sortMode = useSignal<'total' | 'avg'>('total');
 
   // Re-sort based on current mode
@@ -568,9 +629,15 @@ const UnitRankingPanel = component$<{
     sorted.sort((a, b) =>
       sortMode.value === 'avg' ? b.avgDamage - a.avgDamage : b.totalDamageDealt - a.totalDamageDealt,
     );
+  } else if (category === 'damageReceived') {
+    sorted.sort((a, b) =>
+      sortMode.value === 'avg' ? b.avgDamageReceived - a.avgDamageReceived : b.totalDamageReceived - a.totalDamageReceived,
+    );
   }
 
-  const showToggle = category === 'kills' || category === 'damage';
+  const showToggle = category === 'kills' || category === 'damage' || category === 'damageReceived';
+  const displayCount = expanded.value ? Math.min(sorted.length, 20) : 5;
+  const hasMore = sorted.length > 5;
 
   return (
     <div class="p-0 bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.7)] border border-[rgba(51,51,51,0.15)] h-full flex flex-col">
@@ -607,7 +674,7 @@ const UnitRankingPanel = component$<{
       </div>
       <div class="flex-1 p-3">
         <div class="flex flex-col gap-0">
-          {sorted.slice(0, 5).map((u, i) => {
+          {sorted.slice(0, displayCount).map((u, i) => {
             const resolvedOpts = resolveOptionNames(u.optionNames, i18n.locale);
             const configLabel = resolvedOpts.length > 0
               ? resolvedOpts.join(' + ')
@@ -672,11 +739,32 @@ const UnitRankingPanel = component$<{
                       <span class="text-[var(--text-dim)]">×{u.count}</span>
                     </>
                   )}
+                  {category === 'damageReceived' && (
+                    <>
+                      <span class="text-[var(--red)]">
+                        {sortMode.value === 'avg'
+                          ? Math.round(u.avgDamageReceived)
+                          : u.totalDamageReceived.toLocaleString()}
+                        {sortMode.value === 'avg' ? '/g' : ''} {t(i18n, 'stats.match.damageReceived').toLowerCase()}
+                      </span>
+                      <span class="text-[var(--text-dim)]">×{u.count}</span>
+                    </>
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
+        {hasMore && (
+          <button
+            class="w-full mt-2 py-1.5 text-[9px] font-mono uppercase tracking-[0.2em] text-[var(--text-dim)] hover:text-[var(--accent)] border border-[rgba(51,51,51,0.2)] hover:border-[rgba(51,51,51,0.4)] transition-colors"
+            onClick$={() => { expanded.value = !expanded.value; }}
+          >
+            {expanded.value
+              ? `▲ Show less`
+              : `▼ Show more (${Math.min(sorted.length, 20)})`}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -684,21 +772,25 @@ const UnitRankingPanel = component$<{
 
 /* ─── Main component ─────────────────────────────────────── */
 
-export default component$(() => {
+const PlayerContent = component$<{ data: PlayerProfileData }>(({ data }) => {
   const i18n = useI18n();
   const loc = useLocation();
-  const data = usePlayerProfile();
-  const profile = data.value.profile;
-  const fights = data.value.recentFights;
-  const frequentTeammates = data.value.frequentTeammates;
-  const frequentOpponents = data.value.frequentOpponents;
-  const mostUsedUnits = data.value.mostUsedUnits;
-  const topKillerUnits = data.value.topKillerUnits;
-  const topDamageUnits = data.value.topDamageUnits;
-  const factionBreakdown = data.value.factionBreakdown;
-  const specUsage = data.value.specUsage;
-  const specCombos = data.value.specCombos;
+  const profile = data.profile;
+  const fights = data.recentFights;
+  const frequentTeammates = data.frequentTeammates;
+  const frequentOpponents = data.frequentOpponents;
+  const mostUsedUnits = data.mostUsedUnits;
+  const topKillerUnits = data.topKillerUnits;
+  const topDamageUnits = data.topDamageUnits;
+  const topDamageReceivedUnits = data.topDamageReceivedUnits;
+  const factionBreakdown = data.factionBreakdown;
+  const specUsage = data.specUsage;
+  const specCombos = data.specCombos;
   const activeSection = useSignal<'overview' | 'matches'>('overview');
+
+  // Unit panel shared state
+  const unitExpanded = useSignal(false);
+  const factionFilter = useSignal<'all' | 'USA' | 'Russia'>('all');
 
   // Chart overlay toggles
   const chartToggles = useStore({ showKD: false, showDamage: false, showMatchup: false });
@@ -724,6 +816,15 @@ export default component$(() => {
 
   const user = profile.user;
   const stats = profile.stats;
+
+  // Client-side Steam profile resolution — header player + frequent teammates + opponents.
+  const headerSteamId = user.steamId ?? loc.params.steamId;
+  const steamProfiles = useSteamProfiles([
+    headerSteamId ?? null,
+    ...frequentTeammates.map((p) => p.steamId ?? null),
+    ...frequentOpponents.map((p) => p.steamId ?? null),
+  ]);
+  const headerProfile = headerSteamId ? steamProfiles[headerSteamId] : null;
   const winRate =
     stats && stats.winsCount && stats.fightsCount && stats.fightsCount > 0
       ? ((stats.winsCount / stats.fightsCount) * 100).toFixed(1)
@@ -748,7 +849,7 @@ export default component$(() => {
       : null;
 
   // Recent fight stats (from match history data)
-  const rankedFights = fights.filter((f) => f.ratingChange != null && f.ratingChange !== 0);
+  const rankedFights = fights.filter(isRankedFight);
   const recentWithResult = fights.filter((f) => f.result != null);
   const recentWins = recentWithResult.filter((f) => f.result === 'win').length;
   const recentWinRate =
@@ -783,13 +884,26 @@ export default component$(() => {
           {t(i18n, 'stats.profile.title')}
         </p>
         <div class="flex flex-col sm:flex-row sm:items-end gap-2 sm:gap-4">
-          <div>
-            <h1 class="text-2xl font-semibold text-[var(--text)] tracking-tight">
-              {user.name ?? `Player ${loc.params.steamId}`}
-            </h1>
-            <p class="text-xs text-[var(--text-dim)] font-mono mt-1">
-              Steam ID: {user.steamId ?? loc.params.steamId}
-            </p>
+          <div class="flex items-center gap-4">
+            <SteamAvatar
+              size="md"
+              steamId={headerSteamId}
+              profile={headerProfile}
+              name={user.name}
+            />
+            <div>
+              <h1 class="text-2xl font-semibold text-[var(--text)] tracking-tight">
+                {user.name ?? `Player ${loc.params.steamId}`}
+              </h1>
+              {headerProfile?.personaName && headerProfile.personaName !== user.name && (
+                <p class="text-sm text-[var(--text-dim)] mt-0.5 truncate max-w-[320px]">
+                  {headerProfile.personaName}
+                </p>
+              )}
+              <p class="text-xs text-[var(--text-dim)] font-mono mt-1">
+                Steam ID: {user.steamId ?? loc.params.steamId}
+              </p>
+            </div>
           </div>
           {/* Recent form dots (ranked only) */}
           {rankedFights.length > 0 && (
@@ -880,6 +994,11 @@ export default component$(() => {
               }
             />
           </div>
+
+          {/* Caveat */}
+          <p class="text-[8px] font-mono text-[var(--text-dim)] opacity-60 tracking-wide">
+            {t(i18n, 'stats.profile.dataCaveat')}
+          </p>
 
           {/* Row 2: ELO Progression chart + Win/Loss doughnut */}
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
@@ -1032,7 +1151,7 @@ export default component$(() => {
                     <>
                       <div class="border-t border-[rgba(51,51,51,0.2)] my-1" />
                       <StatRow
-                        label="Supply Net"
+                        label={t(i18n, 'stats.profile.supplyNet')}
                         value={
                           (stats.supplyCapturedCount - stats.supplyCapturedByEnemyCount) >= 0
                             ? `+${(stats.supplyCapturedCount - stats.supplyCapturedByEnemyCount).toLocaleString()}`
@@ -1052,7 +1171,7 @@ export default component$(() => {
               {specUsage.length > 0 && (
                 <Panel title={t(i18n, 'stats.profile.specUsage')} fill>
                   <div class="flex flex-col gap-0.5">
-                    {specUsage.slice(0, 6).map((s, i) => (
+                    {specUsage.map((s, i) => (
                       <div
                         key={`sp-${i}`}
                         class="flex items-center justify-between py-1 border-b border-[rgba(51,51,51,0.1)] last:border-0"
@@ -1067,7 +1186,7 @@ export default component$(() => {
               {specCombos.length > 0 && (
                 <Panel title={t(i18n, 'stats.profile.specCombos')} fill>
                   <div class="flex flex-col gap-0.5">
-                    {specCombos.slice(0, 6).map((c, i) => (
+                    {specCombos.map((c, i) => (
                       <div
                         key={`sc-${i}`}
                         class="flex items-center justify-between py-1 border-b border-[rgba(51,51,51,0.1)] last:border-0"
@@ -1098,35 +1217,79 @@ export default component$(() => {
               <FrequentPlayersList
                 players={frequentTeammates}
                 title={t(i18n, 'stats.profile.frequentTeammates')}
+                profiles={steamProfiles}
               />
               <FrequentPlayersList
                 players={frequentOpponents}
                 title={t(i18n, 'stats.profile.frequentOpponents')}
+                profiles={steamProfiles}
               />
             </div>
           )}
 
           {/* Row 5: Unit Rankings */}
-          {(mostUsedUnits.length > 0 || topKillerUnits.length > 0 || topDamageUnits.length > 0) && (
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <UnitRankingPanel
-                units={mostUsedUnits}
-                title={t(i18n, 'stats.profile.mostUsedUnits')}
-                category="count"
-                totalGames={rankedFights.length}
-              />
-              <UnitRankingPanel
-                units={topKillerUnits}
-                title={t(i18n, 'stats.profile.topKillers')}
-                category="kills"
-              />
-              <UnitRankingPanel
-                units={topDamageUnits}
-                title={t(i18n, 'stats.profile.topDamage')}
-                category="damage"
-              />
-            </div>
-          )}
+          {(mostUsedUnits.length > 0 || topKillerUnits.length > 0 || topDamageUnits.length > 0 || topDamageReceivedUnits.length > 0) && (() => {
+            const filterFn = (u: UnitPerformance) =>
+              factionFilter.value === 'all' || u.countryName === factionFilter.value;
+            const fMostUsed = mostUsedUnits.filter(filterFn);
+            const fTopKillers = topKillerUnits.filter(filterFn);
+            const fTopDamage = topDamageUnits.filter(filterFn);
+            const fTopDmgRecv = topDamageReceivedUnits.filter(filterFn);
+            return (
+              <>
+                <div class="flex items-center gap-2">
+                  {(['all', 'USA', 'Russia'] as const).map((f) => {
+                    const labels: Record<string, string> = {
+                      all: t(i18n, 'stats.profile.factionAll'),
+                      USA: t(i18n, 'stats.profile.factionUS'),
+                      Russia: t(i18n, 'stats.profile.factionRU'),
+                    };
+                    return (
+                      <button
+                        key={f}
+                        class={[
+                          'px-2 py-1 text-[9px] font-mono uppercase tracking-[0.2em] border transition-colors',
+                          factionFilter.value === f
+                            ? 'text-[var(--accent)] border-[var(--accent)] bg-[rgba(70,151,195,0.1)]'
+                            : 'text-[var(--text-dim)] border-[rgba(51,51,51,0.3)] hover:text-[var(--text)]',
+                        ].join(' ')}
+                        onClick$={() => { factionFilter.value = f; }}
+                      >
+                        {labels[f]}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                  <UnitRankingPanel
+                    units={fMostUsed}
+                    title={t(i18n, 'stats.profile.mostUsedUnits')}
+                    category="count"
+                    totalGames={rankedFights.length}
+                    expanded={unitExpanded}
+                  />
+                  <UnitRankingPanel
+                    units={fTopKillers}
+                    title={t(i18n, 'stats.profile.topKillers')}
+                    category="kills"
+                    expanded={unitExpanded}
+                  />
+                  <UnitRankingPanel
+                    units={fTopDamage}
+                    title={t(i18n, 'stats.profile.topDamage')}
+                    category="damage"
+                    expanded={unitExpanded}
+                  />
+                  <UnitRankingPanel
+                    units={fTopDmgRecv}
+                    title={t(i18n, 'stats.profile.topDamageReceived')}
+                    category="damageReceived"
+                    expanded={unitExpanded}
+                  />
+                </div>
+              </>
+            );
+          })()}
 
           {/* Map breakdown chart */}
           {stats && stats.mapsPlayCount.length > 0 && (
@@ -1143,7 +1306,7 @@ export default component$(() => {
       {/* ═══ Matches section ═══ */}
       {activeSection.value === 'matches' && (() => {
         const filteredFights = showRankedOnly.value
-          ? fights.filter((f) => f.ratingChange != null && f.ratingChange !== 0)
+          ? fights.filter(isRankedFight)
           : fights;
         const filteredEloChange = filteredFights.reduce(
           (sum, f) => sum + (f.ratingChange ?? 0), 0,
@@ -1163,7 +1326,7 @@ export default component$(() => {
                 <span class="text-[var(--red)]">
                   {filteredFights.filter((f) => f.result === 'loss').length}L
                 </span>
-                {filteredFights.some((f) => f.ratingChange != null) && (
+                {filteredFights.some(isRankedFight) && (
                   <span
                     class={filteredEloChange >= 0 ? 'text-[var(--green)]' : 'text-[var(--red)]'}
                   >
@@ -1203,8 +1366,14 @@ export default component$(() => {
                       <th class="text-center py-1 border-b border-[rgba(51,51,51,0.3)] w-14">
                         {t(i18n, 'stats.match.result')}
                       </th>
+                      <th class="text-center py-1 border-b border-[rgba(51,51,51,0.3)] w-16">
+                        {t(i18n, 'stats.profile.ranked')}
+                      </th>
                       <th class="text-left py-1 border-b border-[rgba(51,51,51,0.3)]">
                         {t(i18n, 'stats.player.matchMap')}
+                      </th>
+                      <th class="text-left py-1 border-b border-[rgba(51,51,51,0.3)]">
+                        {t(i18n, 'stats.profile.deck')}
                       </th>
                       <th class="text-center py-1 border-b border-[rgba(51,51,51,0.3)]">
                         {t(i18n, 'stats.profile.matchType')}
@@ -1227,10 +1396,10 @@ export default component$(() => {
                       <th class="text-center py-1 border-b border-[rgba(51,51,51,0.3)]">
                         {t(i18n, 'stats.profile.matchmaking')}
                       </th>
-                      <th class="text-right py-1 border-b border-[rgba(51,51,51,0.3)]">
-                        ELO
+                      <th class="text-left py-1 border-b border-[rgba(51,51,51,0.3)] min-w-[90px]">
+                        {t(i18n, 'stats.profile.rating')}
                       </th>
-                      <th class="text-left py-1 border-b border-[rgba(51,51,51,0.3)]">
+                      <th class="text-left py-1 border-b border-[rgba(51,51,51,0.3)] pl-3 whitespace-nowrap">
                         {t(i18n, 'stats.player.matchDate')}
                       </th>
                       <th class="text-left py-1 border-b border-[rgba(51,51,51,0.3)]"></th>
@@ -1267,8 +1436,51 @@ export default component$(() => {
                               <span class="text-[9px] font-mono text-[var(--text-dim)]">-</span>
                             )}
                           </td>
+                          <td class="py-1.5 text-center">
+                            {isRankedFight(fight) ? (
+                              <span
+                                class="text-[8px] font-mono font-bold uppercase tracking-[0.15em] text-[var(--accent)] border border-[rgba(70,151,195,0.4)] bg-[rgba(70,151,195,0.1)] px-1 py-0.5"
+                                title={t(i18n, 'stats.profile.ranked')}
+                              >
+                                {t(i18n, 'stats.profile.ranked')}
+                              </span>
+                            ) : (
+                              <span class="text-[9px] font-mono text-[var(--text-dim)]">-</span>
+                            )}
+                          </td>
                           <td class="py-1.5 text-[var(--text)]">
                             {fight.mapName ?? `Map ${fight.mapId ?? '?'}`}
+                          </td>
+                          <td class="py-1.5">
+                            <div class="flex items-center gap-1.5">
+                              {fight.countryFlag && (
+                                <img
+                                  src={toCountryIconPath(fight.countryFlag)}
+                                  alt={fight.countryName ?? ''}
+                                  title={fight.countryName ?? ''}
+                                  class="w-4 h-3 object-contain opacity-80 shrink-0"
+                                  width={16}
+                                  height={12}
+                                />
+                              )}
+                              {fight.specIcons && fight.specIcons.length > 0 && (
+                                <div class="flex items-center gap-1 shrink-0">
+                                  {fight.specIcons.map((icon, si) =>
+                                    icon ? (
+                                      <img
+                                        key={`si-${si}`}
+                                        src={toSpecializationIconPath(icon)}
+                                        alt={fight.specNames[si] ?? ''}
+                                        title={fight.specNames[si] ?? ''}
+                                        class="w-4 h-4 object-contain opacity-70"
+                                        width={16}
+                                        height={16}
+                                      />
+                                    ) : null,
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </td>
                           <td class="py-1.5 text-center font-mono text-[var(--text-dim)]">
                             {fight.teamSize ?? '-'}
@@ -1299,22 +1511,21 @@ export default component$(() => {
                               <span class="text-[var(--text-dim)]">-</span>
                             )}
                           </td>
-                          <td class="py-1.5 text-right font-mono text-[10px]">
+                          <td class="py-1.5 font-mono text-[10px] min-w-[90px]">
                             {fight.oldRating != null && ratingDelta != null ? (
-                              <span>
+                              <div class="flex items-baseline">
                                 <span class="text-[var(--text-dim)]">{Math.round(fight.oldRating)}</span>
-                                {' '}
                                 <span
                                   class={ratingDelta >= 0 ? 'text-[var(--green)]' : 'text-[var(--red)]'}
                                 >
                                   {ratingDelta >= 0 ? '+' : ''}{ratingDelta.toFixed(0)}
                                 </span>
-                              </span>
+                              </div>
                             ) : (
                               <span class="text-[var(--text-dim)]">-</span>
                             )}
                           </td>
-                          <td class="py-1.5 text-[var(--text-dim)] text-[10px]">
+                          <td class="py-1.5 text text-[var(--text-dim)] text-[10px] whitespace-nowrap pl-3">
                             {formatTimestamp(fight.endTime)}
                           </td>
                           <td class="py-1.5">
@@ -1340,25 +1551,48 @@ export default component$(() => {
   );
 });
 
-export const head: DocumentHead = ({ resolveValue }) => {
-  const data = resolveValue(usePlayerProfile);
-  const user = data?.profile?.user;
-  const stats = data?.profile?.stats;
-  const name = user?.name ?? 'Player';
+/* ─── Outer component: client-only data fetching ──────────
 
-  const parts: string[] = [];
-  if (user?.rank) parts.push(`#${user.rank}`);
-  if (user?.rating) parts.push(`${Math.round(user.rating)} ELO`);
-  if (stats?.fightsCount && stats?.winsCount) {
-    parts.push(`${Math.round((stats.winsCount / stats.fightsCount) * 100)}% Win Rate`);
+   The fetch runs in useVisibleTask$ so it NEVER executes during SSR.
+   On SSR, data.value is null → the skeleton is streamed in the HTML.
+   On hydration, useVisibleTask$ fires → fetch runs → signal populates
+   → component re-renders with real data. This keeps raw player data
+   out of the HTML response (scraping friction + visible GraphQL in
+   DevTools Network), which is the whole point of the SPA conversion.
+*/
+
+export default component$(() => {
+  const envelope = usePlayerProfile();
+  const data = useSignal<PlayerProfileData | null>(null);
+
+  // Decrypt on hydration. Runs only in the browser, so the decrypted plain
+  // object is never serialized into the HTML — scrapers see only the cipher.
+  // 'document-ready' strategy fires immediately after hydration without
+  // waiting for intersection-observer, so the content swap happens as fast
+  // as the Qwik resume completes (typically <100ms after HTML arrives).
+  // eslint-disable-next-line qwik/no-use-visible-task
+  useVisibleTask$(
+    ({ track }) => {
+      const v = track(() => envelope.value);
+      if (v.cipher !== undefined) {
+        data.value = decryptPayload<PlayerProfileData>(v.cipher);
+      } else {
+        data.value = v.plain;
+      }
+    },
+    { strategy: 'document-ready' },
+  );
+
+  if (!data.value) {
+    return <PlayerDetailSkeleton />;
   }
-  if (stats?.kdRatio) parts.push(`${stats.kdRatio.toFixed(2)} K/D`);
-  if (stats?.fightsCount) parts.push(`${stats.fightsCount} Matches`);
-  const description = parts.length
-    ? `${name} — ${parts.join(' · ')}`
-    : `View ${name}'s Broken Arrow statistics, match history, and performance data.`;
+  return <PlayerContent data={data.value} />;
+});
 
-  const title = `${name} — BA Hub Player Stats`;
+export const head: DocumentHead = ({ params }) => {
+  const steamId = params.steamId ?? '';
+  const title = 'BA HUB - Player Profile';
+  const description = `View player statistics, match history, and performance data for Broken Arrow (Steam ${steamId}).`;
 
   return {
     title,

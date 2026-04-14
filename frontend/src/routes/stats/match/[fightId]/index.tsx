@@ -1,13 +1,23 @@
-import { component$, useSignal, Slot, type PropFunction } from '@builder.io/qwik';
+import { component$, useSignal, useVisibleTask$, Slot, type PropFunction } from '@builder.io/qwik';
 import { routeLoader$ } from '@builder.io/qwik-city';
 import type { DocumentHead } from '@builder.io/qwik-city';
+import {
+  encryptPayload,
+  decryptPayload,
+  isEncryptionConfigured,
+} from '@ba-hub/shared';
 import { useI18n, t, GAME_LOCALES, getGameLocaleValueOrKey } from '~/lib/i18n';
 import type { Locale } from '~/lib/i18n';
 import type { AnalyticsFightData, AnalyticsFightPlayer, AnalyticsFightUnit } from '~/lib/graphql-types';
 import { STATS_FIGHT_DATA_QUERY } from '~/lib/queries/stats';
+import { graphqlFetchRaw } from '~/lib/graphqlClient';
 import { toCountryIconPath, toSpecializationIconPath } from '~/lib/iconPaths';
 import { ReadonlyUnitPanel } from '~/components/decks/ReadonlyUnitPanel';
+import { SteamAvatar } from '~/components/stats/SteamAvatar';
+import { useSteamProfiles } from '~/lib/stats/useSteamProfiles';
+import { getMapBackgroundByName } from '~/lib/maps/mapData';
 import type { UnitConfig } from '@ba-hub/shared';
+import { MatchDetailSkeleton } from '~/components/skeletons/MatchDetailSkeleton';
 
 /** Resolve raw option UIName through the game locale system, with fallback cleanup */
 function resolveOptionName(uiName: string, locale: string): string {
@@ -26,27 +36,41 @@ function resolveOptionNames(rawNames: string[], locale: string): string[] {
     .filter((n) => n !== 'None' && n !== 'Default' && n !== 'Empty');
 }
 
-/* ─── Route loader: SSR match data ────────────────────────── */
+/* ─── Client-side data fetching ───────────────────────────── */
 
-export const useFightData = routeLoader$(async (requestEvent) => {
+interface FightPageData {
+  fight: AnalyticsFightData | null;
+  fromPlayer: string | null;
+}
+
+async function fetchFightData(
+  fightId: string,
+  fromPlayer: string | null,
+  signal: AbortSignal,
+): Promise<FightPageData> {
+  const result = await graphqlFetchRaw<{
+    analyticsFightData: AnalyticsFightData | null;
+  }>(STATS_FIGHT_DATA_QUERY, { fightId }, { signal });
+
+  return { fight: result.data?.analyticsFightData ?? null, fromPlayer };
+}
+
+/* ─── SSR loader (encrypted envelope) ─────────────────────── */
+
+type FightPageEnvelope =
+  | { cipher: string; plain?: undefined }
+  | { cipher?: undefined; plain: FightPageData };
+
+export const useFightData = routeLoader$<FightPageEnvelope>(async (requestEvent) => {
   const fightId = requestEvent.params.fightId;
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
+  const fromPlayer = requestEvent.url.searchParams.get('from');
+  const ctrl = new AbortController();
+  const data = await fetchFightData(fightId, fromPlayer, ctrl.signal);
 
-  const response = await fetch(apiUrl, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      query: STATS_FIGHT_DATA_QUERY,
-      variables: { fightId },
-    }),
-  });
-
-  const payload = (await response.json()) as {
-    data?: { analyticsFightData: AnalyticsFightData | null };
-  };
-
-  const fromPlayer = requestEvent.url.searchParams.get('from') ?? null;
-  return { fight: payload.data?.analyticsFightData ?? null, fromPlayer };
+  if (isEncryptionConfigured()) {
+    return { cipher: encryptPayload(data) };
+  }
+  return { plain: data };
 });
 
 /* ─── Helpers ─────────────────────────────────────────────── */
@@ -114,6 +138,28 @@ function markTransported(units: AnalyticsFightUnit[]): boolean[] {
   return result;
 }
 
+/**
+ * Mark units that form the opening lineup (first units whose cumulative
+ * cost stays at or under 1000 points — the starting budget).
+ * Transported infantry cost is attributed to the group but the transport
+ * itself is what "spends" the budget, so we accumulate continuously.
+ */
+function markOpeningLineup(units: AnalyticsFightUnit[]): { isOpener: boolean[]; lastOpenerIdx: number } {
+  const isOpener = new Array(units.length).fill(false);
+  let cumulative = 0;
+  let lastOpenerIdx = -1;
+
+  for (let i = 0; i < units.length; i++) {
+    const cost = units[i].totalCost ?? 0;
+    if (cumulative + cost > 1000) break;
+    cumulative += cost;
+    isOpener[i] = true;
+    lastOpenerIdx = i;
+  }
+
+  return { isOpener, lastOpenerIdx };
+}
+
 /* ─── Panel wrapper ──────────────────────────────────────── */
 
 const Panel = component$<{ title: string }>(({ title }) => {
@@ -162,8 +208,9 @@ const PlayerUnitsTable = component$<{
     sorted.sort((a, b) => (b.totalDamageDealt ?? 0) - (a.totalDamageDealt ?? 0));
   }
 
-  // Only detect transport grouping in spawn order
+  // Only detect transport grouping and opening lineup in spawn order
   const transported = sortMode.value === 'spawn' ? markTransported(sorted) : new Array(sorted.length).fill(false);
+  const opener = sortMode.value === 'spawn' ? markOpeningLineup(sorted) : { isOpener: new Array(sorted.length).fill(false), lastOpenerIdx: -1 };
 
   return (
     <div>
@@ -218,12 +265,30 @@ const PlayerUnitsTable = component$<{
         <tbody>
           {sorted.map((u, idx) => {
             const isTransported = transported[idx];
+            const isOpenerUnit = opener.isOpener[idx];
+            const isLastOpener = idx === opener.lastOpenerIdx;
             const resolvedOpts = resolveOptionNames(u.optionNames ?? [], i18n.locale);
             const hasOptions = resolvedOpts.length > 0;
             return (
+              <>
+              {isOpenerUnit && idx === 0 && (
+                <tr key="opener-label">
+                  <td colSpan={7} class="py-1 px-1">
+                    <span class="text-[8px] font-mono uppercase tracking-[0.2em] text-[var(--accent)] opacity-60">
+                      {t(i18n, 'stats.match.openingLineup')}
+                    </span>
+                  </td>
+                </tr>
+              )}
               <tr
                 key={`u-${u.id}-${idx}`}
-                class="border-b border-[rgba(51,51,51,0.1)] hover:bg-[rgba(70,151,195,0.04)] transition-colors"
+                class={[
+                  'hover:bg-[rgba(70,151,195,0.04)] transition-colors',
+                  isOpenerUnit
+                    ? 'bg-[rgba(70,151,195,0.06)] border-b border-[rgba(51,51,51,0.1)]'
+                    : 'border-b border-[rgba(51,51,51,0.1)]',
+                  isLastOpener ? 'border-b-[rgba(70,151,195,0.25)]' : '',
+                ].join(' ')}
               >
                 <td class={`py-1 px-1 ${isTransported ? 'pl-5' : ''}`}>
                   <div>
@@ -270,6 +335,14 @@ const PlayerUnitsTable = component$<{
                   {u.wasRefunded ? t(i18n, 'stats.match.yes') : t(i18n, 'stats.match.no')}
                 </td>
               </tr>
+              {isLastOpener && idx < sorted.length - 1 && (
+                <tr key="opener-sep">
+                  <td colSpan={7} class="py-0">
+                    <div class="border-b border-[rgba(70,151,195,0.2)]" />
+                  </td>
+                </tr>
+              )}
+              </>
             );
           })}
         </tbody>
@@ -334,11 +407,15 @@ const UnitInspectPanel = component$<{
 
 /* ─── Main component ─────────────────────────────────────── */
 
-export default component$(() => {
+const FightContent = component$<{ data: FightPageData }>(({ data }) => {
   const i18n = useI18n();
-  const data = useFightData();
-  const fight = data.value.fight;
-  const fromPlayer = data.value.fromPlayer;
+  const fight = data.fight;
+  const fromPlayer = data.fromPlayer;
+
+  // Client-side Steam profile resolution for all players in the match.
+  const steamProfiles = useSteamProfiles(
+    (fight?.players ?? []).map((p) => p.steamId ?? null),
+  );
 
   // Compute default selected player (top scorer from first team, or first player)
   const defaultPlayerId = (() => {
@@ -422,37 +499,59 @@ export default component$(() => {
         </button>
       )}
 
-      {/* Match header */}
-      <div class="mb-4">
-        <p class="text-[var(--accent)] text-xs font-mono tracking-[0.3em] uppercase mb-2">
-          {t(i18n, 'stats.match.title')}
-        </p>
-        <h1 class="text-2xl font-semibold text-[var(--text)] tracking-tight">
-          {f.mapName ?? `Map ${f.mapId ?? '?'}`}
-        </h1>
-        <div class="flex flex-wrap gap-4 mt-2 text-xs text-[var(--text-dim)]">
-          <span>
-            {t(i18n, 'stats.match.duration')}: {formatPlaytime(f.totalPlayTimeSec)}
-          </span>
-          <span>
-            {t(i18n, 'stats.match.players')}: {f.players.length}
-          </span>
-          {f.victoryLevel != null && (
-            <span>
-              {t(i18n, 'stats.match.victoryLevel')}: {f.victoryLevel}
-            </span>
-          )}
-          {f.totalObjectiveZonesCount != null && (
-            <span>
-              {t(i18n, 'stats.match.objectives')}: {f.totalObjectiveZonesCount}
-            </span>
-          )}
-          <span>{formatTimestamp(f.endTime)}</span>
-        </div>
-      </div>
+      {/* Match header with map portrait background */}
+      {(() => {
+        const mapImg = getMapBackgroundByName(f.mapName);
+        return (
+          <>
+            <div class="mb-4 relative overflow-hidden border border-[rgba(51,51,51,0.15)]">
+              {mapImg && (
+                <>
+                  <div class="absolute inset-[-15%] pointer-events-none map-pan-anim">
+                    <img
+                      src={mapImg}
+                      alt={f.mapName ?? ''}
+                      class="w-full h-full object-cover opacity-[0.55]"
+                      width={848}
+                      height={480}
+                    />
+                  </div>
+                  <div class="absolute inset-0 bg-gradient-to-b from-[rgba(26,26,26,0.15)] via-[rgba(26,26,26,0.45)] to-[rgba(26,26,26,0.95)] pointer-events-none" />
+                  <div class="absolute inset-0 bg-gradient-to-r from-[rgba(26,26,26,0.5)] to-transparent pointer-events-none" />
+                </>
+              )}
+              {!mapImg && <div class="absolute inset-0 bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.7)]" />}
+              <div class="relative z-10 p-6 py-8">
+                <p class="text-[var(--accent)] text-xs font-mono tracking-[0.3em] uppercase mb-2">
+                  {t(i18n, 'stats.match.title')}
+                </p>
+                <h1 class="text-2xl font-semibold text-[var(--text)] tracking-tight">
+                  {f.mapName ?? `Map ${f.mapId ?? '?'}`}
+                </h1>
+                <div class="flex flex-wrap gap-4 mt-2 text-xs text-[var(--text-dim)]">
+                  <span>
+                    {t(i18n, 'stats.match.duration')}: {formatPlaytime(f.totalPlayTimeSec)}
+                  </span>
+                  <span>
+                    {t(i18n, 'stats.match.players')}: {f.players.length}
+                  </span>
+                  {f.victoryLevel != null && (
+                    <span>
+                      {t(i18n, 'stats.match.victoryLevel')}: {f.victoryLevel}
+                    </span>
+                  )}
+                  {f.totalObjectiveZonesCount != null && (
+                    <span>
+                      {t(i18n, 'stats.match.objectives')}: {f.totalObjectiveZonesCount}
+                    </span>
+                  )}
+                  <span>{formatTimestamp(f.endTime)}</span>
+                </div>
+              </div>
+            </div>
 
-      {/* Team panels */}
-      <div class="flex flex-col gap-3 mb-3">
+            {/* Team panels */}
+            <div class="flex flex-col gap-3 mb-3">
         {teamEntries.map(([teamKey, players]) => {
           const isWinner = teamKey === winnerTeam;
           const headerLabel = isWinner ? '★ VICTORY' : '⊘ DEFEAT';
@@ -486,7 +585,20 @@ export default component$(() => {
 
                   {/* Player scoreboard */}
                   <div class="overflow-x-auto">
-                    <table class="w-full text-xs border-collapse">
+                    <table class="w-full text-xs border-collapse table-fixed">
+                      <colgroup>
+                        <col style={{ width: '28%' }} />
+                        <col style={{ width: '5%' }} />
+                        <col style={{ width: '5%' }} />
+                        <col style={{ width: '8%' }} />
+                        <col style={{ width: '8%' }} />
+                        <col style={{ width: '5%' }} />
+                        <col style={{ width: '8%' }} />
+                        <col style={{ width: '8%' }} />
+                        <col style={{ width: '8%' }} />
+                        <col style={{ width: '5%' }} />
+                        <col style={{ width: '12%' }} />
+                      </colgroup>
                       <thead>
                         <tr class="text-[var(--text-dim)] uppercase tracking-[0.2em] text-[8px]">
                           <th class="text-left py-1 border-b border-[rgba(51,51,51,0.3)]">
@@ -579,7 +691,13 @@ export default component$(() => {
                                     />
                                   ))}
                                   {/* Player name + badges */}
-                                  <div class="flex items-center gap-1 min-w-0">
+                                  <div class="flex items-center gap-1.5 min-w-0">
+                                    <SteamAvatar
+                                      size="sm"
+                                      steamId={p.steamId}
+                                      profile={p.steamId ? steamProfiles[p.steamId] : null}
+                                      name={p.name}
+                                    />
                                     {p.steamId ? (
                                       <a
                                         href={`/stats/player/${p.steamId}`}
@@ -656,7 +774,10 @@ export default component$(() => {
             </div>
           );
         })}
-      </div>
+            </div>
+          </>
+        );
+      })()}
 
       {/* Shared unit roster — renders for each player, visibility controlled by signal */}
       {f.players.map((sp) => (
@@ -691,18 +812,36 @@ export default component$(() => {
   );
 });
 
-export const head: DocumentHead = ({ resolveValue }) => {
-  const data = resolveValue(useFightData);
-  const fight = data?.fight;
-  const mapName = fight?.mapName ?? 'Match';
-  const pc = fight?.players?.length ?? 0;
-  const teamSize = pc >= 2 ? `${Math.ceil(pc / 2)}v${Math.floor(pc / 2)}` : '';
-  const duration = fight?.totalPlayTimeSec ? `${Math.floor(fight.totalPlayTimeSec / 60)}m` : '';
-  const descParts = [mapName, teamSize, duration].filter(Boolean);
-  const description = descParts.length > 1
-    ? descParts.join(' · ')
-    : `View detailed match statistics for ${mapName} in Broken Arrow.`;
-  const title = `${mapName} — BA Hub Match Detail`;
+/* ─── Outer component: SSR loader + client decrypt ────── */
+
+export default component$(() => {
+  const envelope = useFightData();
+  const data = useSignal<FightPageData | null>(null);
+
+  // Decrypt on hydration — cipher blob arrives via SSR in the HTML,
+  // decrypted client-side before first render after resume.
+  // eslint-disable-next-line qwik/no-use-visible-task
+  useVisibleTask$(
+    ({ track }) => {
+      const v = track(() => envelope.value);
+      if (v.cipher !== undefined) {
+        data.value = decryptPayload<FightPageData>(v.cipher);
+      } else {
+        data.value = v.plain;
+      }
+    },
+    { strategy: 'document-ready' },
+  );
+
+  if (!data.value) {
+    return <MatchDetailSkeleton />;
+  }
+  return <FightContent data={data.value} />;
+});
+
+export const head: DocumentHead = () => {
+  const title = 'BA HUB - Match Detail';
+  const description = 'View detailed match statistics for Broken Arrow.';
 
   return {
     title,

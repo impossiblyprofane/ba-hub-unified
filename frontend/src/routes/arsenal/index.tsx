@@ -8,6 +8,13 @@ import { TooltipOverlay } from '~/components/ui/TooltipOverlay';
 import { SimpleTooltip } from '~/components/ui/SimpleTooltip';
 import type { ArsenalCard, ArsenalPageData } from '~/lib/graphql-types';
 import { ARSENAL_PAGE_QUERY } from '~/lib/queries/arsenal';
+import { graphqlFetch } from '~/lib/graphqlClient';
+import { ArsenalSkeleton } from '~/components/skeletons/ArsenalSkeleton';
+import {
+  encryptPayload,
+  decryptPayload,
+  isEncryptionConfigured,
+} from '@ba-hub/shared';
 
 const CATEGORY_DEFS = [
   { id: 0, code: 'REC', label: 'Recon', i18nKey: 'arsenal.category.rec' },
@@ -22,31 +29,29 @@ const CATEGORY_DEFS = [
 const CATEGORY_CODE = new Map(CATEGORY_DEFS.map(cat => [cat.id, cat.code]));
 
 
-export const useArsenalData = routeLoader$(async () => {
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
+async function fetchArsenalData(signal: AbortSignal): Promise<ArsenalPageData> {
+  return graphqlFetch<ArsenalPageData>(ARSENAL_PAGE_QUERY, undefined, { signal });
+}
 
-  const response = await fetch(apiUrl, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ query: ARSENAL_PAGE_QUERY }),
-  });
+/* ─── SSR loader (encrypted envelope) ─────────────────────── */
 
-  if (!response.ok) {
-    throw new Error(`Failed to load arsenal data: ${response.status}`);
+type ArsenalEnvelope =
+  | { cipher: string; plain?: undefined }
+  | { cipher?: undefined; plain: ArsenalPageData };
+
+export const useArsenalData = routeLoader$<ArsenalEnvelope>(async () => {
+  const ctrl = new AbortController();
+  const data = await fetchArsenalData(ctrl.signal);
+
+  if (isEncryptionConfigured()) {
+    return { cipher: encryptPayload(data) };
   }
-
-  const payload = await response.json() as { data?: ArsenalPageData; errors?: Array<{ message: string }> };
-  if (!payload.data) {
-    const msg = payload.errors?.map(err => err.message).join(', ') || 'Unknown error';
-    throw new Error(`Failed to load arsenal data: ${msg}`);
-  }
-
-  return payload.data;
+  return { plain: data };
 });
 
-export default component$(() => {
+const ArsenalContent = component$<{ data: ArsenalPageData }>(({ data: arsenalData }) => {
   const i18n = useI18n();
-  const dataSignal = useArsenalData();
+  const dataSignal = useSignal<ArsenalPageData>(arsenalData);
   const search = useSignal('');
   const selectedCountries = useSignal<number[]>([]);
   const selectedCategories = useSignal<number[]>([]);
@@ -770,8 +775,31 @@ export default component$(() => {
   );
 });
 
+export default component$(() => {
+  const envelope = useArsenalData();
+  const data = useSignal<ArsenalPageData | null>(null);
+
+  // eslint-disable-next-line qwik/no-use-visible-task
+  useVisibleTask$(
+    ({ track }) => {
+      const v = track(() => envelope.value);
+      if (v.cipher !== undefined) {
+        data.value = decryptPayload<ArsenalPageData>(v.cipher);
+      } else {
+        data.value = v.plain;
+      }
+    },
+    { strategy: 'document-ready' },
+  );
+
+  if (!data.value) {
+    return <ArsenalSkeleton />;
+  }
+  return <ArsenalContent data={data.value} />;
+});
+
 export const head: DocumentHead = {
-  title: 'Arsenal Browser - BA Hub',
+  title: 'BA HUB - Arsenal',
   meta: [
     {
       name: 'description',
