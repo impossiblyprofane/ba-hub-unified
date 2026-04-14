@@ -25,6 +25,7 @@ import {
 import { GameIcon } from '~/components/GameIcon';
 import { createDeck, saveDeck, setLastUsedDeckId } from '~/lib/deck';
 import { BUILDER_WIZARD_QUERY } from '~/lib/queries/builder';
+import { graphqlFetch } from '~/lib/graphqlClient';
 import type {
   BuilderCountry,
   BuilderSpecialization,
@@ -87,23 +88,12 @@ export default component$(() => {
   // eslint-disable-next-line qwik/no-use-visible-task
   useVisibleTask$(async () => {
     try {
-      const apiUrl =
-        import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
-      const resp = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          query: BUILDER_WIZARD_QUERY,
-          variables: { countryId: 1, spec1Id: 1, spec2Id: 2 },
-        }),
-      });
-      if (!resp.ok) throw new Error(`Failed: ${resp.status}`);
-      const payload = (await resp.json()) as {
-        data?: { builderData: BuilderPageData };
-      };
-      if (!payload.data) throw new Error('No data returned');
-      state.countries = payload.data.builderData.countries;
-      state.specializations = payload.data.builderData.specializations;
+      const data = await graphqlFetch<{ builderData: BuilderPageData }>(
+        BUILDER_WIZARD_QUERY,
+        { countryId: 1, spec1Id: 1, spec2Id: 2 },
+      );
+      state.countries = data.builderData.countries;
+      state.specializations = data.builderData.specializations;
     } catch (e) {
       state.fetchError = (e as Error).message;
     } finally {
@@ -663,7 +653,7 @@ const SpecDetailCard = component$<SpecDetailCardProps>(({ spec, index }) => {
 /* ------------------------------------------------------------------ */
 
 export const head: DocumentHead = {
-  title: 'New Deck - BA Hub',
+  title: 'BA HUB - New Deck',
   meta: [
     {
       name: 'description',

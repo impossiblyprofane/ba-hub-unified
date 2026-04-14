@@ -18,6 +18,7 @@ import type { DeckModification } from '@ba-hub/shared';
 import { getDeck, saveDeck, deleteDeck, duplicateDeck, computeDeckStats } from '~/lib/deck';
 import { UnitType } from '~/lib/unit-types';
 import { BUILDER_DATA_QUERY } from '~/lib/queries/builder';
+import { graphqlFetch } from '~/lib/graphqlClient';
 import type { BuilderPageData, ArsenalCard } from '~/lib/graphql-types';
 import { DeckSlotCard } from '~/components/builder/DeckSlotCard';
 import { UnitSelectorModal } from '~/components/builder/UnitSelectorModal';
@@ -94,34 +95,26 @@ export default component$(() => {
 
     // Fetch builder data (one-shot — country/spec never change in the editor)
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
-      const resp = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          query: BUILDER_DATA_QUERY,
-          variables: {
-            countryId: loaded.deck.country,
-            spec1Id: loaded.deck.spec1,
-            spec2Id: loaded.deck.spec2,
-          },
-        }),
-      });
-      if (!resp.ok) throw new Error(`Failed: ${resp.status}`);
-      const payload = await resp.json() as { data?: { builderData: BuilderPageData } };
-      if (!payload.data) throw new Error('No builder data');
-      builderData.value = payload.data.builderData;
+      const data = await graphqlFetch<{ builderData: BuilderPageData }>(
+        BUILDER_DATA_QUERY,
+        {
+          countryId: loaded.deck.country,
+          spec1Id: loaded.deck.spec1,
+          spec2Id: loaded.deck.spec2,
+        },
+      );
+      builderData.value = data.builderData;
 
       // Populate arsenal card lookup for handlers (plain object, serializable)
       const lookup: Record<number, ArsenalCard> = {};
-      for (const c of payload.data.builderData.arsenalUnitsCards) {
+      for (const c of data.builderData.arsenalUnitsCards) {
         lookup[c.unit.Id] = c;
       }
       arsenalCardLookup.value = lookup;
 
       // Populate availability map (unitId → Xp0 count) for handlers
       const am: Record<number, number> = {};
-      for (const av of payload.data.builderData.availabilities) {
+      for (const av of data.builderData.availabilities) {
         if (av.specializationId === loaded.deck.spec1 || av.specializationId === loaded.deck.spec2) {
           am[av.unitId] = Math.max(am[av.unitId] ?? 0, av.maxAvailabilityXp0);
         }
@@ -998,7 +991,7 @@ export default component$(() => {
 });
 
 export const head: DocumentHead = {
-  title: 'Edit Deck - BA Hub',
+  title: 'BA HUB - Edit Deck',
   meta: [
     {
       name: 'description',

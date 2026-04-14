@@ -2,43 +2,43 @@ import type { PageMeta } from './types.js';
 
 const STATIC_ROUTES: Record<string, PageMeta> = {
   '/': {
-    title: 'BA Hub - Broken Arrow Stats & Deck Builder',
+    title: 'BA HUB - Broken Arrow Community Toolkit',
     description: 'Lightweight stats viewer and deck builder for Broken Arrow. Browse 300+ units, weapons, and equipment.',
   },
   '/arsenal': {
-    title: 'Arsenal Browser - BA Hub',
+    title: 'BA HUB - Arsenal',
     description: 'Browse and compare every available unit with tactical overlays, fast filters, and instant cost breakdowns.',
   },
   '/arsenal/compare': {
-    title: 'Compare Units - BA Hub Arsenal',
+    title: 'BA HUB - Compare Units',
     description: 'Compare two Broken Arrow units side-by-side with advantage highlighting for optics, stealth, range, cost, and more.',
   },
   '/maps': {
-    title: 'Maps - BA Hub',
+    title: 'BA HUB - Maps',
     description: 'Explore Broken Arrow maps with tactical overlays and strategic analysis.',
   },
   '/decks': {
-    title: 'Decks - BA Hub',
+    title: 'BA HUB - Decks',
     description: 'Build your own deployment decks or browse community strategies for Broken Arrow.',
   },
   '/decks/builder': {
-    title: 'Deck Builder - BA Hub',
+    title: 'BA HUB - Deck Builder',
     description: 'Create, import, and export custom deployment decks with full modification support.',
   },
   '/decks/builder/new': {
-    title: 'New Deck - BA Hub',
+    title: 'BA HUB - New Deck',
     description: 'Select your faction and specializations to create a new deployment deck for Broken Arrow.',
   },
   '/decks/browse': {
-    title: 'Deck Arsenal - BA Hub',
+    title: 'BA HUB - Browse Decks',
     description: 'Browse community-created decks and popular competitive strategies for Broken Arrow.',
   },
   '/stats': {
-    title: 'Statistics - BA Hub',
+    title: 'BA HUB - Statistics',
     description: 'View player leaderboards and performance analytics for Broken Arrow.',
   },
   '/guides': {
-    title: 'Guides - BA Hub',
+    title: 'BA HUB - Guides',
     description: 'Community guides covering basics to advanced competitive strategies for Broken Arrow.',
   },
 };

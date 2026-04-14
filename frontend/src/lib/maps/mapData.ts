@@ -227,3 +227,51 @@ export function getMapByKey(key: string): MapData | undefined {
 export function getMapById(id: number): MapData | undefined {
   return MAPS.find(m => m.id === id);
 }
+
+/**
+ * API display names that differ from MAPS.displayName.
+ * Maps external API name → MAPS key for lookup.
+ */
+const API_NAME_ALIASES: Record<string, string> = {
+  'Tallinn Harbour': 'tallinn',
+  'Oil refinery': 'oilRefinery',
+  'Ignalina Powerplant': 'ignalinaPowerPlant',
+};
+
+/** Map key → portrait image filename in /images/mapsettings/images/portraits/ */
+const MAP_PORTRAIT: Record<string, string> = {
+  airport:       'Map_Airport_Preview.png',
+  airbase:       'Map_Airbase_Preview.png',
+  baltiisk:      'Map_Baltiysk_Preview.png',
+  coast:         'Map_Coast_Preview.png',
+  centralvillage:'Map_Village_Preview.png',
+  chernyakhovsk: 'Map_Cherniakhovsk_Preview.png',
+  dam:           'Map_Dam_Preview.png',
+  frontiers:     'Map_Frontiers_Preview.png',
+  ignalina:      'Map_Powerplant_Preview.png',
+  jelgava:       'Map_Jelgava_Preview.png',
+  kadaga:        'Map_Kadaga_Preview.png',
+  kaliningrad:   'Map_Kaliningrad_Preview.png',
+  klaipeda:      'Map_Klaipeda_Preview.png',
+  narva:         'Map_Narva_Preview.png',
+  oilrefinery:   'Map_OilRefinery_Preview.png',
+  parnu:         'Map_Parnu_Preview.png',
+  river:         'Map_River_Preview.png',
+  ruda:          'Map_Ruda_Preview.png',
+  suwalki:       'Map_Suwalki_Preview.png',
+  tallinn:       'Map_Tallin_Preview.png',
+};
+
+/** Get a map portrait image path from an API map display name. */
+export function getMapBackgroundByName(name: string | null): string | null {
+  if (!name) return null;
+  const aliasKey = API_NAME_ALIASES[name];
+  const map = aliasKey
+    ? MAPS.find(m => m.key === aliasKey)
+    : MAPS.find(m => m.displayName === name);
+  if (!map) return null;
+  const portrait = MAP_PORTRAIT[map.key];
+  if (portrait) return `/images/mapsettings/images/portraits/${portrait}`;
+  // Fallback to votemap/preview
+  return map.image.votemap || map.image.preview;
+}

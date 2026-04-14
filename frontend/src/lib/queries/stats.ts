@@ -21,7 +21,7 @@ export const STATS_OVERVIEW_QUERY = `
       name
       count
     }
-    analyticsLeaderboard(start: 0, end: 100) {
+    analyticsLeaderboard(start: 0, end: 1000) {
       rank
       userId
       steamId
@@ -29,8 +29,6 @@ export const STATS_OVERVIEW_QUERY = `
       rating
       elo
       level
-      winRate
-      kdRatio
     }
     analyticsCountryStats {
       updateDate
@@ -165,6 +163,11 @@ export const STATS_RECENT_FIGHTS_QUERY = `
         enemyAvgRating
         objectivesCaptured
         oldRating
+        countryName
+        countryFlag
+        specNames
+        specIcons
+        isRanked
       }
       frequentTeammates {
         name
@@ -203,8 +206,12 @@ export const STATS_RECENT_FIGHTS_QUERY = `
         count
         totalKills
         totalDamageDealt
+        totalDamageReceived
         avgKills
         avgDamage
+        avgDamageReceived
+        countryId
+        countryName
       }
       topKillerUnits {
         unitId
@@ -214,8 +221,12 @@ export const STATS_RECENT_FIGHTS_QUERY = `
         count
         totalKills
         totalDamageDealt
+        totalDamageReceived
         avgKills
         avgDamage
+        avgDamageReceived
+        countryId
+        countryName
       }
       topDamageUnits {
         unitId
@@ -225,8 +236,27 @@ export const STATS_RECENT_FIGHTS_QUERY = `
         count
         totalKills
         totalDamageDealt
+        totalDamageReceived
         avgKills
         avgDamage
+        avgDamageReceived
+        countryId
+        countryName
+      }
+      topDamageReceivedUnits {
+        unitId
+        unitName
+        optionNames
+        configKey
+        count
+        totalKills
+        totalDamageDealt
+        totalDamageReceived
+        avgKills
+        avgDamage
+        avgDamageReceived
+        countryId
+        countryName
       }
     }
   }
@@ -352,6 +382,54 @@ export const SNAPSHOT_UNIT_RANKINGS_QUERY = `
         avgKills
         avgDamage
       }
+    }
+  }
+`;
+
+// ── Crawler-derived snapshot queries ─────────────────────────
+
+export const CRAWLER_FACTION_HISTORY_QUERY = `
+  query CrawlerFactionHistory($since: String) {
+    crawlerFactionHistory(since: $since) {
+      factionName
+      matchCount
+      winCount
+      snapshotType
+      createdAt
+    }
+  }
+`;
+
+export const SNAPSHOT_SPEC_HISTORY_QUERY = `
+  query SnapshotSpecHistory($since: String) {
+    snapshotSpecHistory(since: $since) {
+      specName
+      specId
+      pickCount
+      snapshotType
+      createdAt
+    }
+  }
+`;
+
+export const UNIT_PERFORMANCE_QUERY = `
+  query UnitPerformance($since: String, $eloBracket: String, $faction: String, $limit: Int) {
+    unitPerformance(since: $since, eloBracket: $eloBracket, faction: $faction, limit: $limit) {
+      configKey
+      unitId
+      unitName
+      factionName
+      optionIds
+      optionNames
+      eloBracket
+      deployCount
+      totalKills
+      avgKills
+      totalDamageDealt
+      avgDamage
+      totalDamageReceived
+      totalSupplyConsumed
+      refundCount
     }
   }
 `;

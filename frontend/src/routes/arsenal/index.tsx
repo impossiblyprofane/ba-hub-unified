@@ -1,5 +1,4 @@
 import { $, component$, useComputed$, useSignal, useStore, useOnDocument, useVisibleTask$ } from '@builder.io/qwik';
-import { routeLoader$ } from '@builder.io/qwik-city';
 import type { DocumentHead } from '@builder.io/qwik-city';
 import { GAME_LOCALES, getGameLocaleValueOrKey, useI18n, t } from '~/lib/i18n';
 import { toCountryIconPath, toSpecializationIconPath, toUnitIconPath } from '~/lib/iconPaths';
@@ -10,11 +9,7 @@ import type { ArsenalCard, ArsenalPageData } from '~/lib/graphql-types';
 import { ARSENAL_PAGE_QUERY } from '~/lib/queries/arsenal';
 import { graphqlFetch } from '~/lib/graphqlClient';
 import { ArsenalSkeleton } from '~/components/skeletons/ArsenalSkeleton';
-import {
-  encryptPayload,
-  decryptPayload,
-  isEncryptionConfigured,
-} from '@ba-hub/shared';
+import { GenericErrorView } from '~/components/errors/GenericErrorView';
 
 const CATEGORY_DEFS = [
   { id: 0, code: 'REC', label: 'Recon', i18nKey: 'arsenal.category.rec' },
@@ -32,22 +27,6 @@ const CATEGORY_CODE = new Map(CATEGORY_DEFS.map(cat => [cat.id, cat.code]));
 async function fetchArsenalData(signal: AbortSignal): Promise<ArsenalPageData> {
   return graphqlFetch<ArsenalPageData>(ARSENAL_PAGE_QUERY, undefined, { signal });
 }
-
-/* ─── SSR loader (encrypted envelope) ─────────────────────── */
-
-type ArsenalEnvelope =
-  | { cipher: string; plain?: undefined }
-  | { cipher?: undefined; plain: ArsenalPageData };
-
-export const useArsenalData = routeLoader$<ArsenalEnvelope>(async () => {
-  const ctrl = new AbortController();
-  const data = await fetchArsenalData(ctrl.signal);
-
-  if (isEncryptionConfigured()) {
-    return { cipher: encryptPayload(data) };
-  }
-  return { plain: data };
-});
 
 const ArsenalContent = component$<{ data: ArsenalPageData }>(({ data: arsenalData }) => {
   const i18n = useI18n();
@@ -776,22 +755,41 @@ const ArsenalContent = component$<{ data: ArsenalPageData }>(({ data: arsenalDat
 });
 
 export default component$(() => {
-  const envelope = useArsenalData();
   const data = useSignal<ArsenalPageData | null>(null);
+  const error = useSignal<unknown>(null);
+  const refreshCounter = useSignal(0);
 
   // eslint-disable-next-line qwik/no-use-visible-task
-  useVisibleTask$(
-    ({ track }) => {
-      const v = track(() => envelope.value);
-      if (v.cipher !== undefined) {
-        data.value = decryptPayload<ArsenalPageData>(v.cipher);
-      } else {
-        data.value = v.plain;
-      }
-    },
-    { strategy: 'document-ready' },
-  );
+  useVisibleTask$(({ track, cleanup }) => {
+    track(() => refreshCounter.value);
+    const abort = new AbortController();
+    cleanup(() => abort.abort());
+    data.value = null;
+    error.value = null;
+    fetchArsenalData(abort.signal)
+      .then((result) => {
+        data.value = result;
+      })
+      .catch((err) => {
+        if (err instanceof Error && err.name === 'AbortError') return;
+        error.value = err;
+      });
+  });
 
+  const retry$ = $(() => {
+    refreshCounter.value++;
+  });
+
+  if (error.value) {
+    return (
+      <GenericErrorView
+        titleKey="errors.arsenalLoadFailed"
+        messageKey="errors.arsenalLoadMessage"
+        error={error.value}
+        retry$={retry$}
+      />
+    );
+  }
   if (!data.value) {
     return <ArsenalSkeleton />;
   }

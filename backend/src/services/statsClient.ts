@@ -163,23 +163,91 @@ type RestUserInfo = {
   ratedGames?: number;
 };
 
+import type { OutboundMetrics } from './outboundMetrics.js';
+
 export class StatsClient {
   private readonly headers: Record<string, string>;
+  private readonly metrics: OutboundMetrics | null;
 
   constructor(
     private readonly baseUrl: string,
     partnerToken?: string,
+    metrics?: OutboundMetrics,
   ) {
     this.headers = { Accept: 'application/json' };
     if (partnerToken) {
       this.headers.partnerToken = partnerToken;
     }
+    this.metrics = metrics ?? null;
+  }
+
+  /**
+   * Fetch JSON from the external API with timeout and retry on 429/5xx.
+   * @param url Full URL to fetch
+   * @param timeoutMs Request timeout in milliseconds (default 10000)
+   * @param maxRetries Max retry attempts for rate limits / server errors (default 2)
+   */
+  private async fetchWithRetry(
+    url: string,
+    timeoutMs = 10_000,
+    maxRetries = 2,
+  ): Promise<Response> {
+    let lastError: unknown;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      const t0 = Date.now();
+
+      try {
+        const response = await fetch(url, {
+          headers: this.headers,
+          signal: controller.signal,
+        });
+
+        clearTimeout(timer);
+        this.metrics?.record('stats-api', {
+          durationMs: Date.now() - t0,
+          status: response.status,
+        });
+
+        // Success or client error (4xx except 429) — don't retry
+        if (response.ok || (response.status >= 400 && response.status < 500 && response.status !== 429)) {
+          return response;
+        }
+
+        // Rate limited (429) or server error (5xx) — retry with backoff
+        if (attempt < maxRetries) {
+          const delay = (attempt + 1) * 2000; // 2s, 4s
+          console.warn(`[StatsClient] ${response.status} for ${url}, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+          await new Promise((r) => setTimeout(r, delay));
+          continue;
+        }
+
+        return response; // Final attempt, return whatever we got
+      } catch (err) {
+        clearTimeout(timer);
+        lastError = err;
+        this.metrics?.record('stats-api', {
+          durationMs: Date.now() - t0,
+          error: err instanceof Error ? err.message : String(err),
+        });
+
+        if (attempt < maxRetries) {
+          const delay = (attempt + 1) * 2000;
+          const reason = err instanceof Error && err.name === 'AbortError' ? 'timeout' : 'fetch failed';
+          console.warn(`[StatsClient] ${reason} for ${url}, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+          await new Promise((r) => setTimeout(r, delay));
+          continue;
+        }
+      }
+    }
+
+    throw lastError instanceof Error ? lastError : new Error(`Fetch failed for ${url}`);
   }
 
   private async fetchJson(path: string): Promise<unknown> {
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      headers: this.headers,
-    });
+    const response = await this.fetchWithRetry(`${this.baseUrl}${path}`);
     if (!response.ok) {
       throw new Error(`Stats API request failed (${response.status}) for ${path}`);
     }
@@ -444,10 +512,8 @@ export class StatsClient {
   async getFightData(fightId: string): Promise<FightData | null> {
     const S3_BASE = 'https://s3.brokenarrowgame.tech';
     try {
-      const response = await fetch(
-        `${S3_BASE}/fights/fight_${encodeURIComponent(fightId)}.json`,
-        { headers: this.headers },
-      );
+      const url = `${S3_BASE}/fights/fight_${encodeURIComponent(fightId)}.json`;
+      const response = await this.fetchWithRetry(url, 5_000, 1); // 5s timeout, 1 retry
       if (!response.ok) return null;
       const raw = (await response.json()) as Record<string, unknown>;
 

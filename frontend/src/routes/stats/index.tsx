@@ -1,12 +1,7 @@
 import { $, component$, useSignal, useVisibleTask$, Slot } from '@builder.io/qwik';
-import { routeLoader$ } from '@builder.io/qwik-city';
 import type { DocumentHead } from '@builder.io/qwik-city';
 import { StatsOverviewSkeleton } from '~/components/skeletons/StatsOverviewSkeleton';
-import {
-  encryptPayload,
-  decryptPayload,
-  isEncryptionConfigured,
-} from '@ba-hub/shared';
+import { GenericErrorView } from '~/components/errors/GenericErrorView';
 import { useI18n, t, GAME_LOCALES, getGameLocaleValueOrKey } from '~/lib/i18n';
 import type {
   StatsOverviewData,
@@ -136,22 +131,6 @@ async function fetchStatsOverview(signal: AbortSignal): Promise<StatsPageData> {
     unitPerformance: unitPerformanceRes?.data?.unitPerformance ?? [],
   };
 }
-
-/* ─── SSR loader (encrypted envelope) ─────────────────────── */
-
-type StatsPageEnvelope =
-  | { cipher: string; plain?: undefined }
-  | { cipher?: undefined; plain: StatsPageData };
-
-export const useStatsOverview = routeLoader$<StatsPageEnvelope>(async () => {
-  const ctrl = new AbortController();
-  const data = await fetchStatsOverview(ctrl.signal);
-
-  if (isEncryptionConfigured()) {
-    return { cipher: encryptPayload(data) };
-  }
-  return { plain: data };
-});
 
 /* ─── Chart config builders ──────────────────────────────── */
 
@@ -1022,25 +1001,44 @@ const StatsContent = component$<{ data: StatsPageData }>(({ data }) => {
   );
 });
 
-/* ─── Outer component: SSR loader + client decrypt ────── */
+/* ─── Outer component: client-only data fetching ───────── */
 
 export default component$(() => {
-  const envelope = useStatsOverview();
   const data = useSignal<StatsPageData | null>(null);
+  const error = useSignal<unknown>(null);
+  const refreshCounter = useSignal(0);
 
   // eslint-disable-next-line qwik/no-use-visible-task
-  useVisibleTask$(
-    ({ track }) => {
-      const v = track(() => envelope.value);
-      if (v.cipher !== undefined) {
-        data.value = decryptPayload<StatsPageData>(v.cipher);
-      } else {
-        data.value = v.plain;
-      }
-    },
-    { strategy: 'document-ready' },
-  );
+  useVisibleTask$(({ track, cleanup }) => {
+    track(() => refreshCounter.value);
+    const abort = new AbortController();
+    cleanup(() => abort.abort());
+    data.value = null;
+    error.value = null;
+    fetchStatsOverview(abort.signal)
+      .then((result) => {
+        data.value = result;
+      })
+      .catch((err) => {
+        if (err instanceof Error && err.name === 'AbortError') return;
+        error.value = err;
+      });
+  });
 
+  const retry$ = $(() => {
+    refreshCounter.value++;
+  });
+
+  if (error.value) {
+    return (
+      <GenericErrorView
+        titleKey="errors.statsLoadFailed"
+        messageKey="errors.statsLoadMessage"
+        error={error.value}
+        retry$={retry$}
+      />
+    );
+  }
   if (!data.value) {
     return <StatsOverviewSkeleton />;
   }

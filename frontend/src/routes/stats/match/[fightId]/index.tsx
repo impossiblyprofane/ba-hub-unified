@@ -1,11 +1,6 @@
-import { component$, useSignal, useVisibleTask$, Slot, type PropFunction } from '@builder.io/qwik';
-import { routeLoader$ } from '@builder.io/qwik-city';
+import { $, component$, useSignal, useVisibleTask$, Slot, type PropFunction } from '@builder.io/qwik';
+import { useLocation } from '@builder.io/qwik-city';
 import type { DocumentHead } from '@builder.io/qwik-city';
-import {
-  encryptPayload,
-  decryptPayload,
-  isEncryptionConfigured,
-} from '@ba-hub/shared';
 import { useI18n, t, GAME_LOCALES, getGameLocaleValueOrKey } from '~/lib/i18n';
 import type { Locale } from '~/lib/i18n';
 import type { AnalyticsFightData, AnalyticsFightPlayer, AnalyticsFightUnit } from '~/lib/graphql-types';
@@ -18,6 +13,7 @@ import { useSteamProfiles } from '~/lib/stats/useSteamProfiles';
 import { getMapBackgroundByName } from '~/lib/maps/mapData';
 import type { UnitConfig } from '@ba-hub/shared';
 import { MatchDetailSkeleton } from '~/components/skeletons/MatchDetailSkeleton';
+import { GenericErrorView } from '~/components/errors/GenericErrorView';
 
 /** Resolve raw option UIName through the game locale system, with fallback cleanup */
 function resolveOptionName(uiName: string, locale: string): string {
@@ -54,24 +50,6 @@ async function fetchFightData(
 
   return { fight: result.data?.analyticsFightData ?? null, fromPlayer };
 }
-
-/* ─── SSR loader (encrypted envelope) ─────────────────────── */
-
-type FightPageEnvelope =
-  | { cipher: string; plain?: undefined }
-  | { cipher?: undefined; plain: FightPageData };
-
-export const useFightData = routeLoader$<FightPageEnvelope>(async (requestEvent) => {
-  const fightId = requestEvent.params.fightId;
-  const fromPlayer = requestEvent.url.searchParams.get('from');
-  const ctrl = new AbortController();
-  const data = await fetchFightData(fightId, fromPlayer, ctrl.signal);
-
-  if (isEncryptionConfigured()) {
-    return { cipher: encryptPayload(data) };
-  }
-  return { plain: data };
-});
 
 /* ─── Helpers ─────────────────────────────────────────────── */
 
@@ -812,27 +790,49 @@ const FightContent = component$<{ data: FightPageData }>(({ data }) => {
   );
 });
 
-/* ─── Outer component: SSR loader + client decrypt ────── */
+/* ─── Outer component: client-only data fetching ───────── */
 
 export default component$(() => {
-  const envelope = useFightData();
+  const loc = useLocation();
   const data = useSignal<FightPageData | null>(null);
+  const error = useSignal<unknown>(null);
+  const refreshCounter = useSignal(0);
 
-  // Decrypt on hydration — cipher blob arrives via SSR in the HTML,
-  // decrypted client-side before first render after resume.
   // eslint-disable-next-line qwik/no-use-visible-task
-  useVisibleTask$(
-    ({ track }) => {
-      const v = track(() => envelope.value);
-      if (v.cipher !== undefined) {
-        data.value = decryptPayload<FightPageData>(v.cipher);
-      } else {
-        data.value = v.plain;
-      }
-    },
-    { strategy: 'document-ready' },
-  );
+  useVisibleTask$(({ track, cleanup }) => {
+    const fightId = track(() => loc.params.fightId);
+    const fromPlayer = track(() => loc.url.searchParams.get('from'));
+    track(() => refreshCounter.value);
+    const abort = new AbortController();
+    cleanup(() => abort.abort());
+    data.value = null;
+    error.value = null;
+    fetchFightData(fightId, fromPlayer, abort.signal)
+      .then((result) => {
+        data.value = result;
+      })
+      .catch((err) => {
+        if (err instanceof Error && err.name === 'AbortError') return;
+        error.value = err;
+      });
+  });
 
+  const retry$ = $(() => {
+    refreshCounter.value++;
+  });
+
+  if (error.value) {
+    return (
+      <GenericErrorView
+        titleKey="errors.matchLoadFailed"
+        messageKey="errors.matchLoadMessage"
+        error={error.value}
+        retry$={retry$}
+        backHref="/stats"
+        backLabelKey="stats.player.backToStats"
+      />
+    );
+  }
   if (!data.value) {
     return <MatchDetailSkeleton />;
   }

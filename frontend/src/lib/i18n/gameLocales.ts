@@ -18,7 +18,8 @@ const LOCALE_COLUMN: Record<Locale, string> = {
 
 const FALLBACK_COLUMN = 'col_1';
 
-const ALL = allLocales as GameLocaleTable;
+// JSON has null values where TS expects string|undefined — cast through unknown
+const ALL = allLocales as unknown as GameLocaleTable;
 
 /**
  * All three aliases point to the single unified locale table.

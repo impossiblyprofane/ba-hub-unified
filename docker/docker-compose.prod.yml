@@ -1,0 +1,100 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: bahub-prod-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${PG_USER:-bahub}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-bahub_dev}
+      POSTGRES_DB: ${PG_DB:-bahub}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - bahub-shared
+
+  database:
+    build:
+      context: ..
+      dockerfile: docker/database.Dockerfile
+    container_name: bahub-prod-database
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+      - DATABASE_URL=postgresql://${PG_USER:-bahub}:${PG_PASSWORD:-bahub_dev}@postgres:5432/${PG_DB:-bahub}
+      - DB_ADMIN_SECRET=${DB_ADMIN_SECRET:-}
+      - DB_ADMIN_ORIGINS=${DB_ADMIN_ORIGINS:-}
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks:
+      - bahub-shared
+
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/backend.Dockerfile
+    container_name: bahub-prod-backend
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - FRONTEND_URL=${FRONTEND_URL}
+      - DATABASE_SERVICE_URL=http://database:3002
+      - STATS_API_URL=https://api.brokenarrowgame.tech
+      - STATS_PARTNER_TOKEN=${STATS_PARTNER_TOKEN:-}
+      - STEAM_API_KEY=${STEAM_API_KEY:-}
+      - STATS_COLLECTION_ENABLED=true
+      - ENCRYPT_API=${ENCRYPT_API:-false}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
+      - ENCRYPTION_IV=${ENCRYPTION_IV:-}
+      - ADMIN_TOKEN=${ADMIN_TOKEN:-}
+      - DB_ADMIN_SECRET=${DB_ADMIN_SECRET:-}
+      - CRAWLER_PLAYER_COUNT=${CRAWLER_PLAYER_COUNT:-}
+      - CRAWLER_CHUNK_SIZE=${CRAWLER_CHUNK_SIZE:-}
+      - CRAWLER_BATCH_SIZE=${CRAWLER_BATCH_SIZE:-}
+      - CRAWLER_BATCH_DELAY_MS=${CRAWLER_BATCH_DELAY_MS:-}
+      - CRAWLER_INTERVAL_MS=${CRAWLER_INTERVAL_MS:-}
+      - SLOW_REQUEST_THRESHOLD_MS=${SLOW_REQUEST_THRESHOLD_MS:-}
+    depends_on:
+      - database
+    restart: unless-stopped
+    networks:
+      - bahub-shared
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/frontend.Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL}
+        - VITE_WS_URL=${VITE_WS_URL:-}
+        - VITE_ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
+        - VITE_ENCRYPTION_IV=${ENCRYPTION_IV:-}
+    container_name: bahub-prod-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - SITE_URL=${SITE_URL}
+      - API_URL=http://backend:3001/graphql
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
+      - ENCRYPTION_IV=${ENCRYPTION_IV:-}
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - bahub-shared
+
+volumes:
+  pgdata:
+
+networks:
+  bahub-shared:
+    name: bahub-shared
+    driver: bridge

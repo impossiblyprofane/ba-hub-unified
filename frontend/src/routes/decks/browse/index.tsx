@@ -6,6 +6,7 @@ import { DECK_TAG_GROUPS, DECK_TAG_I18N } from '@ba-hub/shared';
 import type { DeckTag, BrowseDeckSort } from '@ba-hub/shared';
 import { BROWSE_DECKS_QUERY } from '~/lib/queries/decks';
 import { BUILDER_WIZARD_QUERY } from '~/lib/queries/builder';
+import { graphqlFetchRaw } from '~/lib/graphqlClient';
 import type {
   PublishedDeckSummary, BuilderCountry, ArsenalSpecialization,
 } from '~/lib/graphql-types';
@@ -56,7 +57,6 @@ export default component$(() => {
   const fetchDecks = $(async () => {
     state.loading = true;
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
       const filter: Record<string, unknown> = {
         sort: state.sort,
         page: state.page,
@@ -67,22 +67,13 @@ export default component$(() => {
       if (state.tags.length) filter.tags = state.tags;
       if (state.search.trim()) filter.search = state.search.trim();
 
-      const resp = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          query: BROWSE_DECKS_QUERY,
-          variables: { filter },
-        }),
-      });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const payload = await resp.json() as {
-        data?: { browseDecks: { decks: PublishedDeckSummary[]; total: number; totalPages: number } };
-      };
-      if (payload.data) {
-        state.decks = payload.data.browseDecks.decks;
-        state.total = payload.data.browseDecks.total;
-        state.totalPages = payload.data.browseDecks.totalPages;
+      const result = await graphqlFetchRaw<{
+        browseDecks: { decks: PublishedDeckSummary[]; total: number; totalPages: number };
+      }>(BROWSE_DECKS_QUERY, { filter });
+      if (result.data) {
+        state.decks = result.data.browseDecks.decks;
+        state.total = result.data.browseDecks.total;
+        state.totalPages = result.data.browseDecks.totalPages;
       }
     } catch {
       // Silently fail — UI shows empty state
@@ -94,26 +85,15 @@ export default component$(() => {
   // ── Load reference data (countries + specs) + initial decks ──
   // eslint-disable-next-line qwik/no-use-visible-task
   useVisibleTask$(async () => {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
     try {
       // Fetch reference data (countries + specializations) for filters
-      const refResp = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          query: BUILDER_WIZARD_QUERY,
-          variables: { countryId: 0, spec1Id: 0, spec2Id: 0 },
-        }),
-      });
-      if (refResp.ok) {
-        const refPayload = await refResp.json() as {
-          data?: { builderData: { countries: BuilderCountry[]; specializations: ArsenalSpecialization[] } };
-        };
-        if (refPayload.data) {
-          state.countries = refPayload.data.builderData.countries.filter((c) => !c.Hidden);
-          state.specializations = refPayload.data.builderData.specializations;
-          state.refDataLoaded = true;
-        }
+      const refResult = await graphqlFetchRaw<{
+        builderData: { countries: BuilderCountry[]; specializations: ArsenalSpecialization[] };
+      }>(BUILDER_WIZARD_QUERY, { countryId: 0, spec1Id: 0, spec2Id: 0 });
+      if (refResult.data) {
+        state.countries = refResult.data.builderData.countries.filter((c) => !c.Hidden);
+        state.specializations = refResult.data.builderData.specializations;
+        state.refDataLoaded = true;
       }
     } catch {
       // Continue without filter reference data
@@ -348,7 +328,7 @@ export default component$(() => {
 });
 
 export const head: DocumentHead = {
-  title: 'Deck Arsenal - BA Hub',
+  title: 'BA HUB - Browse Decks',
   meta: [
     {
       name: 'description',

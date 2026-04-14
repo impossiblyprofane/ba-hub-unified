@@ -1,0 +1,894 @@
+import type { StatsClient, FightData, FightPlayerData } from './statsClient.js';
+import type { StaticData } from '../data/loader.js';
+import type { StaticIndexes } from '../data/indexes.js';
+import { MAP_ID_TO_NAME } from '../data/constants.js';
+
+// ── Types ────────────────────────────────────────────────────────
+
+/**
+ * Minimal Pino-compatible logger shape. The crawler only needs these
+ * methods; accepting the structural type keeps the test fakes trivial.
+ */
+interface CrawlerLogger {
+  info(obj: Record<string, unknown> | string, msg?: string): void;
+  warn(obj: Record<string, unknown> | string, msg?: string): void;
+  error(obj: Record<string, unknown> | string, msg?: string): void;
+  child?(bindings: Record<string, unknown>): CrawlerLogger;
+}
+
+interface CrawlerConfig {
+  statsClient: StatsClient;
+  databaseServiceUrl: string;
+  indexes: StaticIndexes;
+  data: StaticData;
+  /** Concurrent S3 fetches per batch. Default 25. */
+  batchSize?: number;
+  /** How many leaderboard players to scan for fights. Default 100. */
+  playerCount?: number;
+  /** IDs to scan per range-scan chunk. Default 15000. */
+  chunkSize?: number;
+  /** Milliseconds to wait between concurrent batches. Default 40. */
+  batchDelayMs?: number;
+  /** Optional logger — if provided, structured log lines land in the admin panel's log buffer. */
+  logger?: CrawlerLogger;
+}
+
+interface CollectResult {
+  playerFights: number;
+  rangeScan: number;
+  newMatches: number;
+}
+
+interface MatchInsert {
+  fightId: number;
+  mapId?: number;
+  mapName?: string;
+  isRanked: boolean;
+  winnerTeam?: number;
+  playerCount: number;
+  totalPlayTimeSec?: number;
+  endTime?: number;
+  teams: Array<{
+    teamId: number;
+    factionName: string;
+    isWinner: boolean;
+    avgRating?: number;
+  }>;
+  playerPicks: Array<{
+    steamId?: string;
+    odId?: number;
+    teamId?: number;
+    spec1Id?: number;
+    spec1Name?: string;
+    spec2Id?: number;
+    spec2Name?: string;
+    factionName: string;
+    oldRating?: number;
+    newRating?: number;
+    destruction?: number;
+    losses?: number;
+    damageDealt?: number;
+    damageReceived?: number;
+    objectivesCaptured?: number;
+  }>;
+  unitDeployments: Array<{
+    steamId?: string;
+    odId?: number;
+    unitId: number;
+    unitName: string;
+    factionName: string;
+    optionIds: string;
+    configKey: string;
+    playerRating?: number;
+    eloBracket: string;
+    killedCount: number;
+    totalDamageDealt: number;
+    totalDamageReceived: number;
+    supplyPointsConsumed: number;
+    wasRefunded: boolean;
+  }>;
+}
+
+interface CrawlerState {
+  scanFloor: number;
+  scanCeiling: number;
+  scanPosition: number;
+  initialCollectionDone: boolean;
+  updatedAt: string | null;
+}
+
+export interface CrawlerAggregates {
+  crawlerFactionStats: Array<{ factionName: string; matchCount: number; winCount: number }>;
+  specStats: Array<{ specName: string; specId?: number; pickCount: number }>;
+  mapPopularity: Array<{ mapName: string; playCount: number }>;
+  unitPerformance: Array<{
+    configKey: string;
+    unitId?: number;
+    unitName: string;
+    factionName: string;
+    optionIds: string;
+    eloBracket: string;
+    deployCount: number;
+    totalKills: number;
+    totalDamageDealt: number;
+    totalDamageReceived: number;
+    totalSupplyConsumed: number;
+    refundCount: number;
+  }>;
+}
+
+/** Thrown when a manual run is requested while a collection is already in progress. */
+export class CrawlerBusyError extends Error {
+  constructor() {
+    super('Crawler is already running');
+    this.name = 'CrawlerBusyError';
+  }
+}
+
+/** Derive ELO bracket from a player's rating. Buckets per 500. */
+function getEloBracket(rating?: number): string {
+  if (rating === undefined || rating === null) return 'unranked';
+  const bucket = Math.floor(rating / 500) * 500;
+  return `${bucket}-${bucket + 500}`;
+}
+
+// ── MatchCrawler ─────────────────────────────────────────────────
+
+export class MatchCrawler {
+  private statsClient: StatsClient;
+  private dbUrl: string;
+  private indexes: StaticIndexes;
+  private data: StaticData;
+  private batchSize: number;
+  private playerCount: number;
+  private chunkSize: number;
+  private batchDelayMs: number;
+  private log: CrawlerLogger;
+
+  /** Reverse index: unitId → Set<specId> (built once on first use). */
+  private unitIdToSpecIds: Map<number, Set<number>> | null = null;
+
+  /**
+   * Mutex guarding concurrent runs. Both the auto-tick in StatsCollector and
+   * the manual fire from the admin panel check this before starting so we
+   * never hit the partner API twice in parallel.
+   */
+  private busy = false;
+  private lastRunAt: number | null = null;
+  private lastRunDurationMs: number | null = null;
+  private lastRunResult: CollectResult | null = null;
+  private lastRunError: string | null = null;
+
+  constructor(config: CrawlerConfig) {
+    this.statsClient = config.statsClient;
+    this.dbUrl = config.databaseServiceUrl.replace(/\/$/, '');
+    this.indexes = config.indexes;
+    this.data = config.data;
+    this.batchSize = config.batchSize ?? 25;
+    this.playerCount = config.playerCount ?? 100;
+    this.chunkSize = config.chunkSize ?? 15000;
+    this.batchDelayMs = config.batchDelayMs ?? 40;
+    // Fall back to a console-backed shim if no logger is supplied — keeps
+    // tests and scripts that instantiate the crawler standalone working.
+    const fallback: CrawlerLogger = {
+      info: (obj, msg) => console.log('[MatchCrawler]', msg ?? obj),
+      warn: (obj, msg) => console.warn('[MatchCrawler]', msg ?? obj),
+      error: (obj, msg) => console.error('[MatchCrawler]', msg ?? obj),
+    };
+    const base = config.logger ?? fallback;
+    this.log = base.child ? base.child({ cat: 'crawler' }) : base;
+  }
+
+  /** True when a collection run is currently in progress. */
+  isBusy(): boolean {
+    return this.busy;
+  }
+
+  /** Current configuration — surfaced on the admin panel for visibility. */
+  getConfig(): {
+    batchSize: number;
+    playerCount: number;
+    chunkSize: number;
+    batchDelayMs: number;
+    saveInterval: number;
+    errorBudget: number;
+    lastRunAt: number | null;
+    lastRunDurationMs: number | null;
+    lastRunResult: CollectResult | null;
+    lastRunError: string | null;
+  } {
+    return {
+      batchSize: this.batchSize,
+      playerCount: this.playerCount,
+      chunkSize: this.chunkSize,
+      batchDelayMs: this.batchDelayMs,
+      saveInterval: MatchCrawler.SAVE_INTERVAL,
+      errorBudget: MatchCrawler.ERROR_BUDGET,
+      lastRunAt: this.lastRunAt,
+      lastRunDurationMs: this.lastRunDurationMs,
+      lastRunResult: this.lastRunResult,
+      lastRunError: this.lastRunError,
+    };
+  }
+
+  /**
+   * Fire-and-forget wrapper for manual runs — acquires the mutex
+   * synchronously and returns immediately with `{ started: true }`. The
+   * actual work happens in the background; callers poll `isBusy()` and
+   * `getConfig().lastRunResult` to see progress.
+   */
+  startBackgroundRun(): { started: boolean } {
+    if (this.busy) return { started: false };
+    // Acquire the lock synchronously so a second caller in the same tick
+    // sees busy=true and gets { started: false }.
+    this.busy = true;
+    this.lastRunError = null;
+    this.lastRunResult = null;
+    const t0 = Date.now();
+    // Call the UNLOCKED internal — we already hold the mutex.
+    this.collectMatchesInternal()
+      .then((result) => {
+        this.lastRunResult = result;
+      })
+      .catch((err) => {
+        this.lastRunError = err instanceof Error ? err.message : String(err);
+        this.log.error({ err }, 'Background run failed');
+      })
+      .finally(() => {
+        this.lastRunAt = t0;
+        this.lastRunDurationMs = Date.now() - t0;
+        this.busy = false;
+      });
+    return { started: true };
+  }
+
+  /**
+   * Internal wrapper that acquires the mutex, runs an async task, records
+   * duration, and releases the mutex. Throws `CrawlerBusyError` if another
+   * run is already in progress.
+   */
+  private async withLock<T>(fn: () => Promise<T>): Promise<T> {
+    if (this.busy) {
+      throw new CrawlerBusyError();
+    }
+    this.busy = true;
+    const t0 = Date.now();
+    try {
+      return await fn();
+    } finally {
+      this.lastRunAt = t0;
+      this.lastRunDurationMs = Date.now() - t0;
+      this.busy = false;
+    }
+  }
+
+  // ── Spec reverse index ─────────────────────────────────────────
+
+  private getUnitIdToSpecIds(): Map<number, Set<number>> {
+    if (!this.unitIdToSpecIds) {
+      this.unitIdToSpecIds = new Map();
+      for (const sa of this.data.specializationAvailabilities) {
+        let set = this.unitIdToSpecIds.get(sa.UnitId);
+        if (!set) { set = new Set(); this.unitIdToSpecIds.set(sa.UnitId, set); }
+        set.add(sa.SpecializationId);
+      }
+    }
+    return this.unitIdToSpecIds;
+  }
+
+  // ── DB helpers ─────────────────────────────────────────────────
+
+  private async getState(): Promise<CrawlerState> {
+    const res = await fetch(`${this.dbUrl}/api/crawler/state`);
+    return res.json() as Promise<CrawlerState>;
+  }
+
+  private async updateState(updates: Partial<CrawlerState>): Promise<void> {
+    await fetch(`${this.dbUrl}/api/crawler/state`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+  }
+
+  private async checkExisting(ids: number[]): Promise<Set<number>> {
+    if (ids.length === 0) return new Set();
+    const res = await fetch(`${this.dbUrl}/api/crawler/matches/exists?ids=${ids.join(',')}`);
+    const data = (await res.json()) as { existing: number[] };
+    return new Set(data.existing);
+  }
+
+  private async bulkInsert(matches: MatchInsert[]): Promise<number> {
+    if (matches.length === 0) return 0;
+    try {
+      const res = await fetch(`${this.dbUrl}/api/crawler/matches`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(matches),
+      });
+      if (res.status === 413 && matches.length > 1) {
+        // Body too large — split in half and retry
+        const mid = Math.ceil(matches.length / 2);
+        const a = await this.bulkInsert(matches.slice(0, mid));
+        const b = await this.bulkInsert(matches.slice(mid));
+        return a + b;
+      }
+      if (!res.ok) {
+        this.log.warn({ status: res.status, count: matches.length }, 'bulkInsert failed');
+        return 0;
+      }
+      const result = (await res.json()) as { inserted: number; skipped: number };
+      return result.inserted ?? 0;
+    } catch (err) {
+      this.log.warn({ err: err instanceof Error ? err.message : err }, 'bulkInsert error');
+      return 0;
+    }
+  }
+
+  // ── Main collection method ─────────────────────────────────────
+
+  /**
+   * Collect matches: player-based discovery + range scan chunk.
+   * Called by StatsCollector each hourly/daily cycle.
+   *
+   * Mutex-guarded: concurrent callers get `CrawlerBusyError`.
+   */
+  async collectMatches(): Promise<CollectResult> {
+    return this.withLock(() => this.collectMatchesInternal());
+  }
+
+  /** Unlocked inner — callers must hold `this.busy` themselves. */
+  private async collectMatchesInternal(): Promise<CollectResult> {
+    const state = await this.getState();
+
+    // Phase 1: Initial setup (first run ever)
+    if (!state.initialCollectionDone) {
+      return this.initialCollection();
+    }
+
+    // Phase 2: Ongoing collection
+    // Step 1: Collect from player recent fights
+    const playerFights = await this.collectFromPlayers();
+
+    // Step 2: Range scan chunk (if not finished)
+    let rangeScan = 0;
+    if (state.scanPosition < state.scanCeiling) {
+      rangeScan = await this.rangeScanChunk(state);
+    }
+
+    return {
+      playerFights,
+      rangeScan,
+      newMatches: playerFights + rangeScan,
+    };
+  }
+
+  /**
+   * Run only a range scan chunk — no player discovery.
+   * Used by the dedicated fast crawler loop to avoid redundant player lookups.
+   *
+   * Mutex-guarded: concurrent callers get `CrawlerBusyError`.
+   */
+  async scanRangeChunk(): Promise<{ scanned: number; found: number; done: boolean }> {
+    return this.withLock(async () => {
+      const state = await this.getState();
+      if (!state.initialCollectionDone) {
+        return { scanned: 0, found: 0, done: false };
+      }
+      if (state.scanPosition >= state.scanCeiling) {
+        return { scanned: 0, found: 0, done: true };
+      }
+      const found = await this.rangeScanChunk(state);
+      const newState = await this.getState();
+      return {
+        scanned: newState.scanPosition - state.scanPosition,
+        found,
+        done: newState.scanPosition >= newState.scanCeiling,
+      };
+    });
+  }
+
+  /** Get scan progress for heartbeat/monitoring. */
+  async getProgress(): Promise<{
+    floor: number;
+    ceiling: number;
+    position: number;
+    percentDone: number;
+    initialDone: boolean;
+  }> {
+    const state = await this.getState();
+    const range = state.scanCeiling - state.scanFloor;
+    const progress = state.scanPosition - state.scanFloor;
+    return {
+      floor: state.scanFloor,
+      ceiling: state.scanCeiling,
+      position: state.scanPosition,
+      percentDone: range > 0 ? Math.round((progress / range) * 1000) / 10 : 0,
+      initialDone: state.initialCollectionDone,
+    };
+  }
+
+  // ── Initial collection ─────────────────────────────────────────
+
+  private async initialCollection(): Promise<CollectResult> {
+    this.log.info('Running initial collection');
+
+    // Step 1: Get fight IDs from leaderboard players
+    const fightIds = await this.discoverFightIds();
+    if (fightIds.length === 0) {
+      this.log.warn('No fight IDs found from players. Will retry next cycle.');
+      return { playerFights: 0, rangeScan: 0, newMatches: 0 };
+    }
+
+    const maxId = Math.max(...fightIds);
+    this.log.info({ count: fightIds.length, maxId }, 'Discovered fight IDs from players');
+
+    // Step 2: Binary search for S3 floor
+    const floor = await this.findS3Floor(maxId);
+    this.log.info({ floor }, 'S3 floor found');
+
+    // Step 3: Store state
+    await this.updateState({
+      scanFloor: floor,
+      scanCeiling: maxId,
+      scanPosition: floor,
+      initialCollectionDone: true,
+    });
+
+    // Step 4: Process discovered player fights
+    const newCount = await this.processDiscoveredFights(fightIds);
+    this.log.info({ newCount }, 'Initial collection complete');
+
+    return { playerFights: newCount, rangeScan: 0, newMatches: newCount };
+  }
+
+  // ── Player-based discovery ─────────────────────────────────────
+
+  private async discoverFightIds(): Promise<number[]> {
+    const fightIdSet = new Set<number>();
+
+    try {
+      const leaderboard = await this.statsClient.getLeaderboard(0, 100);
+      const playerIds = leaderboard
+        .filter((e) => e.userId)
+        .slice(0, this.playerCount)
+        .map((e) => e.userId!);
+
+      // Fetch fight IDs in batches of 5 players
+      for (let i = 0; i < playerIds.length; i += 5) {
+        const batch = playerIds.slice(i, i + 5);
+        const results = await Promise.all(
+          batch.map((userId) =>
+            this.statsClient.getRecentFightIds(userId).catch(() => [] as string[]),
+          ),
+        );
+        for (const ids of results) {
+          for (const id of ids) {
+            const num = parseInt(id, 10);
+            if (Number.isFinite(num)) fightIdSet.add(num);
+          }
+        }
+      }
+    } catch (err) {
+      this.log.error({ err }, 'Failed to discover fight IDs');
+    }
+
+    return [...fightIdSet];
+  }
+
+  private async collectFromPlayers(): Promise<number> {
+    const fightIds = await this.discoverFightIds();
+    if (fightIds.length === 0) return 0;
+
+    // Also update the ceiling if we found higher IDs
+    const maxId = Math.max(...fightIds);
+    const state = await this.getState();
+    if (maxId > state.scanCeiling) {
+      await this.updateState({ scanCeiling: maxId });
+    }
+
+    return this.processDiscoveredFights(fightIds);
+  }
+
+  private async processDiscoveredFights(fightIds: number[]): Promise<number> {
+    // Filter out already-processed
+    const existing = await this.checkExisting(fightIds);
+    const newIds = fightIds.filter((id) => !existing.has(id));
+    if (newIds.length === 0) return 0;
+
+    this.log.info({ count: newIds.length }, 'Processing new fights from player discovery');
+
+    // Fetch and process in batches
+    let totalInserted = 0;
+    for (let i = 0; i < newIds.length; i += this.batchSize) {
+      const batch = newIds.slice(i, i + this.batchSize);
+      const results = await Promise.all(
+        batch.map((id) => this.statsClient.getFightData(String(id)).catch(() => null)),
+      );
+
+      const toInsert: MatchInsert[] = [];
+      for (let j = 0; j < results.length; j++) {
+        if (!results[j]) continue;
+        const processed = this.processFight(batch[j], results[j]!);
+        if (processed) toInsert.push(processed);
+      }
+
+      if (toInsert.length > 0) {
+        totalInserted += await this.bulkInsert(toInsert);
+      }
+
+      // Small delay between batches
+      if (i + this.batchSize < newIds.length) {
+        await new Promise((r) => setTimeout(r, this.batchDelayMs));
+      }
+    }
+
+    return totalInserted;
+  }
+
+  // ── Binary search for S3 floor ─────────────────────────────────
+
+  private async findS3Floor(maxId: number): Promise<number> {
+    let low = 1;
+    let high = maxId;
+
+    // Binary search with error tolerance — a failed fetch counts as "no data"
+    // but we track failures to avoid infinite loops on network issues.
+    let consecutiveFailures = 0;
+    const MAX_BINARY_FAILURES = 10;
+
+    while (high - low > 1000) {
+      if (consecutiveFailures >= MAX_BINARY_FAILURES) {
+        this.log.warn({ low, high, failures: MAX_BINARY_FAILURES }, 'Binary search aborted');
+        break;
+      }
+      const mid = Math.floor((low + high) / 2);
+      try {
+        const exists = await this.statsClient.getFightData(String(mid));
+        consecutiveFailures = 0;
+        if (exists) {
+          high = mid; // Data exists here, floor might be lower
+        } else {
+          low = mid; // No data here, floor is higher
+        }
+      } catch {
+        consecutiveFailures++;
+        // Treat fetch failure as "no data" — nudge low up
+        low = mid;
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+    }
+
+    return high;
+  }
+
+  // ── Range scan chunk ───────────────────────────────────────────
+
+  /**
+   * How often to save scan position (in IDs processed).
+   * Keeps crash-recovery loss to ~SAVE_INTERVAL IDs max.
+   */
+  private static readonly SAVE_INTERVAL = 1000;
+  /** If this many errors accumulate in one sub-chunk without success, pause the chunk. */
+  private static readonly ERROR_BUDGET = 50;
+
+  private async rangeScanChunk(state: CrawlerState): Promise<number> {
+    const start = state.scanPosition;
+    const end = Math.min(start + this.chunkSize, state.scanCeiling);
+
+    this.log.info({ start, end, ceiling: state.scanCeiling }, 'Range scan');
+
+    let totalInserted = 0;
+    let totalHits = 0;
+    let totalMisses = 0;
+    let totalErrors = 0;
+
+    // Process in sub-chunks, saving position after each
+    for (let subStart = start; subStart < end; subStart += MatchCrawler.SAVE_INTERVAL) {
+      const subEnd = Math.min(subStart + MatchCrawler.SAVE_INTERVAL, end);
+      const result = await this.scanSubChunk(subStart, subEnd);
+
+      totalInserted += result.inserted;
+      totalHits += result.hits;
+      totalMisses += result.misses;
+      totalErrors += result.errors;
+
+      // Save progress after each sub-chunk — crash-safe
+      await this.updateState({ scanPosition: subEnd });
+
+      // If too many errors in this sub-chunk, stop and let the next cycle retry
+      if (result.errors > MatchCrawler.ERROR_BUDGET) {
+        this.log.warn(
+          { subStart, subEnd, errors: result.errors },
+          'Error budget exceeded — pausing scan',
+        );
+        break;
+      }
+    }
+
+    this.log.info(
+      {
+        start,
+        end: state.scanPosition ?? end,
+        hits: totalHits,
+        inserted: totalInserted,
+        misses: totalMisses,
+        errors: totalErrors,
+      },
+      'Chunk complete',
+    );
+
+    return totalInserted;
+  }
+
+  /**
+   * Scan a small range [start, end) of fight IDs, fetching from S3 in concurrent batches.
+   * Returns metrics for the sub-chunk.
+   */
+  private async scanSubChunk(
+    start: number,
+    end: number,
+  ): Promise<{ inserted: number; hits: number; misses: number; errors: number }> {
+    let inserted = 0;
+    let hits = 0;
+    let misses = 0;
+    let errors = 0;
+    const toInsert: MatchInsert[] = [];
+
+    for (let i = start; i < end; i += this.batchSize) {
+      const batch = Array.from(
+        { length: Math.min(this.batchSize, end - i) },
+        (_, j) => i + j,
+      );
+
+      const results = await Promise.all(
+        batch.map((id) =>
+          this.statsClient.getFightData(String(id)).catch(() => {
+            errors++;
+            return null;
+          }),
+        ),
+      );
+
+      for (let j = 0; j < results.length; j++) {
+        if (!results[j]) {
+          misses++;
+          continue;
+        }
+        hits++;
+        const processed = this.processFight(batch[j], results[j]!);
+        if (processed) toInsert.push(processed);
+      }
+
+      // Flush periodically — keep batches small to avoid 413 body-too-large
+      if (toInsert.length >= 10) {
+        inserted += await this.bulkInsert(toInsert);
+        toInsert.length = 0;
+      }
+
+      // Small delay between batches to stay under rate limits
+      if (this.batchDelayMs > 0) {
+        await new Promise((r) => setTimeout(r, this.batchDelayMs));
+      }
+    }
+
+    // Flush remainder
+    if (toInsert.length > 0) {
+      inserted += await this.bulkInsert(toInsert);
+    }
+
+    return { inserted, hits, misses, errors };
+  }
+
+  // ── Fight processing ───────────────────────────────────────────
+
+  private processFight(fightId: number, fight: FightData): MatchInsert | null {
+    if (!fight.players || fight.players.length === 0) return null;
+
+    // Only process ranked matches (players with rating changes)
+    const isRanked = fight.players.some(
+      (p) =>
+        p.oldRating !== undefined &&
+        p.newRating !== undefined &&
+        p.oldRating !== p.newRating,
+    );
+
+    // Skip unranked matches entirely — no value in storing them
+    if (!isRanked) return null;
+
+    const mapName = fight.mapId ? MAP_ID_TO_NAME[fight.mapId] ?? fight.mapName ?? null : fight.mapName ?? null;
+
+    // Group players by team
+    const teamPlayers = new Map<number, FightPlayerData[]>();
+    for (const player of fight.players) {
+      const teamId = player.teamId ?? 0;
+      const existing = teamPlayers.get(teamId);
+      if (existing) existing.push(player);
+      else teamPlayers.set(teamId, [player]);
+    }
+
+    // Determine winning team from ELO changes (most reliable).
+    // Player who gained ELO → winning team. Player who lost ELO → losing team.
+    let winningTeamId: number | null = null;
+
+    for (const [teamId, players] of teamPlayers) {
+      for (const p of players) {
+        if (p.oldRating === undefined || p.newRating === undefined) continue;
+        if (p.newRating > p.oldRating) {
+          // This player gained ELO — their team won
+          winningTeamId = teamId;
+        } else if (p.newRating < p.oldRating) {
+          // This player lost ELO — the OTHER team won
+          // Find the other team ID
+          for (const otherTeamId of teamPlayers.keys()) {
+            if (otherTeamId !== teamId) {
+              winningTeamId = otherTeamId;
+              break;
+            }
+          }
+        }
+        if (winningTeamId !== null) break;
+      }
+      if (winningTeamId !== null) break;
+    }
+
+    // Fall back to winnerTeam field from S3 if ELO didn't resolve it
+    if (winningTeamId === null && fight.winnerTeam !== undefined) {
+      winningTeamId = fight.winnerTeam;
+    }
+
+    // Build team results
+    const teams: MatchInsert['teams'] = [];
+    for (const [teamId, players] of teamPlayers) {
+      const factionName = this.inferFaction(players);
+      const isWinner = winningTeamId !== null ? teamId === winningTeamId : false;
+      const ratings = players
+        .map((p) => p.oldRating)
+        .filter((r): r is number => r !== undefined);
+      const avgRating = ratings.length > 0 ? ratings.reduce((a, b) => a + b, 0) / ratings.length : undefined;
+      teams.push({ teamId, factionName, isWinner, avgRating });
+    }
+
+    // Build player picks
+    const playerPicks: MatchInsert['playerPicks'] = [];
+    for (const player of fight.players) {
+      const factionName = this.inferFaction([player]);
+      const topSpecs = this.inferPlayerSpecs(player);
+      playerPicks.push({
+        steamId: player.steamId,
+        odId: player.id || undefined,
+        teamId: player.teamId,
+        spec1Id: topSpecs[0]?.id,
+        spec1Name: topSpecs[0]?.name,
+        spec2Id: topSpecs[1]?.id,
+        spec2Name: topSpecs[1]?.name,
+        factionName,
+        oldRating: player.oldRating,
+        newRating: player.newRating,
+        destruction: player.destruction,
+        losses: player.losses,
+        damageDealt: player.damageDealt,
+        damageReceived: player.damageReceived,
+        objectivesCaptured: player.objectivesCaptured,
+      });
+    }
+
+    // Build unit deployments — one row per unit per player
+    const unitDeployments: MatchInsert['unitDeployments'] = [];
+    for (const player of fight.players) {
+      const eloBracket = getEloBracket(player.oldRating);
+      for (const unit of player.units) {
+        const unitData = this.indexes.unitsById.get(unit.id);
+        const unitName = unitData?.HUDName ?? unitData?.Name ?? `Unit_${unit.id}`;
+        const countryId = unitData?.CountryId;
+        const country = countryId ? this.indexes.countriesById?.get(countryId) : undefined;
+        const factionName = country?.Name ?? 'Unknown';
+
+        const sortedOpts = [...unit.optionIds].sort((a, b) => a - b);
+        const optionIdsStr = sortedOpts.join(',');
+        const configKey = `${unit.id}:${optionIdsStr}`;
+
+        unitDeployments.push({
+          steamId: player.steamId,
+          odId: player.id || undefined,
+          unitId: unit.id,
+          unitName,
+          factionName,
+          optionIds: optionIdsStr,
+          configKey,
+          playerRating: player.oldRating,
+          eloBracket,
+          killedCount: unit.killedCount ?? 0,
+          totalDamageDealt: unit.totalDamageDealt ?? 0,
+          totalDamageReceived: unit.totalDamageReceived ?? 0,
+          supplyPointsConsumed: unit.supplyPointsConsumed ?? 0,
+          wasRefunded: unit.wasRefunded ?? false,
+        });
+      }
+    }
+
+    return {
+      fightId,
+      mapId: fight.mapId,
+      mapName: mapName ?? undefined,
+      isRanked,
+      winnerTeam: fight.winnerTeam,
+      playerCount: fight.players.length,
+      totalPlayTimeSec: fight.totalPlayTimeSec,
+      endTime: fight.endTime,
+      teams,
+      playerPicks,
+      unitDeployments,
+    };
+  }
+
+  /** Determine majority faction from a list of players (team or individual). */
+  private inferFaction(players: FightPlayerData[]): string {
+    const countryCounts = new Map<number, number>();
+    for (const player of players) {
+      for (const unit of player.units) {
+        const ud = this.indexes.unitsById.get(unit.id);
+        if (ud?.CountryId) {
+          countryCounts.set(ud.CountryId, (countryCounts.get(ud.CountryId) ?? 0) + 1);
+        }
+      }
+    }
+    if (countryCounts.size === 0) return 'Unknown';
+    const topCountryId = [...countryCounts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+    return this.indexes.countriesById?.get(topCountryId)?.Name ?? 'Unknown';
+  }
+
+  /** Infer top 2 specs for a player from their deployed units. */
+  private inferPlayerSpecs(player: FightPlayerData): Array<{ id: number; name: string }> {
+    const specMap = this.getUnitIdToSpecIds();
+    const specScores = new Map<number, number>();
+    for (const unit of player.units) {
+      const specs = specMap.get(unit.id);
+      if (specs) {
+        for (const specId of specs) {
+          specScores.set(specId, (specScores.get(specId) ?? 0) + 1);
+        }
+      }
+    }
+    return [...specScores.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 2)
+      .map(([id]) => {
+        const spec = this.indexes.specializationsById.get(id);
+        return { id, name: spec?.Name || spec?.UIName || `Spec_${id}` };
+      });
+  }
+
+  // ── Aggregation ────────────────────────────────────────────────
+
+  async computeAggregates(snapshotType: 'hourly' | 'daily'): Promise<CrawlerAggregates | null> {
+    const now = Date.now();
+    const window = snapshotType === 'hourly' ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+    const since = new Date(now - window).toISOString();
+    const until = new Date(now).toISOString();
+
+    try {
+      const res = await fetch(
+        `${this.dbUrl}/api/crawler/matches/aggregates?since=${encodeURIComponent(since)}&until=${encodeURIComponent(until)}`,
+      );
+      if (!res.ok) return null;
+
+      const data = (await res.json()) as {
+        factionWinRates: Array<{ factionName: string; matchCount: number; winCount: number }>;
+        specPopularity: Array<{ specName: string; specId?: number; pickCount: number }>;
+        mapPopularity: Array<{ mapName: string; playCount: number }>;
+        unitPerformance: CrawlerAggregates['unitPerformance'];
+      };
+
+      return {
+        crawlerFactionStats: data.factionWinRates,
+        specStats: data.specPopularity,
+        mapPopularity: data.mapPopularity,
+        unitPerformance: data.unitPerformance,
+      };
+    } catch (err) {
+      this.log.error({ err, snapshotType }, 'Failed to compute aggregates');
+      return null;
+    }
+  }
+}

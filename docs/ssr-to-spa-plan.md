@@ -1,10 +1,10 @@
 # SSR → SPA Conversion Plan
 
-**Status:** Superseded by encrypted-SSR re-conversion (see §15 below)
+**Status:** Planning
 **Scope:** `frontend/` (Qwik City SPA on port 3000)
 **Branch:** `main` (`dev` is in limbo, do not use)
 **Owner:** TBD
-**Last updated:** 2026-04-08
+**Last updated:** 2026-04-07
 
 ---
 
@@ -491,98 +491,3 @@ Before signing off on this plan, answer:
 3. Is the order of operations in §7 acceptable?
 4. Is anyone else touching the same files on `main` right now? (Check `git log --oneline -20` and outstanding PRs.)
 5. Are you OK with a temporary perf regression on the arsenal index page, or should that one be excluded?
-
----
-
-## 15. Post-mortem: the SPA conversion was wrong, reverted to encrypted SSR
-
-**Date:** 2026-04-08
-
-### What happened
-
-The SPA conversion shipped and worked as designed, but it came at a real perf cost — every page now has a skeleton-flash + GraphQL-RTT wait where there used to be instant content. That trade bought one thing: scraping friction against `curl | pup`. It bought nothing against a headless-browser scraper.
-
-Meanwhile an adjacent piece of work had been quietly happening in parallel:
-
-1. `shared/src/crypto.ts` implemented `encryptPayload` / `decryptPayload` / `isEncryptionConfigured` using AES-256-CBC over crypto-js (mirroring the legacy REST project's pattern)
-2. `backend/src/index.ts` wired in opportunistic pre/onSend hooks that decrypt `{e: ciphertext}` request bodies and encrypt responses when the request was tagged
-3. `frontend/src/lib/graphqlClient.ts` shipped a `graphqlFetch` / `graphqlFetchRaw` helper that transparently handles the envelope
-4. `docker-compose` and the deploy workflow already piped `ENCRYPTION_KEY` / `VITE_ENCRYPTION_KEY` through as env vars
-5. A later commit (`83aeaf5`) migrated all 46 inline GraphQL call sites in the frontend to go through `graphqlFetch`, so enabling wire encryption became a single env-var flip
-
-None of that helped the SPA perf regression. Wire encryption on the localhost hop between frontend SSR and backend is pointless for anti-scrape because the HTML response still exposed data the moment you reverted the SPA change. And the SPA change was what gave up the perf in the first place.
-
-### The fix — encrypted SSR envelope
-
-Option B from the thread: put the `routeLoader$` back, but instead of returning plain `StatsPageData`, return a discriminated union envelope:
-
-```typescript
-type Envelope =
-  | { cipher: string; plain?: undefined }    // prod: encrypted blob
-  | { cipher?: undefined; plain: PageData }; // dev without keys: plain
-
-export const usePageData = routeLoader$<Envelope>(async () => {
-  const data = await fetchFromGraphQL();
-  if (isEncryptionConfigured()) return { cipher: encryptPayload(data) };
-  return { plain: data };
-});
-
-export default component$(() => {
-  const envelope = usePageData();
-  const data = useSignal<PageData | null>(null);
-
-  useVisibleTask$(
-    ({ track }) => {
-      const v = track(() => envelope.value);
-      data.value = v.cipher !== undefined
-        ? decryptPayload<PageData>(v.cipher)
-        : v.plain;
-    },
-    { strategy: 'document-ready' },
-  );
-
-  if (!data.value) return <PageSkeleton />;
-  return <PageContent data={data.value} />;
-});
-```
-
-Qwik serializes the envelope (not the decrypted data) into the q:state blob in the HTML. Scrapers running `curl /stats/player/{id}` see the skeleton markup and a ciphertext string — no player name, ELO, K/D, match list, or unit stats. On hydration, the `useVisibleTask$` with `{ strategy: 'document-ready' }` fires immediately after Qwik resumes, decrypts once, and renders the real content without any network round-trip.
-
-### Trade-off recap
-
-| | Original SSR (unencrypted) | SPA (useVisibleTask$ + client fetch) | Encrypted SSR (this fix) |
-|---|---|---|---|
-| First paint | Instant | Skeleton flash | Instant skeleton, content <100ms later |
-| Scrape `curl`? | ✗ Full data | ✓ Empty shell | ✓ Cipher blob only |
-| Scrape headless browser? | ✗ Full data | ✗ Full data | ✗ Full data (key in bundle) |
-| Extra network RTT after paint | 0 | 1 | 0 |
-| Server CPU cost | baseline | baseline | +~0.1ms AES per request |
-
-Encrypted SSR defeats the same attackers the SPA pattern defeated (laziest `curl | grep` bots) while restoring the paint timing. Anyone with a real browser + devtools can still extract `VITE_ENCRYPTION_KEY` from the client bundle and decrypt — which is fine, because that's the same threat model the legacy REST project accepted.
-
-### What was converted back
-
-| Route | Commit |
-|---|---|
-| `stats/player/[steamId]/index.tsx` | `6c2fdb5` Re-SSR player detail page with encrypted envelope |
-| `stats/match/[fightId]/index.tsx` | `723fe17` Re-SSR match detail page with encrypted envelope |
-| `stats/index.tsx` (stats overview) | `ef96004` Re-SSR stats overview page with encrypted envelope |
-| `arsenal/index.tsx` | `573261e` Re-SSR arsenal listing page with encrypted envelope |
-
-Verified against the running local dev server with `ENCRYPT_API=true` and matching `ENCRYPTION_KEY`/`VITE_ENCRYPTION_KEY`:
-- All 4 `curl` responses contain a `{"cipher":"..."}` blob in q:state and no leaked data
-- All 4 pages render full content after hydration in a real browser
-- Dev-loop still works with `ENCRYPTION_KEY` unset — falls back to `{plain: data}`
-- Crawler metadata path in `entry.fastify.tsx` is unaffected (bots still get their own hand-rolled meta HTML before the Qwik render runs)
-
-### What's still SPA (and why that's fine)
-
-- `arsenal/[unitid]/index.tsx` and `arsenal/compare/index.tsx` remain client-fetched via `graphqlFetch`. They have genuinely interactive re-fetches (swapping modifications, picking different comparison units) that don't fit the `routeLoader$` model. Their wire traffic is encrypted via the opportunistic backend hook.
-- Every other route in §3's inventory that was already client-side stays client-side.
-
-### Things I'd do differently
-
-- **Don't trade perf for a half-wall.** The first plan weighed scraping friction against perf and picked friction. That was wrong given we also had a near-finished encryption layer sitting in shared/ that would have given us both. I should have noticed the unused crypto infra before committing to the SPA conversion.
-- **Verify the scrape attack you're defending against is real.** If the only attacker is `curl | pup`, you might not need any of this — rate limits on the edge would be cheaper. If the attacker is a well-resourced team running real browsers, nothing short of auth helps.
-- **Respect `document-ready` as a strategy option.** The default `intersection-observer` for `useVisibleTask$` delays execution until the element is on-screen, which is fine for below-the-fold widgets but wrong for above-the-fold data decryption. Use `{ strategy: 'document-ready' }` when you want the task to run immediately after Qwik resumes.
-- **Use a discriminated envelope, not a single field that might be null.** `{cipher: string} | {plain: T}` with exclusive `undefined` on the missing side type-checks cleanly and avoids the "is this encrypted or not?" runtime guesswork.

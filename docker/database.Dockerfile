@@ -4,7 +4,7 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Copy root workspace manifests first (cache-friendly layer)
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json tsconfig.base.json ./
 COPY shared/package.json ./shared/
 COPY database/package.json ./database/
 
@@ -35,8 +35,9 @@ RUN npm ci --workspace=shared --workspace=database --omit=dev
 COPY --from=builder /app/shared/dist ./shared/dist
 COPY --from=builder /app/database/dist ./database/dist
 
-# Copy drizzle migrations
+# Copy drizzle migrations + config
 COPY --from=builder /app/database/drizzle ./database/drizzle
+COPY --from=builder /app/database/drizzle.config.json ./database/drizzle.config.json
 
 EXPOSE 3002
 

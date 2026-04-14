@@ -10,6 +10,10 @@ export default defineConfig({
       '~': resolve(__dirname, 'src'),
     },
   },
+  build: {
+    // SSR build outputs to dist/server/ (not server/ which has source files)
+    outDir: resolve(__dirname, 'dist'),
+  },
   server: {
     port: 3000,
     strictPort: true,

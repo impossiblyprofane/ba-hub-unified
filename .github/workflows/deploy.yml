@@ -1,0 +1,88 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main, dev]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set environment
+        id: env
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "ENV=prod" >> $GITHUB_OUTPUT
+            echo "COMPOSE_FILE=docker-compose.prod.yml" >> $GITHUB_OUTPUT
+          else
+            echo "ENV=dev" >> $GITHUB_OUTPUT
+            echo "COMPOSE_FILE=docker-compose.dev.yml" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate .env
+        run: |
+          cat > docker/.env <<ENVEOF
+          PG_USER=${{ secrets.PG_USER }}
+          PG_PASSWORD=${{ secrets.PG_PASSWORD }}
+          PG_DB=${{ secrets.PG_DB }}
+          VITE_API_URL=${{ github.ref == 'refs/heads/main' && secrets.PROD_API_URL || secrets.DEV_API_URL }}
+          VITE_WS_URL=${{ github.ref == 'refs/heads/main' && secrets.PROD_WS_URL || secrets.DEV_WS_URL }}
+          SITE_URL=${{ github.ref == 'refs/heads/main' && secrets.PROD_SITE_URL || secrets.DEV_SITE_URL }}
+          FRONTEND_URL=${{ github.ref == 'refs/heads/main' && secrets.PROD_FRONTEND_URL || secrets.DEV_FRONTEND_URL }}
+          STATS_PARTNER_TOKEN=${{ secrets.STATS_PARTNER_TOKEN }}
+          ENCRYPT_API=true
+          ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}
+          ENCRYPTION_IV=${{ secrets.ENCRYPTION_IV }}
+          ADMIN_TOKEN=${{ secrets.ADMIN_TOKEN }}
+          DB_ADMIN_SECRET=${{ secrets.DB_ADMIN_SECRET }}
+          CRAWLER_PLAYER_COUNT=${{ vars.CRAWLER_PLAYER_COUNT }}
+          CRAWLER_CHUNK_SIZE=${{ vars.CRAWLER_CHUNK_SIZE }}
+          CRAWLER_BATCH_SIZE=${{ vars.CRAWLER_BATCH_SIZE }}
+          CRAWLER_BATCH_DELAY_MS=${{ vars.CRAWLER_BATCH_DELAY_MS }}
+          CRAWLER_INTERVAL_MS=${{ vars.CRAWLER_INTERVAL_MS }}
+          SLOW_REQUEST_THRESHOLD_MS=${{ vars.SLOW_REQUEST_THRESHOLD_MS }}
+          ENVEOF
+          sed -i 's/^[[:space:]]*//' docker/.env
+
+      - name: Transfer to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          source: ./*
+          target: /root/ba-hub/${{ steps.env.outputs.ENV }}/
+          strip_components: 0
+
+      - name: Build and deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          command_timeout: 30m
+          script: |
+            set -e
+            ENV=${{ steps.env.outputs.ENV }}
+            COMPOSE="docker compose -p bahub-$ENV -f ${{ steps.env.outputs.COMPOSE_FILE }} --env-file .env"
+            cd /root/ba-hub/$ENV/docker
+
+            echo "=== Building and starting ($ENV) ==="
+            $COMPOSE up -d --build
+
+            echo "=== Waiting for services ==="
+            sleep 10
+
+            echo "=== Running migrations (prod postgres) ==="
+            for f in /root/ba-hub/prod/database/drizzle/0*.sql; do
+              echo "  $(basename $f)..."
+              docker exec -i bahub-prod-postgres psql -U ${{ secrets.PG_USER }} -d ${{ secrets.PG_DB }} -f - < "$f" 2>&1 | tail -1 || true
+            done
+
+            docker image prune -f
+            echo "=== Deploy complete ($ENV) ==="

@@ -29,6 +29,8 @@ const en: TranslationDict = {
   'home.title': 'Broken Arrow',
   'home.titleAccent': 'BA-HUB',
   'home.subtitle': 'Browse units, build decks, analyze maps, and track competitive performance.',
+  'home.stamp.line1': 'Zhukov',
+  'home.stamp.line2': 'Approved',
   'home.status.active': 'SYS:ACTIVE',
   'home.status.nodes': 'NET:3',
 
@@ -45,14 +47,14 @@ const en: TranslationDict = {
   'home.feature.maps.tag': '15+ Battlefields',
   'home.feature.maps.desc': 'Interactive map viewer with zone layouts, capture points, and deployment areas.',
   'home.feature.maps.cta': 'View Maps',
-  'home.feature.playerStats': 'Player Stats',
+  'home.feature.playerStats': 'Statistics',
   'home.feature.playerStats.tag': 'Live Data',
-  'home.feature.playerStats.desc': 'Track competitive performance with live win rates, KDR, and match history.',
+  'home.feature.playerStats.desc': 'Leaderboards, match analysis, player profiles, unit performance, and global game trends.',
   'home.feature.playerStats.cta': 'View Stats',
-  'home.feature.mapStats': 'Map Stats',
-  'home.feature.mapStats.tag': 'Win Rates',
-  'home.feature.mapStats.desc': 'Faction win rates and balance analysis across all ranked maps.',
-  'home.feature.mapStats.cta': 'Analyze',
+  'home.feature.discord': 'Discord',
+  'home.feature.discord.tag': 'Community',
+  'home.feature.discord.desc': 'Join the BA Hub community for strategy discussions, bug reports, and guide contributions.',
+  'home.feature.discord.cta': 'Join Server',
   'home.feature.guides': 'Guides',
   'home.feature.guides.tag': '50+ Articles',
   'home.feature.guides.desc': 'Tactics, unit guides, and strategies contributed by the community.',
@@ -608,20 +610,24 @@ const en: TranslationDict = {
   // Stats: overview charts
   'stats.overview.mapPlayFrequency': 'Map Play Frequency',
   'stats.overview.specUsage': 'Specialization Usage',
-  'stats.overview.factionWinRates': 'Faction Win Rates',
+  'stats.overview.factionWinRates': 'Map Side Win Rate',
   'stats.overview.factionMatchups': 'Faction Matchups',
   'stats.overview.matchesPlayed': 'Matches Played',
   'stats.overview.winsLabel': 'Wins',
   'stats.overview.plays': 'plays',
 
   // Stats: map analytics
-  'stats.mapAnalytics.factionBreakdown': 'Faction Win Breakdown',
+  'stats.mapAnalytics.factionBreakdown': 'Map Side Win Rate',
   'stats.mapAnalytics.noData': 'No map analytics data available.',
 
   // Stats: country/faction stats
   'stats.country.title': 'Faction Statistics',
   'stats.country.matchDistribution': 'Match Distribution by Faction',
   'stats.country.winDistribution': 'Win Distribution',
+
+  // Stats: Steam profile enrichment
+  'stats.steam.profileTooltip': 'View Steam profile',
+  'stats.steam.unknownPlayer': 'Unknown player',
 
   // Stats: player profile
   'stats.profile.title': 'Player Profile',
@@ -701,6 +707,7 @@ const en: TranslationDict = {
   'stats.match.sortSpawn': 'Spawn',
   'stats.match.sortKills': 'Kills',
   'stats.match.sortDamage': 'Damage',
+  'stats.match.openingLineup': 'Opening Lineup',
 
   // Stats: player profile — expanded
   'stats.profile.winRateByMap': 'Win Rate by Map',
@@ -724,6 +731,11 @@ const en: TranslationDict = {
   'stats.profile.mostUsedUnits': 'Most Used Units',
   'stats.profile.topKillers': 'Top Killers',
   'stats.profile.topDamage': 'Top Damage',
+  'stats.profile.topDamageReceived': 'Most Targeted',
+  'stats.profile.factionAll': 'All',
+  'stats.profile.factionUS': 'US',
+  'stats.profile.factionRU': 'RU',
+  'stats.profile.dataCaveat': 'Recent performance data is derived from the last 30 days of game data and may not be fully accurate.',
   'stats.profile.unitDeployed': 'Deployed',
   'stats.profile.unitAvgKills': 'Avg Kills',
   'stats.profile.unitAvgDmg': 'Avg Dmg',
@@ -746,6 +758,19 @@ const en: TranslationDict = {
   'stats.profile.lifetime': 'Lifetime',
   'stats.profile.recent': 'Recent',
 
+  'stats.profile.supplyNet': 'Supply Net',
+  'stats.profile.deck': 'Deck',
+  'stats.profile.rating': 'Rating',
+
+  // Stats: unit tables
+  'stats.unitTable.unit': 'Unit',
+  'stats.unitTable.options': 'Options',
+  'stats.unitTable.faction': 'Faction',
+  'stats.unitTable.elo': 'ELO',
+  'stats.unitTable.refundPct': 'Refund %',
+  'stats.unitTable.allElo': 'All ELO',
+  'stats.unitTable.configs': 'configs',
+
   // Stats: game history (future — periodic snapshots)
   'stats.history.title': 'Game History',
   'stats.history.subtitle': 'Track trends in faction balance, map popularity, and player rankings over time.',
@@ -763,11 +788,37 @@ const en: TranslationDict = {
   'stats.topUnits.avgKills': 'Avg Kills',
   'stats.topUnits.avgDamage': 'Avg Damage',
 
+  // -- Crawler-derived stats --
+  'stats.crawlerFactionWinRates.title': 'Faction Win Rates (Ranked)',
+  'stats.crawlerFactionWinRates.subtitle': 'Win rate trends from recent ranked matches.',
+  'stats.crawlerFactionWinRates.comingSoon': 'Match data is being collected. Win rate trends will appear here as data accumulates.',
+  'stats.specPopularity.title': 'Specialization Popularity (Ranked)',
+  'stats.specPopularity.subtitle': 'Pick frequency trends from recent ranked matches.',
+  'stats.specPopularity.comingSoon': 'Match data is being collected. Specialization trends will appear here as data accumulates.',
+  'stats.unitPopularity.title': 'Unit Popularity',
+  'stats.unitPopularity.subtitle': 'Most deployed units from recent ranked matches.',
+  'stats.unitPopularity.comingSoon': 'Match data is being collected. Unit popularity will appear here as data accumulates.',
+  'stats.unitPopularity.allFactions': 'All Factions',
+  'stats.unitPopularity.deployed': 'Deployed',
+  'stats.crawler.disclaimer': 'Based on recent game data within the last 30 days. Results are approximate and may not reflect all matches.',
+
   // ── Guides page ──
   'guides.tag': 'Strategic Knowledge',
   'guides.title': 'Guides',
   'guides.subtitle': 'Community guides covering basics to advanced competitive strategies.',
   'guides.comingSoon': 'Guides section is under construction. Check back soon for beginner tutorials, advanced strategies, and competitive tips.',
+  'guides.videoGuides': 'Community Video Guides',
+  'guides.writtenGuides': 'Written Guides',
+  'guides.viewMore': 'View More',
+  'guides.backToGuides': 'Back to Guides',
+  'guides.loadError': 'Failed to load guide content.',
+  'guides.communityTitle': 'Community Operations',
+  'guides.contributorsNeeded': 'Contributors Needed',
+  'guides.availableOf': 'of',
+  'guides.guidesCreated': 'guides created. Help us build the ultimate tactical guide library.',
+  'guides.joinDiscord': 'Join Discord',
+  'guides.submitGuide': 'Submit Guide',
+  'guides.communityDesc': 'Help build the ultimate Broken Arrow guide library. Submit written guides, recommend video creators, or contribute tactical knowledge.',
 
   // ── Compare mode ──
   'compare.tag': 'Side by Side',
@@ -1019,6 +1070,19 @@ const en: TranslationDict = {
   'common.returnToArsenal': 'Return to Arsenal',
   'common.comingSoon': 'Coming Soon',
   'common.underConstruction': 'Under Construction',
+
+  // ── Errors (client-side data fetch failures) ──
+  'errors.retry': 'Retry',
+  'errors.genericTitle': 'Load failed',
+  'errors.genericMessage': 'Could not load data from the server.',
+  'errors.playerLoadFailed': 'Could not load player',
+  'errors.playerLoadMessage': 'Failed to fetch player profile data. Check your connection and try again.',
+  'errors.matchLoadFailed': 'Could not load match',
+  'errors.matchLoadMessage': 'Failed to fetch match data. Check your connection and try again.',
+  'errors.statsLoadFailed': 'Could not load statistics',
+  'errors.statsLoadMessage': 'Failed to fetch statistics data. Check your connection and try again.',
+  'errors.arsenalLoadFailed': 'Could not load arsenal',
+  'errors.arsenalLoadMessage': 'Failed to fetch unit catalogue. Check your connection and try again.',
 };
 
 export default en;

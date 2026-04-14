@@ -1,11 +1,6 @@
-import { component$, useSignal, useStore, useVisibleTask$, Slot, type Signal } from '@builder.io/qwik';
-import { routeLoader$, useLocation } from '@builder.io/qwik-city';
+import { $, component$, useSignal, useStore, useVisibleTask$, Slot, type Signal } from '@builder.io/qwik';
+import { useLocation } from '@builder.io/qwik-city';
 import type { DocumentHead } from '@builder.io/qwik-city';
-import {
-  encryptPayload,
-  decryptPayload,
-  isEncryptionConfigured,
-} from '@ba-hub/shared';
 import { useI18n, t, GAME_LOCALES, getGameLocaleValueOrKey } from '~/lib/i18n';
 import type {
   AnalyticsUserProfile,
@@ -29,6 +24,7 @@ import type { SteamProfile } from '~/lib/graphql-types';
 import { toCountryIconPath, toSpecializationIconPath } from '~/lib/iconPaths';
 import type { ChartConfiguration } from 'chart.js';
 import { PlayerDetailSkeleton } from '~/components/skeletons/PlayerDetailSkeleton';
+import { GenericErrorView } from '~/components/errors/GenericErrorView';
 
 /** Canonical "is this fight ranked?" check.
  *  A fight is ranked iff the backend marked it ranked AND we have a usable rating delta.
@@ -96,36 +92,6 @@ async function fetchPlayerProfile(
     specCombos: fightsResult.specCombos ?? [],
   };
 }
-
-/* ─── SSR loader (encrypted envelope) ─────────────────────── */
-
-/** Envelope returned by the loader.
- *  When encryption is configured, only `cipher` is present — plain data is
- *  never serialized into the HTML, so scrapers see only a ciphertext blob.
- *  When not configured (dev without env vars), plain data is returned. */
-type PlayerProfileEnvelope =
-  | { cipher: string; plain?: undefined }
-  | { cipher?: undefined; plain: PlayerProfileData };
-
-/** Runs on the Qwik City server. Fetches via `graphqlFetchRaw` (which
- *  transparently handles wire encryption on the localhost hop to the backend)
- *  and wraps the result for transport to the client as encrypted ciphertext
- *  when keys are configured. */
-export const usePlayerProfile = routeLoader$<PlayerProfileEnvelope>(
-  async (requestEvent) => {
-    const steamId = requestEvent.params.steamId;
-    // Reuse the same fetcher the client-side version used. Server-side, the
-    // AbortController is a no-op (requestEvent doesn't expose one cleanly)
-    // — the fetch will complete or the loader will fail out.
-    const ctrl = new AbortController();
-    const data = await fetchPlayerProfile(steamId, ctrl.signal);
-
-    if (isEncryptionConfigured()) {
-      return { cipher: encryptPayload(data) };
-    }
-    return { plain: data };
-  },
-);
 
 /* ─── Chart builders ──────────────────────────────────────── */
 
@@ -1562,27 +1528,45 @@ const PlayerContent = component$<{ data: PlayerProfileData }>(({ data }) => {
 */
 
 export default component$(() => {
-  const envelope = usePlayerProfile();
+  const loc = useLocation();
   const data = useSignal<PlayerProfileData | null>(null);
+  const error = useSignal<unknown>(null);
+  const refreshCounter = useSignal(0);
 
-  // Decrypt on hydration. Runs only in the browser, so the decrypted plain
-  // object is never serialized into the HTML — scrapers see only the cipher.
-  // 'document-ready' strategy fires immediately after hydration without
-  // waiting for intersection-observer, so the content swap happens as fast
-  // as the Qwik resume completes (typically <100ms after HTML arrives).
   // eslint-disable-next-line qwik/no-use-visible-task
-  useVisibleTask$(
-    ({ track }) => {
-      const v = track(() => envelope.value);
-      if (v.cipher !== undefined) {
-        data.value = decryptPayload<PlayerProfileData>(v.cipher);
-      } else {
-        data.value = v.plain;
-      }
-    },
-    { strategy: 'document-ready' },
-  );
+  useVisibleTask$(({ track, cleanup }) => {
+    const steamId = track(() => loc.params.steamId);
+    track(() => refreshCounter.value);
+    const abort = new AbortController();
+    cleanup(() => abort.abort());
+    data.value = null;
+    error.value = null;
+    fetchPlayerProfile(steamId, abort.signal)
+      .then((result) => {
+        data.value = result;
+      })
+      .catch((err) => {
+        if (err instanceof Error && err.name === 'AbortError') return;
+        error.value = err;
+      });
+  });
 
+  const retry$ = $(() => {
+    refreshCounter.value++;
+  });
+
+  if (error.value) {
+    return (
+      <GenericErrorView
+        titleKey="errors.playerLoadFailed"
+        messageKey="errors.playerLoadMessage"
+        error={error.value}
+        retry$={retry$}
+        backHref="/stats"
+        backLabelKey="stats.player.backToStats"
+      />
+    );
+  }
   if (!data.value) {
     return <PlayerDetailSkeleton />;
   }

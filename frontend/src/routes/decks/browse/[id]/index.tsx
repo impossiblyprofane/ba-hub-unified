@@ -29,6 +29,7 @@ import {
   DELETE_PUBLISHED_DECK_MUTATION,
 } from '~/lib/queries/decks';
 import { BUILDER_DATA_QUERY, OPTIONS_BY_IDS_QUERY } from '~/lib/queries/builder';
+import { graphqlFetch, graphqlFetchRaw } from '~/lib/graphqlClient';
 import { GameIcon } from '~/components/GameIcon';
 import { SimpleTooltip } from '~/components/ui/SimpleTooltip';
 import { toCountryIconPath, toSpecializationIconPath } from '~/lib/iconPaths';
@@ -68,8 +69,6 @@ interface DetailState {
   challengeQuestion: string;
   challengeAnswer: string;
 }
-
-const API_URL_DEFAULT = 'http://localhost:3001/graphql';
 
 export default component$(() => {
   const i18n = useI18n();
@@ -115,65 +114,49 @@ export default component$(() => {
   // ── Load deck → builder data → hydrate ──
   // eslint-disable-next-line qwik/no-use-visible-task
   useVisibleTask$(async () => {
-    const apiUrl = import.meta.env.VITE_API_URL || API_URL_DEFAULT;
-
     try {
       // 1. Fetch published deck (pass viewerId so server computes isOwner)
       const viewerId = getUserId();
-      const deckResp = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          query: PUBLISHED_DECK_QUERY,
-          variables: { id: deckId, viewerId: viewerId ?? undefined },
-        }),
-      });
-      if (!deckResp.ok) throw new Error('Deck fetch failed');
-      const deckPayload = await deckResp.json() as {
-        data?: { publishedDeck: PublishedDeck | null };
-      };
-      if (!deckPayload.data?.publishedDeck) {
+      const deckResult = await graphqlFetchRaw<{ publishedDeck: PublishedDeck | null }>(
+        PUBLISHED_DECK_QUERY,
+        { id: deckId, viewerId: viewerId ?? undefined },
+      );
+      if (!deckResult.data?.publishedDeck) {
         state.notFound = true;
         state.loading = false;
         return;
       }
 
-      state.deck = deckPayload.data.publishedDeck;
+      state.deck = deckResult.data.publishedDeck;
       state.likeCount = state.deck.likeCount;
       state.viewCount = state.deck.viewCount;
 
       const deckData = state.deck.deckData as CompressedDeck;
 
       // 2. Fetch builder data (arsenal + specializations) for this deck's faction
-      const builderResp = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          query: BUILDER_DATA_QUERY,
-          variables: {
-            countryId: deckData.country,
-            spec1Id: deckData.spec1,
-            spec2Id: deckData.spec2,
-          },
-        }),
-      });
-      if (!builderResp.ok) throw new Error('Builder data fetch failed');
-      const builderPayload = await builderResp.json() as { data?: { builderData: BuilderPageData } };
-      if (!builderPayload.data) throw new Error('No builder data');
-      builderData.value = builderPayload.data.builderData;
+      const builderResult = await graphqlFetchRaw<{ builderData: BuilderPageData }>(
+        BUILDER_DATA_QUERY,
+        {
+          countryId: deckData.country,
+          spec1Id: deckData.spec1,
+          spec2Id: deckData.spec2,
+        },
+      );
+      if (!builderResult.data) throw new Error('No builder data');
+      builderData.value = builderResult.data.builderData;
 
       // Build card lookup
       const lookup: Record<number, ArsenalCard> = {};
-      for (const c of builderPayload.data.builderData.arsenalUnitsCards) {
+      for (const c of builderResult.data.builderData.arsenalUnitsCards) {
         lookup[c.unit.Id] = c;
       }
       cardLookup.value = lookup;
 
       // Compute max slots/points from specializations
-      const spec1 = builderPayload.data.builderData.specializations.find(
+      const spec1 = builderResult.data.builderData.specializations.find(
         (s) => s.Id === deckData.spec1,
       );
-      const spec2 = builderPayload.data.builderData.specializations.find(
+      const spec2 = builderResult.data.builderData.specializations.find(
         (s) => s.Id === deckData.spec2,
       );
       if (spec1 && spec2) {
@@ -205,20 +188,12 @@ export default component$(() => {
       // 4. Fetch options + hydrate
       let optionsById: Map<number, any> = new Map();
       if (allOptIds.length > 0) {
-        const optResp = await fetch(apiUrl, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            query: OPTIONS_BY_IDS_QUERY,
-            variables: { ids: [...new Set(allOptIds)] },
-          }),
-        });
-        if (optResp.ok) {
-          const optPayload = await optResp.json() as { data?: { optionsByIds: Array<{ Id: number; [key: string]: unknown }> } };
-          if (optPayload.data) {
-            for (const opt of optPayload.data.optionsByIds) {
-              optionsById.set(opt.Id, opt);
-            }
+        const optResult = await graphqlFetchRaw<{
+          optionsByIds: Array<{ Id: number; [key: string]: unknown }>;
+        }>(OPTIONS_BY_IDS_QUERY, { ids: [...new Set(allOptIds)] });
+        if (optResult.data) {
+          for (const opt of optResult.data.optionsByIds) {
+            optionsById.set(opt.Id, opt);
           }
         }
       }
@@ -234,35 +209,21 @@ export default component$(() => {
 
     // Record view (fire-and-forget)
     const viewerId = getUserId();
-    fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        query: RECORD_DECK_VIEW_MUTATION,
-        variables: { deckId, viewerId },
-      }),
-    }).then(async (r) => {
-      if (r.ok) {
-        const p = await r.json() as { data?: { recordDeckView: { newViewCount: number } } };
-        if (p.data) state.viewCount = p.data.recordDeckView.newViewCount;
-      }
+    graphqlFetchRaw<{ recordDeckView: { newViewCount: number } }>(
+      RECORD_DECK_VIEW_MUTATION,
+      { deckId, viewerId },
+    ).then((result) => {
+      if (result.data) state.viewCount = result.data.recordDeckView.newViewCount;
     }).catch(() => { /* ignore */ });
 
     // Check like status
     const userId = getUserId();
     if (userId) {
-      fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          query: DECK_LIKE_STATUS_QUERY,
-          variables: { deckId, userId },
-        }),
-      }).then(async (r) => {
-        if (r.ok) {
-          const p = await r.json() as { data?: { deckLikeStatus: { liked: boolean } } };
-          if (p.data) state.liked = p.data.deckLikeStatus.liked;
-        }
+      graphqlFetchRaw<{ deckLikeStatus: { liked: boolean } }>(
+        DECK_LIKE_STATUS_QUERY,
+        { deckId, userId },
+      ).then((result) => {
+        if (result.data) state.liked = result.data.deckLikeStatus.liked;
       }).catch(() => { /* ignore */ });
     }
   });
@@ -274,22 +235,12 @@ export default component$(() => {
       if (isNew) {
         showToast(toast, t(i18n, 'decks.user.identityCreated'), 'info');
       }
-      const apiUrl = import.meta.env.VITE_API_URL || API_URL_DEFAULT;
-      const resp = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          query: TOGGLE_DECK_LIKE_MUTATION,
-          variables: { deckId, userId },
-        }),
-      });
-      if (!resp.ok) return;
-      const payload = await resp.json() as {
-        data?: { toggleDeckLike: { liked: boolean; newLikeCount: number } };
-      };
-      if (payload.data) {
-        state.liked = payload.data.toggleDeckLike.liked;
-        state.likeCount = payload.data.toggleDeckLike.newLikeCount;
+      const result = await graphqlFetchRaw<{
+        toggleDeckLike: { liked: boolean; newLikeCount: number };
+      }>(TOGGLE_DECK_LIKE_MUTATION, { deckId, userId });
+      if (result.data) {
+        state.liked = result.data.toggleDeckLike.liked;
+        state.likeCount = result.data.toggleDeckLike.newLikeCount;
       }
     } catch {
       // Silently fail
@@ -351,19 +302,12 @@ export default component$(() => {
   /** Fetch a challenge question (needed for edit/delete). */
   const fetchChallenge = $(async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || API_URL_DEFAULT;
-      const resp = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ query: CHALLENGE_QUERY }),
-      });
-      if (!resp.ok) return;
-      const payload = await resp.json() as {
-        data?: { challenge: { challengeId: string; question: string } };
-      };
-      if (payload.data) {
-        state.challengeId = payload.data.challenge.challengeId;
-        state.challengeQuestion = payload.data.challenge.question;
+      const result = await graphqlFetchRaw<{
+        challenge: { challengeId: string; question: string };
+      }>(CHALLENGE_QUERY);
+      if (result.data) {
+        state.challengeId = result.data.challenge.challengeId;
+        state.challengeQuestion = result.data.challenge.question;
         state.challengeAnswer = '';
       }
     } catch { /* ignore */ }
@@ -387,35 +331,22 @@ export default component$(() => {
     state.editSaving = true;
     try {
       const { userId } = await ensureUserId();
-      const apiUrl = import.meta.env.VITE_API_URL || API_URL_DEFAULT;
-      const resp = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          query: UPDATE_PUBLISHED_DECK_MUTATION,
-          variables: {
-            deckId: state.deck.id,
-            input: {
-              authorId: userId,
-              publisherName: state.editPublisherName.trim(),
-              name: state.editName.trim(),
-              description: state.editDescription.trim(),
-              tags: state.editTags,
-              challengeId: state.challengeId,
-              challengeAnswer: parseInt(state.challengeAnswer, 10),
-            },
+      const data = await graphqlFetch<{ updatePublishedDeck: PublishedDeck }>(
+        UPDATE_PUBLISHED_DECK_MUTATION,
+        {
+          deckId: state.deck.id,
+          input: {
+            authorId: userId,
+            publisherName: state.editPublisherName.trim(),
+            name: state.editName.trim(),
+            description: state.editDescription.trim(),
+            tags: state.editTags,
+            challengeId: state.challengeId,
+            challengeAnswer: parseInt(state.challengeAnswer, 10),
           },
-        }),
-      });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const payload = await resp.json() as {
-        data?: { updatePublishedDeck: PublishedDeck };
-        errors?: Array<{ message: string }>;
-      };
-      if (payload.errors?.length) throw new Error(payload.errors[0].message);
-      if (payload.data) {
-        state.deck = { ...state.deck, ...payload.data.updatePublishedDeck };
-      }
+        },
+      );
+      state.deck = { ...state.deck, ...data.updatePublishedDeck };
       state.isEditing = false;
       state.challengeAnswer = '';
       showToast(toast, t(i18n, 'decks.publish.updateSuccess'), 'success');
@@ -443,25 +374,17 @@ export default component$(() => {
     if (!state.deck || !state.challengeAnswer.trim()) return;
     try {
       const { userId } = await ensureUserId();
-      const apiUrl = import.meta.env.VITE_API_URL || API_URL_DEFAULT;
-      const resp = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          query: DELETE_PUBLISHED_DECK_MUTATION,
-          variables: {
-            deckId: state.deck.id,
-            input: {
-              authorId: userId,
-              challengeId: state.challengeId,
-              challengeAnswer: parseInt(state.challengeAnswer, 10),
-            },
+      await graphqlFetch<{ deletePublishedDeck: boolean }>(
+        DELETE_PUBLISHED_DECK_MUTATION,
+        {
+          deckId: state.deck.id,
+          input: {
+            authorId: userId,
+            challengeId: state.challengeId,
+            challengeAnswer: parseInt(state.challengeAnswer, 10),
           },
-        }),
-      });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const payload = await resp.json() as { errors?: Array<{ message: string }> };
-      if (payload.errors?.length) throw new Error(payload.errors[0].message);
+        },
+      );
 
       showToast(toast, t(i18n, 'decks.publish.deleteSuccess'), 'success');
       await nav('/decks/browse');
@@ -1009,7 +932,7 @@ export default component$(() => {
 // ── DocumentHead ────────────────────────────────────────────────
 
 export const head: DocumentHead = {
-  title: 'Deck Detail - BA Hub',
+  title: 'BA HUB - Deck Detail',
   meta: [
     {
       name: 'description',

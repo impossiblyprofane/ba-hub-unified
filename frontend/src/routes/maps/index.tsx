@@ -24,26 +24,20 @@ import { getMapByKey } from '~/lib/maps/mapData';
 import { SessionManager } from '~/lib/maps/sessionManager';
 import type { UnitDetailData } from '~/lib/graphql-types';
 import { UNIT_DETAIL_QUERY } from '~/lib/queries/unit-detail';
+import { graphqlFetch } from '~/lib/graphqlClient';
 
 // ── Constants ──
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/graphql';
 const MAP_STATE_KEY = 'ba_maps_state';
 
 async function fetchUnitDetail(id: number, optionIds: number[]): Promise<UnitDetailData> {
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      query: UNIT_DETAIL_QUERY,
-      variables: { id, optionIds: optionIds.length ? optionIds : null },
-    }),
-  });
-  if (!res.ok) throw new Error(`API error ${res.status}`);
-  const json = await res.json() as { data?: { unitDetail: UnitDetailData }; errors?: Array<{ message: string }> };
-  if (!json.data?.unitDetail) {
-    throw new Error(json.errors?.map(e => e.message).join(', ') || 'Unit not found');
+  const data = await graphqlFetch<{ unitDetail: UnitDetailData | null }>(
+    UNIT_DETAIL_QUERY,
+    { id, optionIds: optionIds.length ? optionIds : null },
+  );
+  if (!data.unitDetail) {
+    throw new Error('Unit not found');
   }
-  return json.data.unitDetail;
+  return data.unitDetail;
 }
 
 export default component$(() => {
@@ -809,7 +803,7 @@ export default component$(() => {
 });
 
 export const head: DocumentHead = {
-  title: 'Maps & Tactics - BA Hub',
+  title: 'BA HUB - Maps',
   meta: [
     {
       name: 'description',

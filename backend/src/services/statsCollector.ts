@@ -1,4 +1,5 @@
 import { StatsClient } from './statsClient.js';
+import type { MatchCrawler, CrawlerAggregates } from './matchCrawler.js';
 
 /**
  * Periodic data collection scheduler.
@@ -7,9 +8,13 @@ import { StatsClient } from './statsClient.js';
  * and unit performance data from the external API and pushes
  * snapshots to the database service for historical tracking.
  *
+ * When a MatchCrawler is provided, also runs incremental match scanning
+ * and includes crawler-derived aggregates (faction win rates from actual
+ * matches, spec popularity, unit popularity per nation) in snapshots.
+ *
  * Frequency:
- * - Hourly:  leaderboard + map stats + faction stats
- * - Daily:   same + unit performance (aggregated from fight data)
+ * - Hourly:  leaderboard + map stats + faction stats + crawler aggregates
+ * - Daily:   same + unit performance (aggregated from fight data) + crawler aggregates
  * - Weekly:  triggered automatically (daily snapshots are sufficient for
  *            the DB to derive weekly rollups via query)
  * - Monthly: same pattern
@@ -19,23 +24,39 @@ import { StatsClient } from './statsClient.js';
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
+/** Default for how often the crawler range-scans when catching up. */
+const DEFAULT_CRAWL_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
+
+interface CollectorLogger {
+  info(obj: Record<string, unknown> | string, msg?: string): void;
+  warn(obj: Record<string, unknown> | string, msg?: string): void;
+  error(obj: Record<string, unknown> | string, msg?: string): void;
+  child?(bindings: Record<string, unknown>): CollectorLogger;
+}
 
 interface CollectorConfig {
   statsClient: StatsClient;
   databaseServiceUrl: string;
   /** Set false to disable (e.g. in dev). Default true. */
   enabled?: boolean;
-  /** Resolve a unit ID → display name. Falls back to "Unit_{id}" if not provided. */
-  resolveUnitName?: (unitId: number) => string | null;
+  /** Optional match crawler for independent fight data collection. */
+  matchCrawler?: MatchCrawler;
+  /** How often the crawler range-scans when catching up. Default 2 minutes. */
+  crawlIntervalMs?: number;
+  /** Optional structured logger — tags entries as `cat: 'collector'`. */
+  logger?: CollectorLogger;
 }
 
 export class StatsCollector {
   private statsClient: StatsClient;
   private dbUrl: string;
   private enabled: boolean;
-  private resolveUnitName: (unitId: number) => string | null;
+  private matchCrawler: MatchCrawler | null;
+  private crawlIntervalMs: number;
+  private log: CollectorLogger;
   private hourlyTimer: ReturnType<typeof setInterval> | null = null;
   private dailyTimer: ReturnType<typeof setInterval> | null = null;
+  private crawlerTimer: ReturnType<typeof setInterval> | null = null;
   private lastHourly: number = 0;
   private lastDaily: number = 0;
 
@@ -43,49 +64,109 @@ export class StatsCollector {
     this.statsClient = config.statsClient;
     this.dbUrl = config.databaseServiceUrl.replace(/\/$/, '');
     this.enabled = config.enabled ?? true;
-    this.resolveUnitName = config.resolveUnitName ?? (() => null);
+    this.matchCrawler = config.matchCrawler ?? null;
+    this.crawlIntervalMs = config.crawlIntervalMs ?? DEFAULT_CRAWL_INTERVAL_MS;
+    const fallback: CollectorLogger = {
+      info: (obj, msg) => console.log('[StatsCollector]', msg ?? obj),
+      warn: (obj, msg) => console.warn('[StatsCollector]', msg ?? obj),
+      error: (obj, msg) => console.error('[StatsCollector]', msg ?? obj),
+    };
+    const base = config.logger ?? fallback;
+    this.log = base.child ? base.child({ cat: 'collector' }) : base;
   }
 
   /** Start the periodic collection loops. */
   start(): void {
     if (!this.enabled) {
-      console.log('[StatsCollector] Disabled — skipping scheduler start.');
+      this.log.info('Disabled — skipping scheduler start');
       return;
     }
 
-    console.log('[StatsCollector] Starting periodic data collection.');
+    this.log.info('Starting periodic data collection');
 
-    // Collect immediately on startup, then every hour
-    this.collectHourly().catch((err) =>
-      console.error('[StatsCollector] Initial hourly collection failed:', err),
-    );
+    // Delay initial collection by 10s to let sibling services (database) start first
+    setTimeout(() => {
+      this.collectHourly().catch((err) =>
+        this.log.error({ err }, 'Initial hourly collection failed'),
+      );
+    }, 10_000);
 
     this.hourlyTimer = setInterval(() => {
       this.collectHourly().catch((err) =>
-        console.error('[StatsCollector] Hourly collection failed:', err),
+        this.log.error({ err }, 'Hourly collection failed'),
       );
     }, HOUR_MS);
 
     // Daily collection — offset by 5 minutes to avoid colliding with hourly
     setTimeout(() => {
       this.collectDaily().catch((err) =>
-        console.error('[StatsCollector] Initial daily collection failed:', err),
+        this.log.error({ err }, 'Initial daily collection failed'),
       );
       this.dailyTimer = setInterval(() => {
         this.collectDaily().catch((err) =>
-          console.error('[StatsCollector] Daily collection failed:', err),
+          this.log.error({ err }, 'Daily collection failed'),
         );
       }, DAY_MS);
     }, 5 * 60 * 1000);
+
+    // Dedicated crawler loop — runs on `crawlIntervalMs`, independent of hourly stats
+    if (this.matchCrawler) {
+      // Start first crawler tick 20s after boot (after initial hourly seeds it)
+      setTimeout(() => {
+        this.crawlerTick();
+        this.crawlerTimer = setInterval(() => this.crawlerTick(), this.crawlIntervalMs);
+      }, 20_000);
+    }
   }
 
   /** Stop all timers. */
   stop(): void {
     if (this.hourlyTimer) clearInterval(this.hourlyTimer);
     if (this.dailyTimer) clearInterval(this.dailyTimer);
+    if (this.crawlerTimer) clearInterval(this.crawlerTimer);
     this.hourlyTimer = null;
     this.dailyTimer = null;
-    console.log('[StatsCollector] Stopped.');
+    this.crawlerTimer = null;
+    this.log.info('Stopped');
+  }
+
+  // ── Crawler tick (independent fast loop) ──────────────────
+
+  private crawlerTick(): void {
+    if (!this.matchCrawler || this.matchCrawler.isBusy()) return;
+    this.runCrawlerScan().catch(() => { /* swallowed by runCrawlerScan */ });
+  }
+
+  private async runCrawlerScan(): Promise<void> {
+    try {
+      const result = await this.matchCrawler!.scanRangeChunk();
+      const progress = await this.matchCrawler!.getProgress();
+      if (result.done) {
+        this.log.info({ position: progress.position }, 'Range scan complete');
+        // Stop the fast loop once caught up
+        if (this.crawlerTimer) {
+          clearInterval(this.crawlerTimer);
+          this.crawlerTimer = null;
+        }
+      } else if (result.scanned > 0) {
+        this.log.info(
+          {
+            scanned: result.scanned,
+            found: result.found,
+            percent: progress.percentDone,
+            position: progress.position,
+            ceiling: progress.ceiling,
+          },
+          'Scan tick',
+        );
+      }
+    } catch (err) {
+      // CrawlerBusyError is expected if a manual fire raced us — swallow quietly.
+      const name = err instanceof Error ? err.name : '';
+      if (name !== 'CrawlerBusyError') {
+        this.log.error({ err }, 'Scan failed');
+      }
+    }
   }
 
   // ── Hourly collection ──────────────────────────────────────
@@ -96,13 +177,36 @@ export class StatsCollector {
     if (now - this.lastHourly < HOUR_MS * 0.9) return;
     this.lastHourly = now;
 
-    console.log('[StatsCollector] Running hourly collection…');
+    this.log.info('Running hourly collection');
 
     const [leaderboard, mapRatings, countryStats] = await Promise.all([
       this.statsClient.getLeaderboard(0, 100).catch(() => []),
       this.statsClient.getMapRatings().catch(() => []),
       this.statsClient.getCountryStats().catch(() => ({ matchesCount: [], winsCount: [] })),
     ]);
+
+    // Collect crawler aggregates (scanning handled by dedicated fast loop)
+    let crawlerAggregates: Partial<CrawlerAggregates> = {};
+
+    if (this.matchCrawler) {
+      try {
+        // Player discovery (new fights from leaderboard players)
+        const crawlResult = await this.matchCrawler.collectMatches();
+        if (crawlResult.newMatches > 0) {
+          this.log.info({ newMatches: crawlResult.playerFights }, 'Player discovery completed');
+        }
+        const agg = await this.matchCrawler.computeAggregates('hourly');
+        if (agg) {
+          crawlerAggregates = {
+            crawlerFactionStats: agg.crawlerFactionStats,
+            specStats: agg.specStats,
+            unitPerformance: agg.unitPerformance,
+          };
+        }
+      } catch (err) {
+        this.log.error({ err }, 'Crawler hourly run failed');
+      }
+    }
 
     const body = {
       snapshotType: 'hourly' as const,
@@ -124,12 +228,18 @@ export class StatsCollector {
           playCount: m.count!,
         })),
       factionStats: this.buildFactionStats(countryStats),
+      ...crawlerAggregates,
     };
 
     await this.postSnapshot(body);
-    console.log(
-      `[StatsCollector] Hourly snapshot saved: ${body.leaderboard.length} players, ` +
-      `${body.mapStats.length} maps, ${body.factionStats.length} factions.`,
+    this.log.info(
+      {
+        players: body.leaderboard.length,
+        maps: body.mapStats.length,
+        factions: body.factionStats.length,
+        specs: crawlerAggregates.specStats?.length ?? 0,
+      },
+      'Hourly snapshot saved',
     );
   }
 
@@ -140,7 +250,7 @@ export class StatsCollector {
     if (now - this.lastDaily < DAY_MS * 0.9) return;
     this.lastDaily = now;
 
-    console.log('[StatsCollector] Running daily collection…');
+    this.log.info('Running daily collection');
 
     const [leaderboard, mapRatings, countryStats] = await Promise.all([
       this.statsClient.getLeaderboard(0, 100).catch(() => []),
@@ -148,8 +258,23 @@ export class StatsCollector {
       this.statsClient.getCountryStats().catch(() => ({ matchesCount: [], winsCount: [] })),
     ]);
 
-    // Collect unit stats from recent fights of top players
-    const unitStats = await this.collectUnitStats(leaderboard.slice(0, 20));
+    // Collect crawler aggregates (scanning handled by dedicated fast loop)
+    let crawlerAggregates: Partial<CrawlerAggregates> = {};
+
+    if (this.matchCrawler) {
+      try {
+        const agg = await this.matchCrawler.computeAggregates('daily');
+        if (agg) {
+          crawlerAggregates = {
+            crawlerFactionStats: agg.crawlerFactionStats,
+            specStats: agg.specStats,
+            unitPerformance: agg.unitPerformance,
+          };
+        }
+      } catch (err) {
+        this.log.error({ err }, 'Crawler daily aggregation failed');
+      }
+    }
 
     const body = {
       snapshotType: 'daily' as const,
@@ -171,99 +296,23 @@ export class StatsCollector {
           playCount: m.count!,
         })),
       factionStats: this.buildFactionStats(countryStats),
-      unitStats,
+      ...crawlerAggregates,
     };
 
     await this.postSnapshot(body);
-    console.log(
-      `[StatsCollector] Daily snapshot saved: ${body.leaderboard.length} players, ` +
-      `${body.mapStats.length} maps, ${body.factionStats.length} factions, ` +
-      `${unitStats.length} units.`,
+    this.log.info(
+      {
+        players: body.leaderboard.length,
+        maps: body.mapStats.length,
+        factions: body.factionStats.length,
+        specs: crawlerAggregates.specStats?.length ?? 0,
+      },
+      'Daily snapshot saved',
     );
 
-    // Prune old snapshots
+    // Prune old snapshots + old raw match data
     await this.pruneSnapshots();
-  }
-
-  // ── Unit stats aggregation from fight data ─────────────────
-
-  private async collectUnitStats(
-    topPlayers: Array<{ userId?: number }>,
-  ): Promise<Array<{
-    unitName: string;
-    timesDeployed: number;
-    totalKills: number;
-    totalDamageDealt: number;
-    totalDamageReceived: number;
-    totalSupplyConsumed: number;
-    timesRefunded: number;
-  }>> {
-    // Collect recent fight IDs from the top N players
-    const fightIdSet = new Set<string>();
-
-    for (const player of topPlayers) {
-      if (!player.userId) continue;
-      try {
-        const fightIds = await this.statsClient.getRecentFightIds(player.userId);
-        for (const id of fightIds.slice(0, 5)) {
-          fightIdSet.add(id);
-        }
-      } catch {
-        // Skip players whose fight history can't be fetched
-      }
-    }
-
-    // Fetch fight data and aggregate unit performance
-    const unitMap = new Map<
-      string,
-      {
-        timesDeployed: number;
-        totalKills: number;
-        totalDamageDealt: number;
-        totalDamageReceived: number;
-        totalSupplyConsumed: number;
-        timesRefunded: number;
-      }
-    >();
-
-    const fightIds = [...fightIdSet].slice(0, 50); // Limit to 50 fights to avoid overloading the S3 endpoint
-
-    // Process fights in small batches (5 at a time)
-    for (let i = 0; i < fightIds.length; i += 5) {
-      const batch = fightIds.slice(i, i + 5);
-      const results = await Promise.all(
-        batch.map((id) => this.statsClient.getFightData(id).catch(() => null)),
-      );
-
-      for (const fight of results) {
-        if (!fight) continue;
-        for (const player of fight.players) {
-          for (const unit of player.units) {
-              const name = this.resolveUnitName(unit.id) ?? `Unit_${unit.id}`;
-            const existing = unitMap.get(name) ?? {
-              timesDeployed: 0,
-              totalKills: 0,
-              totalDamageDealt: 0,
-              totalDamageReceived: 0,
-              totalSupplyConsumed: 0,
-              timesRefunded: 0,
-            };
-            existing.timesDeployed += 1;
-            existing.totalKills += unit.killedCount ?? 0;
-            existing.totalDamageDealt += unit.totalDamageDealt ?? 0;
-            existing.totalDamageReceived += unit.totalDamageReceived ?? 0;
-            existing.totalSupplyConsumed += unit.supplyPointsConsumed ?? 0;
-            existing.timesRefunded += unit.wasRefunded ? 1 : 0;
-            unitMap.set(name, existing);
-          }
-        }
-      }
-    }
-
-    return [...unitMap.entries()].map(([unitName, stats]) => ({
-      unitName,
-      ...stats,
-    }));
+    await this.pruneOldMatches();
   }
 
   // ── Helpers ────────────────────────────────────────────────
@@ -304,10 +353,27 @@ export class StatsCollector {
         method: 'DELETE',
       });
       if (res.ok) {
-        console.log('[StatsCollector] Old snapshots pruned.');
+        this.log.info('Old snapshots pruned');
       }
     } catch (err) {
-      console.error('[StatsCollector] Prune failed:', err);
+      this.log.error({ err }, 'Prune failed');
+    }
+  }
+
+  /** Remove raw match data older than 30 days (cascade deletes child rows). */
+  private async pruneOldMatches(): Promise<void> {
+    try {
+      const res = await fetch(`${this.dbUrl}/api/crawler/matches/prune?olderThanDays=30`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { pruned: number };
+        if (data.pruned > 0) {
+          this.log.info({ pruned: data.pruned }, 'Pruned old match records');
+        }
+      }
+    } catch (err) {
+      this.log.error({ err }, 'Match prune failed');
     }
   }
 }

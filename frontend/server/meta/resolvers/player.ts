@@ -40,14 +40,14 @@ export async function resolvePlayerMeta(steamId: string): Promise<PageMeta> {
   if (player) {
     const name = player.user.name ?? 'Player';
     return {
-      title: `${name} — BA Hub Player Stats`,
+      title: `BA HUB - ${name}`,
       description: buildPlayerDescription(player),
       ogType: 'profile',
     };
   }
 
   return {
-    title: 'Player Profile - BA Hub',
+    title: 'BA HUB - Player Profile',
     description: 'View player statistics, match history, and performance data for Broken Arrow.',
   };
 }
