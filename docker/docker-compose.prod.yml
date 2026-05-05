@@ -1,3 +1,11 @@
+# Default container log rotation — caps each service at ~150 MB of logs
+# (50 MB × 3 files) so unbounded stdout/stderr can't fill /var/lib/docker.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "50m"
+    max-file: "3"
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -11,6 +19,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     restart: unless-stopped
+    logging: *default-logging
     networks:
       - bahub-shared
 
@@ -30,6 +39,7 @@ services:
     depends_on:
       - postgres
     restart: unless-stopped
+    logging: *default-logging
     networks:
       - bahub-shared
 
@@ -63,6 +73,7 @@ services:
     depends_on:
       - database
     restart: unless-stopped
+    logging: *default-logging
     networks:
       - bahub-shared
 
@@ -88,6 +99,7 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+    logging: *default-logging
     networks:
       - bahub-shared
 

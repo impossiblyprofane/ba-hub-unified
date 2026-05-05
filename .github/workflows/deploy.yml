@@ -49,6 +49,17 @@ jobs:
           ENVEOF
           sed -i 's/^[[:space:]]*//' docker/.env
 
+      # Strip artifacts the server doesn't need (huge .git history, any
+      # local node_modules/dist) so each upload is small and the deploy dir
+      # ends up clean rather than accumulating cruft from prior runs.
+      - name: Trim workspace before upload
+        run: |
+          rm -rf .git .github
+          find . -type d -name node_modules -prune -exec rm -rf {} +
+          find . -type d -name dist -prune -exec rm -rf {} +
+          find . -type d -name .cache -prune -exec rm -rf {} +
+          du -sh . || true
+
       - name: Transfer to server
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -58,6 +69,9 @@ jobs:
           source: ./*
           target: /root/ba-hub/${{ steps.env.outputs.ENV }}/
           strip_components: 0
+          # Wipe target before extracting so prior-deploy files (esp. ones
+          # we no longer ship) don't pile up indefinitely.
+          rm: true
           debug: true
 
       - name: Build and deploy
@@ -85,5 +99,15 @@ jobs:
               docker exec -i bahub-prod-postgres psql -U ${{ secrets.PG_USER }} -d ${{ secrets.PG_DB }} -f - < "$f" 2>&1 | tail -1 || true
             done
 
-            docker image prune -f
+            echo "=== Cleanup: prune unused images, stopped containers, and build cache ==="
+            # Was previously `docker image prune -f` (dangling-only). The
+            # build cache alone reached ~7 GB before the first cleanup; this
+            # keeps disk steady deploy-over-deploy. Volumes are untouched —
+            # postgres data stays put.
+            docker container prune -f
+            docker image prune -af
+            docker builder prune -af
+
+            echo "=== Disk after deploy ==="
+            df -h / | tail -1
             echo "=== Deploy complete ($ENV) ==="
