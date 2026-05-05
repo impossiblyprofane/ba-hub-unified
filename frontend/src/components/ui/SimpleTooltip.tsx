@@ -1,4 +1,5 @@
 import { component$, useSignal, Slot } from '@builder.io/qwik';
+import { getCursorTooltipStyle } from '~/lib/tooltipPosition';
 
 /**
  * SimpleTooltip — self-contained cursor-following tooltip for plain text.
@@ -14,17 +15,17 @@ import { component$, useSignal, Slot } from '@builder.io/qwik';
 export const SimpleTooltip = component$<{ text: string; class?: string }>(
   ({ text, class: className }) => {
     const visible = useSignal(false);
-    const pos = useSignal({ x: 0, y: 0 });
+    const style = useSignal({ top: '0px', left: '0px', transform: 'translateY(-100%)' });
 
     return (
       <div
         class={className ?? ''}
         onMouseEnter$={(e: MouseEvent) => {
           visible.value = true;
-          pos.value = { x: e.clientX, y: e.clientY };
+          style.value = getCursorTooltipStyle(e.clientX, e.clientY);
         }}
         onMouseMove$={(e: MouseEvent) => {
-          pos.value = { x: e.clientX, y: e.clientY };
+          style.value = getCursorTooltipStyle(e.clientX, e.clientY);
         }}
         onMouseLeave$={() => {
           visible.value = false;
@@ -34,11 +35,7 @@ export const SimpleTooltip = component$<{ text: string; class?: string }>(
         {visible.value && (
           <div
             class="fixed z-50 pointer-events-none border border-[rgba(70,151,195,0.3)] bg-[#0a0e14]/95 backdrop-blur-sm px-2.5 py-1.5 max-w-xs text-[10px] font-mono text-[var(--text)] whitespace-pre-wrap shadow-lg shadow-black/40"
-            style={{
-              top: `${pos.value.y - 8}px`,
-              left: `${pos.value.x + 16}px`,
-              transform: 'translateY(-100%)',
-            }}
+            style={style.value}
           >
             {text}
           </div>

@@ -1,4 +1,5 @@
 import { component$, useSignal, Slot } from '@builder.io/qwik';
+import { getCursorTooltipStyle } from '~/lib/tooltipPosition';
 
 /**
  * Rich tooltip wrapper — hover to reveal structured tooltip content.
@@ -16,17 +17,17 @@ import { component$, useSignal, Slot } from '@builder.io/qwik';
  */
 export const RichTooltip = component$<{ class?: string }>(({ class: className }) => {
   const visible = useSignal(false);
-  const pos = useSignal({ x: 0, y: 0 });
+  const style = useSignal({ top: '0px', left: '0px', transform: 'translateY(-100%)' });
 
   return (
     <div
       class={`relative ${className ?? ''}`}
       onMouseEnter$={(e: MouseEvent) => {
         visible.value = true;
-        pos.value = { x: e.clientX, y: e.clientY };
+        style.value = getCursorTooltipStyle(e.clientX, e.clientY);
       }}
       onMouseMove$={(e: MouseEvent) => {
-        pos.value = { x: e.clientX, y: e.clientY };
+        style.value = getCursorTooltipStyle(e.clientX, e.clientY);
       }}
       onMouseLeave$={() => {
         visible.value = false;
@@ -36,11 +37,7 @@ export const RichTooltip = component$<{ class?: string }>(({ class: className })
       {visible.value && (
         <div
           class="fixed z-50 pointer-events-none border border-[rgba(70,151,195,0.3)] bg-[#0a0e14]/95 backdrop-blur-sm px-3 py-2 max-w-xs text-xs font-mono text-[var(--text)] shadow-lg shadow-black/40"
-          style={{
-            top: `${pos.value.y - 8}px`,
-            left: `${pos.value.x + 16}px`,
-            transform: 'translateY(-100%)',
-          }}
+          style={style.value}
         >
           <Slot name="tooltip" />
         </div>

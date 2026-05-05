@@ -7,7 +7,68 @@ import { useI18n, t } from '~/lib/i18n';
 import { SimpleTooltip } from '~/components/ui/SimpleTooltip';
 import type { UnitDetailWeapon, UnitDetailAmmo, UnitDetailAbility } from '~/lib/graphql-types';
 
-type Props = { weapons: UnitDetailWeapon[]; unitId: number; abilities?: UnitDetailAbility[] };
+type Props = {
+  weapons: UnitDetailWeapon[];
+  unitId: number;
+  unitType?: number;
+  abilities?: UnitDetailAbility[];
+};
+
+/**
+ * Effective damage-event rate in events-per-minute. The game-data
+ * `ShotsPerBurst` field is the *visual* round count (e.g. an MMG sprays
+ * 4-8 rounds per trigger pull) but each burst applies a single damage event
+ * to the target — burst size and `TimeBetweenShotsInBurst` are cosmetic, so
+ * we count trigger-pulls, not bullets.
+ *
+ * Reload time is amortized across the magazine so that mag-1 weapons (tank
+ * cannons, SAMs) reflect the per-mag reload rather than just the cooldown
+ * between identical shots in a non-existent burst. For mag-30 rifles the
+ * amortized term is negligible (~0.1s per shot).
+ *
+ *   cycle = avgInterBurst + avgReload / max(mag, 1)
+ *   rpm   = 60 / cycle
+ *
+ * Returns 0 when no cycle is defined (e.g. one-shot grenade launchers with
+ * no inter-burst time and no reload), in which case we hide the stat.
+ */
+function computeRpm(w: UnitDetailWeapon['weapon']): number {
+  const interMin = w.TimeBetweenBurstsMin || 0;
+  const interMax = w.TimeBetweenBurstsMax || interMin;
+  const interAvg = (interMin + interMax) / 2;
+  const reloadMin = w.MagazineReloadTimeMin || 0;
+  const reloadMax = w.MagazineReloadTimeMax || reloadMin;
+  const reloadAvg = (reloadMin + reloadMax) / 2;
+  const mag = Math.max(w.MagazineSize || 1, 1);
+  const cycle = interAvg + reloadAvg / mag;
+  if (cycle <= 0) return 0;
+  return 60 / cycle;
+}
+
+/** Weapon Types where DPS is a meaningful summary — sustained-fire small arms
+ *  (rifles, DMRs, snipers, SMGs, MMGs, autorifles, shotguns). UGL/AGL grenade
+ *  launchers, rocket launchers, ATGMs, MANPADS etc. fire single high-damage
+ *  rounds at infrequent intervals where DPS is misleading. */
+const RIFLE_LIKE_WEAPON_TYPES = new Set([
+  1,  // Rifle (assault rifle, semi-auto rifle)
+  2,  // DMR
+  3,  // Sniper
+  4,  // Sniper (heavy)
+  5,  // Rifle (silenced/variant)
+  6,  // Rifle (variant)
+  25, // SMG
+  26, // MMG (infantry)
+  30, // Autorifle (LMG)
+  40, // Shotgun
+]);
+
+/** True when DPS is meaningful for this unit+weapon combination. */
+function shouldShowDpsFor(unitType: number | undefined, weaponType: number): boolean {
+  // Type 2 = infantry. Vehicle/heli/jet weapons (including those mounted on
+  // vehicles) get raw per-round damage instead.
+  if (unitType !== 2) return false;
+  return RIFLE_LIKE_WEAPON_TYPES.has(weaponType);
+}
 
 /* ── Target type icons ─────────────────────────────────────────── */
 
@@ -133,7 +194,7 @@ function hasAnyAltRange(weapons: UnitDetailWeapon[]): { hasLowAlt: boolean; hasH
 
 /* ── Weapons Panel ─────────────────────────────────────────────── */
 
-export const UnitWeaponsPanel = component$<Props>(({ weapons, abilities }) => {
+export const UnitWeaponsPanel = component$<Props>(({ weapons, unitType, abilities }) => {
   const merged = mergeWeapons(weapons);
   const { hasLowAlt, hasHighAlt } = hasAnyAltRange(weapons);
 
@@ -156,6 +217,7 @@ export const UnitWeaponsPanel = component$<Props>(({ weapons, abilities }) => {
           showHighAlt={hasHighAlt}
           radarLowAltMod={hasRadarRange ? radarLowAltWpnMod : 0}
           radarHighAltMod={hasRadarRange ? radarHighAltWpnMod : 0}
+          showDps={shouldShowDpsFor(unitType, g.entry.weapon.Type)}
         />
       ))}
     </div>
@@ -172,9 +234,10 @@ type WeaponSectionProps = {
   showHighAlt: boolean;
   radarLowAltMod: number;
   radarHighAltMod: number;
+  showDps: boolean;
 };
 
-const WeaponSection = component$<WeaponSectionProps>(({ entry, count, isMerged, showLowAlt, showHighAlt, radarLowAltMod, radarHighAltMod }) => {
+const WeaponSection = component$<WeaponSectionProps>(({ entry, count, isMerged, showLowAlt, showHighAlt, radarLowAltMod, radarHighAltMod, showDps }) => {
   const i18nWs = useI18n();
   const { weapon, turret, ammunition } = entry;
   const weaponIcon = weapon.HUDIcon ? toWeaponIconPath(weapon.HUDIcon) : null;
@@ -186,6 +249,7 @@ const WeaponSection = component$<WeaponSectionProps>(({ entry, count, isMerged, 
   const aimMax = weapon.AimTimeMax;
   const reload = reloadMin === reloadMax ? `${reloadMin}s` : `${reloadMin}–${reloadMax}s`;
   const aim = aimMin === aimMax ? `${aimMin}s` : `${aimMin}–${aimMax}s`;
+  const weaponRpm = computeRpm(weapon);
 
   return (
     <div class="bg-gradient-to-b from-[var(--bg)] to-[rgba(26,26,26,0.7)] border border-[rgba(51,51,51,0.15)] border-l-[3px] border-l-[var(--accent)]">
@@ -235,8 +299,8 @@ const WeaponSection = component$<WeaponSectionProps>(({ entry, count, isMerged, 
           {weapon.StabilizerQuality > 0 && (
             <span>STAB <span class="text-[var(--text)] font-semibold">{weapon.StabilizerQuality}</span></span>
           )}
-          {weapon.TimeBetweenShotsInBurst > 0 && weapon.ShotsPerBurstMax > 1 && (
-            <span>ROF <span class="text-[var(--text)] font-semibold">{weapon.TimeBetweenShotsInBurst}s</span></span>
+          {weaponRpm > 0 && (
+            <span>RPM <span class="text-[var(--text)] font-semibold">{Math.round(weaponRpm)}</span></span>
           )}
         </div>
       </div>
@@ -286,6 +350,7 @@ const WeaponSection = component$<WeaponSectionProps>(({ entry, count, isMerged, 
                   colSpanTotal={10 + (showLowAlt ? 1 : 0) + (showHighAlt ? 1 : 0)}
                   radarLowAltMod={radarLowAltMod}
                   radarHighAltMod={radarHighAltMod}
+                  weaponRpm={showDps ? weaponRpm : 0}
                 />
               ))}
             </tbody>
@@ -306,9 +371,11 @@ type AmmoTableRowProps = {
   colSpanTotal: number;
   radarLowAltMod: number;
   radarHighAltMod: number;
+  /** Weapon RPM for DPS calc; 0 means hide DPS (non-infantry weapons). */
+  weaponRpm: number;
 };
 
-const AmmoTableRow = component$<AmmoTableRowProps>(({ ammo, quantity, showLowAlt, showHighAlt, colSpanTotal, radarLowAltMod, radarHighAltMod }) => {
+const AmmoTableRow = component$<AmmoTableRowProps>(({ ammo, quantity, showLowAlt, showHighAlt, colSpanTotal, radarLowAltMod, radarHighAltMod, weaponRpm }) => {
   const i18n = useI18n();
   const expanded = useSignal(false);
   const ammoIcon = ammo.HUDIcon ? toAmmunitionIconPath(ammo.HUDIcon) : null;
@@ -396,9 +463,22 @@ const AmmoTableRow = component$<AmmoTableRowProps>(({ ammo, quantity, showLowAlt
             ))}
           </div>
         </td>
-        {/* Damage */}
+        {/* Damage — for infantry weapons we surface DPS (rounds-per-min × per-round
+            damage / 60) as the primary value and tuck the raw per-round damage below
+            as a caption so the table column width stays consistent. */}
         <td class="px-2 py-2.5 text-right text-[var(--text)]">
-          {ammo.Damage > 0 ? ammo.Damage : '—'}
+          {ammo.Damage > 0 ? (
+            weaponRpm > 0 ? (
+              <SimpleTooltip text={`${(weaponRpm / 60 * ammo.Damage).toFixed(2)} dps · ${ammo.Damage} per round at ${Math.round(weaponRpm)} rpm`}>
+                <div class="leading-tight">
+                  <div class="font-semibold">{(weaponRpm / 60 * ammo.Damage).toFixed(2)}</div>
+                  <div class="text-[10px] text-[var(--text-dim)] font-normal">{ammo.Damage}/rd</div>
+                </div>
+              </SimpleTooltip>
+            ) : (
+              ammo.Damage
+            )
+          ) : '—'}
         </td>
         {/* Stress */}
         <td class="px-2 py-2.5 text-right text-[var(--text)]">

@@ -621,12 +621,15 @@ const ArsenalContent = component$<{ data: ArsenalPageData }>(({ data: arsenalDat
                   const seats = card.transportCapacity > 0 ? card.transportCapacity : undefined;
                   const lift = card.cargoCapacity > 0 ? Math.round(card.cargoCapacity) : undefined;
 
+                  const cardHref = card.rootUnitId && card.rootOptionId
+                    ? `/arsenal/${card.rootUnitId}/?m=${card.rootOptionId}`
+                    : `/arsenal/${unit.Id}`;
                   return (
                     <ArsenalUnitCard
                       key={unit.Id}
-                      href={`/arsenal/${unit.Id}`}
+                      href={cardHref}
                       dataCardId={unit.Id}
-                      unitName={unit.HUDName}
+                      unitName={card.displayName || unit.HUDName}
                       unitIconUrl={unitIconUrl}
                       categoryCode={CATEGORY_CODE.get(unit.CategoryType) ?? 'UNK'}
                       cost={cost}
@@ -721,12 +724,15 @@ const ArsenalContent = component$<{ data: ArsenalPageData }>(({ data: arsenalDat
             const seats = card.transportCapacity > 0 ? card.transportCapacity : undefined;
             const lift = card.cargoCapacity > 0 ? Math.round(card.cargoCapacity) : undefined;
 
+            const cardHref = card.rootUnitId && card.rootOptionId
+              ? `/arsenal/${card.rootUnitId}/?m=${card.rootOptionId}`
+              : `/arsenal/${unit.Id}`;
             return (
               <ArsenalUnitCard
                 key={unit.Id}
-                href={`/arsenal/${unit.Id}`}
+                href={cardHref}
                 dataCardId={unit.Id}
-                unitName={unit.HUDName}
+                unitName={card.displayName || unit.HUDName}
                 unitIconUrl={unitIconUrl}
                 categoryCode={CATEGORY_CODE.get(unit.CategoryType) ?? 'UNK'}
                 cost={cost}

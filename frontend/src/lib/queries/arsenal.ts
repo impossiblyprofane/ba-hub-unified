@@ -13,6 +13,7 @@ export const ARSENAL_PAGE_QUERY = `
         IsUnitModification
         DisplayInArmory
       }
+      displayName
       isTransport
       specializationIds
       transportCapacity
@@ -21,6 +22,8 @@ export const ARSENAL_PAGE_QUERY = `
       defaultModificationOptions {
         optCost
       }
+      rootUnitId
+      rootOptionId
     }
     countries {
       Id

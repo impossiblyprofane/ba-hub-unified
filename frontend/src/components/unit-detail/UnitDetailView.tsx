@@ -15,6 +15,7 @@ import { UnitAbilitiesPanel } from '~/components/unit-detail/UnitAbilitiesPanel'
 import { UnitWeaponsPanel } from '~/components/unit-detail/UnitWeaponsPanel';
 import { UnitAvailabilityPanel } from '~/components/unit-detail/UnitAvailabilityPanel';
 import { SquadCompositionPanel } from '~/components/unit-detail/SquadCompositionPanel';
+import { UnitTransportForPanel } from '~/components/unit-detail/UnitTransportForPanel';
 import { StatBadge } from '~/components/unit-detail/StatBadge';
 import { EmptyPanel } from '~/components/unit-detail/EmptyPanel';
 
@@ -44,8 +45,22 @@ export const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetch
   // Directional armor check — when present, the single ArmorValue is redundant (shown on portrait overlay)
   const hasDirArmor = data.armor
     ? (data.armor.KinArmorFront > 0 || data.armor.HeatArmorFront > 0 ||
-       data.armor.KinArmorRear > 0 || data.armor.HeatArmorRear > 0)
+       data.armor.KinArmorRear > 0 || data.armor.HeatArmorRear > 0 ||
+       data.armor.KinArmorSides > 0 || data.armor.HeatArmorSides > 0 ||
+       data.armor.KinArmorTop > 0 || data.armor.HeatArmorTop > 0)
     : false;
+  const showArmorBadge = !hasDirArmor && (data.armor?.ArmorValue ?? 0) > 0;
+
+  // Weight display: infantry units (Type 2) carry per-soldier weight in unit.Weight
+  // is meaningless (always 1); the in-game weight is members × 125kg.
+  const INFANTRY_WEIGHT_PER_MEMBER_KG = 125;
+  const memberCount = data.squadMembers.length;
+  const isInfantryType = unit.Type === 2;
+  const isInfantryUnit = isInfantryType && memberCount > 0;
+  const displayWeightKg = isInfantryUnit
+    ? memberCount * INFANTRY_WEIGHT_PER_MEMBER_KG
+    : unit.Weight;
+  const weightLabel = displayWeightKg ? `${displayWeightKg}kg` : '—';
 
   return (
     <div class={`relative transition-opacity ${isRefetching ? 'opacity-70' : ''}`}>
@@ -97,10 +112,10 @@ export const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetch
             {data.armor && (
               <>
                 <StatBadge icon={UtilIconPaths.STAT_HEALTH_VEH} label={t(i18n, 'unitDetail.stat.hp')} value={data.armor.MaxHealthPoints} compact />
-                {!hasDirArmor && <StatBadge icon={UtilIconPaths.STAT_ARMOR} label={t(i18n, 'unitDetail.stat.armor')} value={data.armor.ArmorValue} compact />}
+                {showArmorBadge && <StatBadge icon={UtilIconPaths.STAT_ARMOR} label={t(i18n, 'unitDetail.stat.armor')} value={data.armor.ArmorValue} compact />}
               </>
             )}
-            <StatBadge icon={UtilIconPaths.STAT_WEIGHT} label={t(i18n, 'unitDetail.stat.weight')} value={unit.Weight ? `${unit.Weight}kg` : '—'} compact />
+            <StatBadge icon={UtilIconPaths.STAT_WEIGHT} label={t(i18n, 'unitDetail.stat.weight')} value={weightLabel} compact />
             <StatBadge icon={UtilIconPaths.STAT_STEALTH} label={t(i18n, 'unitDetail.stat.stealth')} value={unit.Stealth !== undefined ? (1 / Math.max(0.1, unit.Stealth)).toFixed(2) : '—'} compact />
             {unit.InfantrySlots > 0 && (
               <StatBadge icon={UtilIconPaths.STAT_SEATS} label={t(i18n, 'unitDetail.stat.seats')} value={unit.InfantrySlots} compact />
@@ -146,18 +161,21 @@ export const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetch
             {data.availability.length > 0 && (
               <UnitAvailabilityPanel availability={data.availability} compact />
             )}
+            {data.availability.length === 0 && data.transportFor && (
+              <UnitTransportForPanel transportFor={data.transportFor} compact />
+            )}
           </div>
         </div>
 
-        {/* Squad Composition */}
-        {data.squadMembers.length > 0 && (
+        {/* Squad Composition (infantry only) */}
+        {isInfantryType && data.squadMembers.length > 0 && (
           <SquadCompositionPanel members={data.squadMembers} compact />
         )}
 
         {/* Weapons */}
         {data.weapons.length > 0 && (
           <div>
-            <UnitWeaponsPanel weapons={data.weapons} unitId={unit.Id} abilities={data.abilities} />
+            <UnitWeaponsPanel weapons={data.weapons} unitId={unit.Id} unitType={unit.Type} abilities={data.abilities} />
           </div>
         )}
       </div>
@@ -206,10 +224,10 @@ export const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetch
             {data.armor && (
               <>
                 <StatBadge icon={UtilIconPaths.STAT_HEALTH_VEH} label={t(i18n, 'unitDetail.stat.hp')} value={data.armor.MaxHealthPoints} compact />
-                {!hasDirArmor && <StatBadge icon={UtilIconPaths.STAT_ARMOR} label={t(i18n, 'unitDetail.stat.armor')} value={data.armor.ArmorValue} compact />}
+                {showArmorBadge && <StatBadge icon={UtilIconPaths.STAT_ARMOR} label={t(i18n, 'unitDetail.stat.armor')} value={data.armor.ArmorValue} compact />}
               </>
             )}
-            <StatBadge icon={UtilIconPaths.STAT_WEIGHT} label={t(i18n, 'unitDetail.stat.weight')} value={unit.Weight ? `${unit.Weight}kg` : '—'} compact />
+            <StatBadge icon={UtilIconPaths.STAT_WEIGHT} label={t(i18n, 'unitDetail.stat.weight')} value={weightLabel} compact />
             <StatBadge icon={UtilIconPaths.STAT_STEALTH} label={t(i18n, 'unitDetail.stat.stealth')} value={unit.Stealth !== undefined ? (1 / Math.max(0.1, unit.Stealth)).toFixed(2) : '—'} compact />
             {unit.InfantrySlots > 0 && (
               <StatBadge icon={UtilIconPaths.STAT_SEATS} label={t(i18n, 'unitDetail.stat.seats')} value={unit.InfantrySlots} compact />
@@ -220,7 +238,7 @@ export const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetch
           </div>
         </div>
 
-        {data.squadMembers.length > 0 && (
+        {isInfantryType && data.squadMembers.length > 0 && (
           <SquadCompositionPanel members={data.squadMembers} compact />
         )}
 
@@ -250,6 +268,9 @@ export const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetch
             {data.availability.length > 0 && (
               <UnitAvailabilityPanel availability={data.availability} compact />
             )}
+            {data.availability.length === 0 && data.transportFor && (
+              <UnitTransportForPanel transportFor={data.transportFor} compact />
+            )}
             {data.modifications.length > 0 && (
               <UnitModifications
                 modifications={data.modifications}
@@ -263,7 +284,7 @@ export const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetch
 
       {data.weapons.length > 0 && (
         <div class="hidden md:block lg:hidden mt-4">
-          <UnitWeaponsPanel weapons={data.weapons} unitId={unit.Id} abilities={data.abilities} />
+          <UnitWeaponsPanel weapons={data.weapons} unitId={unit.Id} unitType={unit.Type} abilities={data.abilities} />
         </div>
       )}
 
@@ -339,10 +360,10 @@ export const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetch
               {data.armor && (
                 <>
                   <StatBadge icon={UtilIconPaths.STAT_HEALTH_VEH} label={t(i18n, 'unitDetail.stat.hp')} value={data.armor.MaxHealthPoints} />
-                  {!hasDirArmor && <StatBadge icon={UtilIconPaths.STAT_ARMOR} label={t(i18n, 'unitDetail.stat.armor')} value={data.armor.ArmorValue} />}
+                  {showArmorBadge && <StatBadge icon={UtilIconPaths.STAT_ARMOR} label={t(i18n, 'unitDetail.stat.armor')} value={data.armor.ArmorValue} />}
                 </>
               )}
-              <StatBadge icon={UtilIconPaths.STAT_WEIGHT} label={t(i18n, 'unitDetail.stat.weight')} value={unit.Weight ? `${unit.Weight}kg` : '—'} />
+              <StatBadge icon={UtilIconPaths.STAT_WEIGHT} label={t(i18n, 'unitDetail.stat.weight')} value={weightLabel} />
               <StatBadge icon={UtilIconPaths.STAT_STEALTH} label={t(i18n, 'unitDetail.stat.stealth')} value={unit.Stealth !== undefined ? (1 / Math.max(0.1, unit.Stealth)).toFixed(2) : '—'} />
               {unit.InfantrySlots > 0 && (
                 <StatBadge icon={UtilIconPaths.STAT_SEATS} label={t(i18n, 'unitDetail.stat.seats')} value={unit.InfantrySlots} />
@@ -354,23 +375,31 @@ export const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetch
           </div>
         </div>
 
-        {/* Right Column: Availability, Squad, Modifications */}
+        {/* Right Column: Availability/TransportFor, Squad, Modifications */}
         <div class="flex flex-col gap-4 justify-between">
           {data.availability.length > 0 ? (
             <UnitAvailabilityPanel availability={data.availability} />
+          ) : data.transportFor ? (
+            <UnitTransportForPanel transportFor={data.transportFor} />
           ) : (
             <EmptyPanel label="Availability" />
           )}
 
-          {data.squadMembers.length > 0 && (
-            <SquadCompositionPanel members={data.squadMembers} />
+          {isInfantryType && (
+            data.squadMembers.length > 0 ? (
+              <SquadCompositionPanel members={data.squadMembers} />
+            ) : (
+              <EmptyPanel label="Squad Composition" />
+            )
           )}
 
-          {data.modifications.length > 0 && (
+          {data.modifications.length > 0 ? (
             <UnitModifications
               modifications={data.modifications}
               onOptionChange$={onOptionChange$}
             />
+          ) : (
+            <EmptyPanel label="Modifications" />
           )}
         </div>
       </div>
@@ -378,7 +407,7 @@ export const UnitDetailView = component$<UnitDetailViewProps>(({ data, isRefetch
       {/* ── Desktop Weapons Section (full width) ─────────────────────────────── */}
       {data.weapons.length > 0 && (
         <div class="hidden lg:block mt-4">
-          <UnitWeaponsPanel weapons={data.weapons} unitId={unit.Id} abilities={data.abilities} />
+          <UnitWeaponsPanel weapons={data.weapons} unitId={unit.Id} unitType={unit.Type} abilities={data.abilities} />
         </div>
       )}
 

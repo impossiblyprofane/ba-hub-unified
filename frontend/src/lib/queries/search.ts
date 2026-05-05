@@ -3,10 +3,13 @@ export const SEARCH_UNITS_QUERY = `
     searchUnits(search: $search, limit: $limit) {
       Id
       HUDName
+      displayName
       ThumbnailFileName
       CountryId
       CategoryType
       Cost
+      rootUnitId
+      rootOptionId
     }
   }
 `;

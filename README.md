@@ -157,8 +157,9 @@ npm run docker:down
 
 ## Documentation
 
-- [docs/development.md](docs/development.md) — Detailed dev guide, environment variables, SSR strategy
-- [docs/migration-plan.md](docs/migration-plan.md) — Migration from legacy React + Express codebase
+- [CLAUDE.md](CLAUDE.md) — Single source of truth for architecture, patterns, and conventions
+- [docs/development.md](docs/development.md) — Detailed dev guide, environment variables, workflows
+- [docs/ssr-to-spa-plan.md](docs/ssr-to-spa-plan.md) — In-flight conversion of route data fetching from SSR to client-only
 - [docker/README.md](docker/README.md) — Docker configuration details
 
 ## Project Status

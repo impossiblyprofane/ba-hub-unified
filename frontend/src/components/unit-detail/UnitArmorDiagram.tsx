@@ -12,7 +12,9 @@ type Props = { armor: UnitDetailArmor };
 export const UnitArmorDiagram = component$<Props>(({ armor }) => {
   const hasDirArmor =
     armor.KinArmorFront > 0 || armor.HeatArmorFront > 0 ||
-    armor.KinArmorRear > 0 || armor.HeatArmorRear > 0;
+    armor.KinArmorRear > 0 || armor.HeatArmorRear > 0 ||
+    armor.KinArmorSides > 0 || armor.HeatArmorSides > 0 ||
+    armor.KinArmorTop > 0 || armor.HeatArmorTop > 0;
 
   if (!hasDirArmor) return null;
 

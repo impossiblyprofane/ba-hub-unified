@@ -18,9 +18,10 @@ export const UnitSensorsPanel = component$<Props>(({ sensors, abilities, compact
   const primary = sensors[0];
   if (!primary) return null;
 
-  const ground = Math.round(primary.OpticsGround * 2);
-  const lowAlt = Math.round(primary.OpticsLowAltitude * 2);
-  const highAlt = Math.round(primary.OpticsHighAltitude * 2);
+  const formatVision = (v: number) => (v <= 0 ? 'N/A' : `${v}m`);
+  const ground = formatVision(Math.round(primary.OpticsGround * 2));
+  const lowAlt = formatVision(Math.round(primary.OpticsLowAltitude * 2));
+  const highAlt = formatVision(Math.round(primary.OpticsHighAltitude * 2));
 
   const radarLow = radar ? Math.round(primary.OpticsLowAltitude * 2 * radar.RadarLowAltOpticsModifier) : null;
   const radarHigh = radar ? Math.round(primary.OpticsHighAltitude * 2 * radar.RadarHighAltOpticsModifier) : null;
@@ -35,9 +36,9 @@ export const UnitSensorsPanel = component$<Props>(({ sensors, abilities, compact
 
       {compact ? (
         <div class={`flex flex-wrap gap-2 ${fill ? 'flex-1' : ''} content-start`}>
-          <HStatCell icon={UtilIconPaths.STAT_OPTICS} tooltip="Ground optics" value={`${ground}m`} />
-          <HStatCell icon={UtilIconPaths.TRAIT_AIR_ALT_DOWN} tooltip="Low-altitude optics" value={`${lowAlt}m`} />
-          <HStatCell icon={UtilIconPaths.TRAIT_AIR_ALT_UP} tooltip="High-altitude optics" value={`${highAlt}m`} />
+          <HStatCell icon={UtilIconPaths.STAT_OPTICS} tooltip="Ground optics" value={ground} />
+          <HStatCell icon={UtilIconPaths.TRAIT_AIR_ALT_DOWN} tooltip="Low-altitude optics" value={lowAlt} />
+          <HStatCell icon={UtilIconPaths.TRAIT_AIR_ALT_UP} tooltip="High-altitude optics" value={highAlt} />
           {radar && (
             <>
               <SimpleTooltip text="Radar">
@@ -67,9 +68,9 @@ export const UnitSensorsPanel = component$<Props>(({ sensors, abilities, compact
         <div class="flex-1 flex flex-col justify-start">
           {/* Base optics — vertical icon + value */}
           <div class="grid grid-cols-3 gap-1">
-            <VStatCell icon={UtilIconPaths.STAT_OPTICS} tooltip="Ground optics" value={`${ground}m`} />
-            <VStatCell icon={UtilIconPaths.TRAIT_AIR_ALT_DOWN} tooltip="Low-altitude optics" value={`${lowAlt}m`} />
-            <VStatCell icon={UtilIconPaths.TRAIT_AIR_ALT_UP} tooltip="High-altitude optics" value={`${highAlt}m`} />
+            <VStatCell icon={UtilIconPaths.STAT_OPTICS} tooltip="Ground optics" value={ground} />
+            <VStatCell icon={UtilIconPaths.TRAIT_AIR_ALT_DOWN} tooltip="Low-altitude optics" value={lowAlt} />
+            <VStatCell icon={UtilIconPaths.TRAIT_AIR_ALT_UP} tooltip="High-altitude optics" value={highAlt} />
           </div>
 
           {/* Radar-enhanced values */}
