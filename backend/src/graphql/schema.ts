@@ -84,10 +84,21 @@ export const schema = `
   type SearchUnitResult {
     Id: Int!
     HUDName: String!
+    # Disambiguating display label — usually the unit's Name field with the
+    # internal "DLC#" prefix stripped. This separates variants that share the
+    # same HUDName, e.g. "Marine Raiders CQC" vs "Marine Raiders AT" rather
+    # than two rows both showing "Marine Raiders".
+    displayName: String!
     ThumbnailFileName: String
     CountryId: Int!
     CategoryType: Int!
     Cost: Int!
+    # When this entry is a variant reachable only through another unit's
+    # modification, rootUnitId+rootOptionId direct the click to the root unit
+    # with the option pre-applied (so the editor opens correctly). Null for
+    # units that are picked directly.
+    rootUnitId: Int
+    rootOptionId: Int
   }
 
   input UnitFilter {
@@ -120,12 +131,21 @@ export const schema = `
 
   type ArsenalUnitCard {
     unit: Unit!
+    # Disambiguating display label (see SearchUnitResult.displayName for
+    # rationale) — distinguishes "Marine Raiders CQC" from "Marine Raiders AT".
+    displayName: String!
     isTransport: Boolean!
     specializationIds: [Int!]!
     transportCapacity: Int!
     cargoCapacity: Float!
     availableTransports: [Int!]!
     defaultModificationOptions: [ArsenalDefaultModificationOption!]!
+    # When this card represents a variant reachable only via another unit's
+    # modification, rootUnitId+rootOptionId tell the frontend to link to the
+    # root unit's detail page with the option pre-applied. Null for units
+    # that are picked directly.
+    rootUnitId: Int
+    rootOptionId: Int
   }
 
   type Unit {
@@ -579,6 +599,16 @@ export const schema = `
     modifications: [ModificationSlot!]!
     squadMembers: [SquadMember!]!
     availability: [UnitAvailability!]!
+    transportFor: TransportRelationship
+  }
+
+  # Reverse of UnitAvailability.transports — for a transport unit, the
+  # specialization it serves and the parent units that take it as a transport.
+  # A transport belongs to exactly one specialization but may carry multiple
+  # parent units within that spec.
+  type TransportRelationship {
+    specialization: Specialization!
+    parentUnits: [Unit!]!
   }
 
   type ModificationSlot {

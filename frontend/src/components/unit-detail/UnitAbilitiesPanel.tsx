@@ -7,15 +7,28 @@ import type { UnitDetailAbility } from '~/lib/graphql-types';
 
 type Props = { abilities: UnitDetailAbility[]; compact?: boolean; fill?: boolean };
 
+type AbilityInfo = {
+  icon: string;
+  label: string;
+  stats: Array<{ key: string; value: string }>;
+  tooltipTitle: string;
+  tooltipDesc: string;
+  tooltipRows: Array<{ label: string; value: string }>;
+};
+
+type AbilityRowSpec = { signature: string; info: AbilityInfo };
+
 /**
- * Abilities panel — each ability shown as a row with icon, label, key stats.
- * Rich tooltips give full detailed breakdowns on hover.
+ * Abilities panel — each ability category shown as a row with icon, label,
+ * key stats. A single ability record can cover multiple categories (e.g.
+ * "Laser Smoke x2" is both Laser Designator AND Smoke), so we expand each
+ * record into one row per category. The resolver guarantees at most one
+ * ability per category (coin-sorter slot model), so no further dedupe needed.
  */
 export const UnitAbilitiesPanel = component$<Props>(({ abilities, compact, fill }) => {
   const i18n = useI18n();
-  // Filter out empty/placeholder abilities (no type flags set)
-  const displayable = abilities.filter(a => isDisplayableAbility(a));
-  if (displayable.length === 0) return null;
+  const rows = abilities.flatMap(buildAbilityRows);
+  if (rows.length === 0) return null;
 
   return (
     <div
@@ -25,17 +38,15 @@ export const UnitAbilitiesPanel = component$<Props>(({ abilities, compact, fill 
         {t(i18n, 'unitDetail.panel.abilities')}
       </p>
       <div class={`flex flex-col ${compact ? 'gap-1.5' : 'gap-2'} ${fill ? 'flex-1 overflow-y-auto' : ''}`}>
-        {displayable.map(ability => (
-          <AbilityRow key={ability.Id} ability={ability} compact={compact} />
+        {rows.map(row => (
+          <AbilityRow key={row.signature} info={row.info} compact={compact} />
         ))}
       </div>
     </div>
   );
 });
 
-const AbilityRow = component$<{ ability: UnitDetailAbility; compact?: boolean }>(({ ability, compact }) => {
-  const info = getAbilityDisplay(ability);
-
+const AbilityRow = component$<{ info: AbilityInfo; compact?: boolean }>(({ info, compact }) => {
   return (
     <RichTooltip>
       <div class={`flex items-start ${compact ? 'gap-1.5 p-1' : 'gap-2 p-1.5'} bg-[rgba(26,26,26,0.4)] cursor-help`}>
@@ -53,7 +64,6 @@ const AbilityRow = component$<{ ability: UnitDetailAbility; compact?: boolean }>
           )}
         </div>
       </div>
-      {/* Rich tooltip content */}
       <div q:slot="tooltip" class="space-y-2">
         <div class="font-bold text-[var(--accent)]">{info.tooltipTitle}</div>
         <div class="text-[var(--text-dim)]">{info.tooltipDesc}</div>
@@ -69,162 +79,151 @@ const AbilityRow = component$<{ ability: UnitDetailAbility; compact?: boolean }>
   );
 });
 
-type AbilityInfo = {
-  icon: string;
-  label: string;
-  stats: Array<{ key: string; value: string }>;
-  tooltipTitle: string;
-  tooltipDesc: string;
-  tooltipRows: Array<{ label: string; value: string }>;
-};
+function buildAbilityRows(a: UnitDetailAbility): AbilityRowSpec[] {
+  const rows: AbilityRowSpec[] = [];
 
-function getAbilityDisplay(a: UnitDetailAbility): AbilityInfo {
   if (a.IsLaserDesignator) {
-    return {
-      icon: UtilIconPaths.ABILITY_LASER_DESIGNATION,
-      label: 'Laser Designator',
-      stats: [
-        { key: 'Range', value: `${Math.round(a.LaserMaxRange * 2)}m` },
-      ],
-      tooltipTitle: 'Laser Designator',
-      tooltipDesc: 'Guides laser-guided munitions to the target',
-      tooltipRows: [
-        { label: 'Range', value: `${Math.round(a.LaserMaxRange * 2)}m` },
-        { label: 'Usage', value: a.LaserUsableInMove ? 'Can designate while moving' : 'Must be stationary' },
-      ],
-    };
+    rows.push({
+      signature: `laser:${a.LaserMaxRange}:${a.LaserUsableInMove}`,
+      info: {
+        icon: UtilIconPaths.ABILITY_LASER_DESIGNATION,
+        label: 'Laser Designator',
+        stats: [{ key: 'Range', value: `${Math.round(a.LaserMaxRange * 2)}m` }],
+        tooltipTitle: 'Laser Designator',
+        tooltipDesc: 'Guides laser-guided munitions to the target',
+        tooltipRows: [
+          { label: 'Range', value: `${Math.round(a.LaserMaxRange * 2)}m` },
+          { label: 'Usage', value: a.LaserUsableInMove ? 'Can designate while moving' : 'Must be stationary' },
+        ],
+      },
+    });
   }
+
   if (a.IsRadar) {
     const modeLabel = a.IsRadarStatic ? 'STATIC' : 'MOBILE';
-    return {
-      icon: UtilIconPaths.ABILITY_RADAR,
-      label: `Radar (${modeLabel})`,
-      stats: [
-        { key: 'Low', value: `×${a.RadarLowAltOpticsModifier}` },
-        { key: 'High', value: `×${a.RadarHighAltOpticsModifier}` },
-      ],
-      tooltipTitle: `Radar — ${modeLabel}`,
-      tooltipDesc: a.IsRadarStatic
-        ? 'Enhances aerial detection range; unit must be stationary'
-        : 'Enhances aerial detection range while moving',
-      tooltipRows: [
-        { label: 'Low Alt Optics', value: `×${a.RadarLowAltOpticsModifier}` },
-        { label: 'High Alt Optics', value: `×${a.RadarHighAltOpticsModifier}` },
-        ...(a.RadarLowAltWeaponRangeModifier > 0 && a.RadarLowAltWeaponRangeModifier !== 1
-          ? [{ label: 'Low Alt Wpn Range', value: `×${a.RadarLowAltWeaponRangeModifier}` }] : []),
-        ...(a.RadarHighAltWeaponRangeModifier > 0 && a.RadarHighAltWeaponRangeModifier !== 1
-          ? [{ label: 'High Alt Wpn Range', value: `×${a.RadarHighAltWeaponRangeModifier}` }] : []),
-        ...(a.RadarSwitchCooldown > 0
-          ? [{ label: 'Toggle Cooldown', value: `${a.RadarSwitchCooldown}s` }] : []),
-      ],
-    };
+    rows.push({
+      signature: `radar:${a.IsRadarStatic}:${a.RadarLowAltOpticsModifier}:${a.RadarHighAltOpticsModifier}`,
+      info: {
+        icon: UtilIconPaths.ABILITY_RADAR,
+        label: `Radar (${modeLabel})`,
+        stats: [
+          { key: 'Low', value: `×${a.RadarLowAltOpticsModifier}` },
+          { key: 'High', value: `×${a.RadarHighAltOpticsModifier}` },
+        ],
+        tooltipTitle: `Radar — ${modeLabel}`,
+        tooltipDesc: a.IsRadarStatic
+          ? 'Enhances aerial detection range; unit must be stationary'
+          : 'Enhances aerial detection range while moving',
+        tooltipRows: [
+          { label: 'Low Alt Optics', value: `×${a.RadarLowAltOpticsModifier}` },
+          { label: 'High Alt Optics', value: `×${a.RadarHighAltOpticsModifier}` },
+          ...(a.RadarLowAltWeaponRangeModifier > 0 && a.RadarLowAltWeaponRangeModifier !== 1
+            ? [{ label: 'Low Alt Wpn Range', value: `×${a.RadarLowAltWeaponRangeModifier}` }] : []),
+          ...(a.RadarHighAltWeaponRangeModifier > 0 && a.RadarHighAltWeaponRangeModifier !== 1
+            ? [{ label: 'High Alt Wpn Range', value: `×${a.RadarHighAltWeaponRangeModifier}` }] : []),
+          ...(a.RadarSwitchCooldown > 0
+            ? [{ label: 'Toggle Cooldown', value: `${a.RadarSwitchCooldown}s` }] : []),
+        ],
+      },
+    });
   }
+
   if (a.IsAPS) {
-    return {
-      icon: UtilIconPaths.ABILITY_APS,
-      label: 'Active Protection',
-      stats: [
-        { key: 'Charges', value: String(a.APSQuantity) },
-      ],
-      tooltipTitle: 'Active Protection System',
-      tooltipDesc: 'Intercepts incoming projectiles before impact',
-      tooltipRows: [
-        { label: 'Charges', value: String(a.APSQuantity) },
-        { label: 'Cooldown', value: `${a.APSCooldown}s` },
-        { label: 'Coverage', value: `${Math.round(a.APSHitboxProportion * 100)}% hitbox` },
-        ...(a.APSSupplyCost > 0 ? [{ label: 'Supply Cost', value: String(a.APSSupplyCost) }] : []),
-        ...(a.APSResupplyTime > 0 ? [{ label: 'Resupply Time', value: `${a.APSResupplyTime}s` }] : []),
-      ],
-    };
+    rows.push({
+      signature: `aps:${a.APSQuantity}:${a.APSCooldown}:${a.APSHitboxProportion}`,
+      info: {
+        icon: UtilIconPaths.ABILITY_APS,
+        label: 'Active Protection',
+        stats: [{ key: 'Charges', value: String(a.APSQuantity) }],
+        tooltipTitle: 'Active Protection System',
+        tooltipDesc: 'Intercepts incoming projectiles before impact',
+        tooltipRows: [
+          { label: 'Charges', value: String(a.APSQuantity) },
+          { label: 'Cooldown', value: `${a.APSCooldown}s` },
+          { label: 'Coverage', value: `${Math.round(a.APSHitboxProportion * 100)}% hitbox` },
+          ...(a.APSSupplyCost > 0 ? [{ label: 'Supply Cost', value: String(a.APSSupplyCost) }] : []),
+          ...(a.APSResupplyTime > 0 ? [{ label: 'Resupply Time', value: `${a.APSResupplyTime}s` }] : []),
+        ],
+      },
+    });
   }
+
   if (a.IsSmoke) {
-    return {
-      icon: UtilIconPaths.ABILITY_SMOKE,
-      label: 'Smoke Screen',
-      stats: [
-        { key: 'Rounds', value: String(a.SmokeAmmunitionQuantity) },
-      ],
-      tooltipTitle: 'Smoke Screen',
-      tooltipDesc: 'Deploys smoke screens for concealment',
-      tooltipRows: [
-        { label: 'Rounds', value: String(a.SmokeAmmunitionQuantity) },
-        { label: 'Cooldown', value: `${a.SmokeCooldown}s` },
-        { label: 'Effect', value: 'Blocks line of sight and reduces accuracy' },
-      ],
-    };
+    rows.push({
+      signature: `smoke:${a.SmokeAmmunitionQuantity}:${a.SmokeCooldown}`,
+      info: {
+        icon: UtilIconPaths.ABILITY_SMOKE,
+        label: 'Smoke Screen',
+        stats: [{ key: 'Rounds', value: String(a.SmokeAmmunitionQuantity) }],
+        tooltipTitle: 'Smoke Screen',
+        tooltipDesc: 'Deploys smoke screens for concealment',
+        tooltipRows: [
+          { label: 'Rounds', value: String(a.SmokeAmmunitionQuantity) },
+          { label: 'Cooldown', value: `${a.SmokeCooldown}s` },
+          { label: 'Effect', value: 'Blocks line of sight and reduces accuracy' },
+        ],
+      },
+    });
   }
+
   if (a.IsInfantrySprint) {
-    return {
-      icon: UtilIconPaths.ABILITY_SPRINT,
-      label: 'Sprint',
-      stats: [
-        { key: 'Dur', value: `${a.SprintDuration}s` },
-      ],
-      tooltipTitle: 'Sprint',
-      tooltipDesc: 'Temporarily increases movement speed',
-      tooltipRows: [
-        { label: 'Duration', value: `${a.SprintDuration}s` },
-        { label: 'Cooldown', value: `${a.SprintCooldown}s` },
-      ],
-    };
+    rows.push({
+      signature: `sprint:${a.SprintDuration}:${a.SprintCooldown}`,
+      info: {
+        icon: UtilIconPaths.ABILITY_SPRINT,
+        label: 'Sprint',
+        stats: [{ key: 'Dur', value: `${a.SprintDuration}s` }],
+        tooltipTitle: 'Sprint',
+        tooltipDesc: 'Temporarily increases movement speed',
+        tooltipRows: [
+          { label: 'Duration', value: `${a.SprintDuration}s` },
+          { label: 'Cooldown', value: `${a.SprintCooldown}s` },
+        ],
+      },
+    });
   }
+
   if (a.IsDecoy) {
     const accPct = a.DecoyAccuracyMultiplier > 0
       ? `${Math.round((1 - a.DecoyAccuracyMultiplier) * 100)}%`
       : null;
-    return {
-      icon: UtilIconPaths.ABILITY_FLARES,
-      label: 'Decoy / Flares',
-      stats: [
-        { key: 'Qty', value: String(a.DecoyQuantity) },
-      ],
-      tooltipTitle: 'Decoy / Flares',
-      tooltipDesc: 'Deploys countermeasures to confuse incoming missiles',
-      tooltipRows: [
-        { label: 'Charges', value: String(a.DecoyQuantity) },
-        { label: 'Duration', value: `${a.DecoyDuration}s` },
-        { label: 'Cooldown', value: `${a.DecoyCooldown}s` },
-        ...(accPct ? [{ label: 'Accuracy Reduction', value: accPct }] : []),
-        ...(a.DecoySupplyCost > 0 ? [{ label: 'Supply Cost', value: String(a.DecoySupplyCost) }] : []),
-        ...(a.DecoyResupplyTime > 0 ? [{ label: 'Resupply Time', value: `${a.DecoyResupplyTime}s` }] : []),
-      ],
-    };
+    rows.push({
+      signature: `decoy:${a.DecoyQuantity}:${a.DecoyDuration}:${a.DecoyCooldown}:${a.DecoyAccuracyMultiplier}`,
+      info: {
+        icon: UtilIconPaths.ABILITY_FLARES,
+        label: 'Decoy / Flares',
+        stats: [{ key: 'Qty', value: String(a.DecoyQuantity) }],
+        tooltipTitle: 'Decoy / Flares',
+        tooltipDesc: 'Deploys countermeasures to confuse incoming missiles',
+        tooltipRows: [
+          { label: 'Charges', value: String(a.DecoyQuantity) },
+          { label: 'Duration', value: `${a.DecoyDuration}s` },
+          { label: 'Cooldown', value: `${a.DecoyCooldown}s` },
+          ...(accPct ? [{ label: 'Accuracy Reduction', value: accPct }] : []),
+          ...(a.DecoySupplyCost > 0 ? [{ label: 'Supply Cost', value: String(a.DecoySupplyCost) }] : []),
+          ...(a.DecoyResupplyTime > 0 ? [{ label: 'Resupply Time', value: `${a.DecoyResupplyTime}s` }] : []),
+        ],
+      },
+    });
   }
+
   if (a.ECMAccuracyMultiplier > 0 && a.ECMAccuracyMultiplier < 1) {
     const pct = Math.round((1 - a.ECMAccuracyMultiplier) * 100);
-    return {
-      icon: UtilIconPaths.TRAIT_ECM,
-      label: 'ECM',
-      stats: [
-        { key: 'Reduction', value: `${pct}%` },
-      ],
-      tooltipTitle: 'Electronic Countermeasures',
-      tooltipDesc: 'Reduces enemy weapon accuracy against this unit',
-      tooltipRows: [
-        { label: 'Accuracy Reduction', value: `${pct}%` },
-        { label: 'Multiplier', value: `×${a.ECMAccuracyMultiplier}` },
-      ],
-    };
+    rows.push({
+      signature: `ecm:${a.ECMAccuracyMultiplier}`,
+      info: {
+        icon: UtilIconPaths.TRAIT_ECM,
+        label: 'ECM',
+        stats: [{ key: 'Reduction', value: `${pct}%` }],
+        tooltipTitle: 'Electronic Countermeasures',
+        tooltipDesc: 'Reduces enemy weapon accuracy against this unit',
+        tooltipRows: [
+          { label: 'Accuracy Reduction', value: `${pct}%` },
+          { label: 'Multiplier', value: `×${a.ECMAccuracyMultiplier}` },
+        ],
+      },
+    });
   }
-  return {
-    icon: UtilIconPaths.STAT_VISIBLE,
-    label: a.Name || 'Ability',
-    stats: [],
-    tooltipTitle: a.Name || 'Ability',
-    tooltipDesc: '',
-    tooltipRows: [],
-  };
-}
 
-/** True if the ability has at least one meaningful type flag set */
-function isDisplayableAbility(a: UnitDetailAbility): boolean {
-  return (
-    a.IsLaserDesignator ||
-    a.IsRadar ||
-    a.IsAPS ||
-    a.IsSmoke ||
-    a.IsInfantrySprint ||
-    a.IsDecoy ||
-    (a.ECMAccuracyMultiplier > 0 && a.ECMAccuracyMultiplier < 1)
-  );
+  return rows;
 }

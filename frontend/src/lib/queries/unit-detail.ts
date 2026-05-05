@@ -91,6 +91,10 @@ export const UNIT_DETAIL_QUERY = `
         specialization { Id Name UIName Icon CountryId }
         transports { Id Name HUDName ThumbnailFileName }
       }
+      transportFor {
+        specialization { Id Name UIName Icon CountryId }
+        parentUnits { Id Name HUDName ThumbnailFileName }
+      }
     }
   }
 `;

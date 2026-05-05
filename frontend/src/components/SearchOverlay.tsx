@@ -102,9 +102,15 @@ export const SearchOverlay = component$<Props>(({ open }) => {
     }, 200);
   });
 
-  const navigateToUnit$ = $((unitId: number) => {
+  const navigateToUnit$ = $((unit: SearchUnitResult) => {
     open.value = false;
-    nav(`/arsenal/${unitId}`);
+    // Variants (units reached only via another unit's modification, e.g. Marines
+    // from Reserve Marines + option) link to the root unit with the option
+    // pre-applied so the modification editor loads the correct loadout.
+    const href = unit.rootUnitId && unit.rootOptionId
+      ? `/arsenal/${unit.rootUnitId}/?m=${unit.rootOptionId}`
+      : `/arsenal/${unit.Id}`;
+    nav(href);
   });
 
   const scrollActiveIntoView = $((idx: number) => {
@@ -131,7 +137,7 @@ export const SearchOverlay = component$<Props>(({ open }) => {
     } else if (e.key === 'Enter' && activeIndex.value >= 0) {
       e.preventDefault();
       const unit = results.value[activeIndex.value];
-      if (unit) navigateToUnit$(unit.Id);
+      if (unit) navigateToUnit$(unit);
     }
   });
 
@@ -207,7 +213,7 @@ export const SearchOverlay = component$<Props>(({ open }) => {
                         ? 'bg-[rgba(70,151,195,0.12)]'
                         : 'hover:bg-[rgba(26,26,26,0.6)]',
                     ].join(' ')}
-                    onClick$={() => navigateToUnit$(unit.Id)}
+                    onClick$={() => navigateToUnit$(unit)}
                     onMouseEnter$={() => (activeIndex.value = idx)}
                   >
                     {/* Unit thumbnail */}
@@ -227,7 +233,7 @@ export const SearchOverlay = component$<Props>(({ open }) => {
                     {/* Unit info */}
                     <div class="flex-1 min-w-0">
                       <p class="text-sm text-[var(--text)] truncate" style={{ fontFamily: 'var(--mono)' }}>
-                        {unit.HUDName}
+                        {unit.displayName || unit.HUDName}
                       </p>
                       <div class="flex items-center gap-2 text-[10px] text-[var(--text-dim)]" style={{ fontFamily: 'var(--mono)' }}>
                         <span class={cat.color}>{cat.code}</span>

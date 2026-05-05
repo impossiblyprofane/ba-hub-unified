@@ -60,7 +60,7 @@ export const UnitMobilityPanel = component$<Props>(({ mobility, flyPreset, unitT
     if (!isInfantry && mobility.MaxSpeedReverse > 0) {
       stats.push({ icon: UtilIconPaths.MOBILITY_REVERSE_VEH, label: 'Reverse', value: `${Math.round(mobility.MaxSpeedReverse)}`, unit: '' });
     }
-    if (mobility.MaxSpeedWater > 0) {
+    if (mobility.IsAmphibious && mobility.MaxSpeedWater > 0) {
       stats.push({ icon: UtilIconPaths.TRAIT_AMPHIBIOUS, label: 'Water', value: `${Math.round(mobility.MaxSpeedWater)}`, unit: '' });
     }
   }

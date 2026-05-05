@@ -140,6 +140,7 @@ function makeUnit(overrides: Partial<{
     modifications: [],
     squadMembers: [],
     availability: [],
+    transportFor: null,
   };
 }
 

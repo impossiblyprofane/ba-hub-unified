@@ -25,7 +25,14 @@ import type { RegisterUserResult, UserProfile } from '@ba-hub/shared';
 /** A lightweight unit result from the searchUnits query. */
 export type SearchUnitResult = Pick<
   Unit, 'Id' | 'HUDName' | 'ThumbnailFileName' | 'CountryId' | 'CategoryType' | 'Cost'
->;
+> & {
+  /** Server-computed disambiguating label — see backend `buildDisplayLabel`. */
+  displayName: string;
+  /** When set, link to this root unit with rootOptionId pre-applied so the
+   *  modification system loads the variant correctly. */
+  rootUnitId: number | null;
+  rootOptionId: number | null;
+};
 
 /* ═══════════════════════════════════════════════════════════════════
  * Arsenal List Page — arsenalUnitsCards query
@@ -41,6 +48,8 @@ export type ArsenalUnit = Pick<
 /** A single card in the arsenal grid. */
 export type ArsenalCard = {
   unit: ArsenalUnit;
+  /** Disambiguating display label — see SearchUnitResult.displayName. */
+  displayName: string;
   isTransport: boolean;
   specializationIds: number[];
   transportCapacity: number;
@@ -56,6 +65,10 @@ export type ArsenalCard = {
     optThumbnailOverride: string | null;
     optPortraitOverride: string | null;
   }>;
+  /** When set, link to /arsenal/{rootUnitId}/?m={rootOptionId} so the
+   *  modification editor opens with the variant pre-applied. */
+  rootUnitId: number | null;
+  rootOptionId: number | null;
 };
 
 /** Country fields used in the arsenal page. */
@@ -220,6 +233,12 @@ export type UnitDetailAvailability = {
   transports: Array<Pick<Unit, 'Id' | 'Name' | 'HUDName' | 'ThumbnailFileName'>>;
 };
 
+/** Reverse availability — for transport units, the spec + parent units that take it. */
+export type UnitDetailTransportFor = {
+  specialization: Pick<Specialization, 'Id' | 'Name' | 'UIName' | 'Icon' | 'CountryId'>;
+  parentUnits: Array<Pick<Unit, 'Id' | 'Name' | 'HUDName' | 'ThumbnailFileName'>>;
+};
+
 /** Complete unitDetail query response. */
 export type UnitDetailData = {
   unit: UnitDetailUnit;
@@ -236,6 +255,7 @@ export type UnitDetailData = {
   modifications: UnitDetailModSlot[];
   squadMembers: UnitDetailSquadMember[];
   availability: UnitDetailAvailability[];
+  transportFor: UnitDetailTransportFor | null;
 };
 
 /* ═══════════════════════════════════════════════════════════════════

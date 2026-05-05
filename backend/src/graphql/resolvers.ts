@@ -40,12 +40,15 @@ type ArsenalDefaultModificationOption = {
 
 type ArsenalUnitCard = {
   unit: unknown;
+  displayName: string;
   isTransport: boolean;
   specializationIds: number[];
   transportCapacity: number;
   cargoCapacity: number;
   availableTransports: number[];
   defaultModificationOptions: ArsenalDefaultModificationOption[];
+  rootUnitId: number | null;
+  rootOptionId: number | null;
 };
 
 const isPositiveId = (value: number | null | undefined): value is number =>
@@ -127,6 +130,66 @@ const buildUnitWeapons = (unitId: number, indexes: StaticIndexes): UnitWeaponSlo
   return results;
 };
 
+type LabelUnit = { Id: number; Name?: string | null; HUDName?: string | null };
+
+/** Strip the internal "DLC#" prefix from a unit name. */
+function stripDlcPrefix(s: string | null | undefined): string {
+  return ((s ?? '').trim()).replace(/^DLC\d*\s+/i, '').trim();
+}
+
+/** Convert an option's UIName into a human-readable suffix, e.g.
+ *  "Custom_Option_TOW2B_ATGM" → "TOW2B ATGM". Empty string when not useful. */
+function cleanOptionLabel(uiName?: string | null): string {
+  if (!uiName) return '';
+  const trimmed = uiName.trim();
+  if (!trimmed) return '';
+  if (/^custom_option_/i.test(trimmed)) {
+    return trimmed.replace(/^custom_option_/i, '').replace(/_/g, ' ').trim();
+  }
+  return trimmed;
+}
+
+/**
+ * Cleaned-up label for arsenal/search display. The unit data dump has both a
+ * `Name` (internal/dev label, often with a variant suffix like "Marine Raiders
+ * CQC") and a `HUDName` (in-game label, sometimes more descriptive like
+ * "Airborne NGWS"). For non-variants we pick whichever is longer (more
+ * disambiguating). For variants — units reachable only via another unit's
+ * modification — we surface the relationship in the label by combining the
+ * variant's HUDName with the option's cleaned UIName, e.g.
+ * "Marine Raiders (Standoff)" — but suppress the suffix when it duplicates
+ * the HUDName (e.g. avoid "Buk M3 (Buk-M3)").
+ */
+function buildDisplayLabel(unit: LabelUnit, indexes?: StaticIndexes): string {
+  const cleanedName = stripDlcPrefix(unit.Name);
+  const hud = (unit.HUDName ?? '').trim();
+  const variantInfo = indexes?.variantRoots.get(unit.Id);
+
+  // For non-variants: pick the more informative of Name/HUDName (longer wins).
+  if (!variantInfo) {
+    if (!cleanedName) return hud;
+    if (!hud) return cleanedName;
+    return cleanedName.length >= hud.length ? cleanedName : hud;
+  }
+
+  // For variants: HUDName is the in-game label (clean, no internal "2"
+  // suffix); the variant identity comes from the option's UIName. Combine
+  // them: "Airborne Snipers (M107 AMR)". Skip the suffix when it's
+  // redundant with the HUDName (e.g. avoid "Buk M3 (Buk-M3)").
+  const baseLabel = hud || cleanedName;
+  const opt = indexes!.optionsById.get(variantInfo.optionId) as
+    | { UIName?: string | null }
+    | undefined;
+  const suffix = cleanOptionLabel(opt?.UIName);
+  if (!suffix) return baseLabel;
+  const labelLower = baseLabel.toLowerCase();
+  const suffixLower = suffix.toLowerCase();
+  if (labelLower.includes(suffixLower)) return baseLabel;
+  const firstWord = suffixLower.split(/\s+/)[0];
+  if (firstWord.length >= 3 && labelLower.includes(firstWord)) return baseLabel;
+  return `${baseLabel} (${suffix})`;
+}
+
 const buildArsenalUnitCard = (unitId: number, ctx: GraphQLContext): ArsenalUnitCard | null => {
   const { data, indexes } = ctx;
   const unit = indexes.unitsById.get(unitId);
@@ -182,14 +245,18 @@ const buildArsenalUnitCard = (unitId: number, ctx: GraphQLContext): ArsenalUnitC
     }];
   });
 
+  const variantRoot = indexes.variantRoots.get(unit.Id) ?? null;
   return {
     unit,
+    displayName: buildDisplayLabel(unit, indexes),
     isTransport: Boolean(validTransportAvailability),
     specializationIds: specIds,
     transportCapacity: unit.InfantrySlots ?? 0,
     cargoCapacity: mobility?.HeavyLiftWeight ?? 0,
     availableTransports,
     defaultModificationOptions,
+    rootUnitId: variantRoot?.rootUnitId ?? null,
+    rootOptionId: variantRoot?.optionId ?? null,
   };
 };
 
@@ -228,7 +295,6 @@ const TURRET_FIELDS = [
 
 const buildUnitWeaponsWithOverrides = (
   resolvedUnitId: number,
-  originalUnitId: number,
   activeOptions: Array<Record<string, unknown>>,
   indexes: StaticIndexes,
 ): UnitWeaponSlot[] => {
@@ -294,7 +360,9 @@ const buildUnitWeaponsWithOverrides = (
   // 5. Resolve weapons — one entry per channel occurrence (preserves pylon counts),
   //    plus one entry per expanded child turret.
   const results: UnitWeaponSlot[] = [];
-  const ammoUnitId = originalUnitId;
+  // When an option replaces the unit, weapon-ammunition entries are keyed under
+  // the replacement unit's ID, so look up ammo against resolvedUnitId.
+  const ammoUnitId = resolvedUnitId;
 
   const resolveWeaponsForTurret = (tid: number) => {
     const turret = indexes.turretsById.get(tid);
@@ -423,28 +491,59 @@ const buildUnitDetailResult = (
     if (s && !sensors.some((e: any) => e.Id === s.Id)) sensors.push(s);
   }
 
-  // 6. Abilities — start with base unit abilities, then merge option-specified abilities
-  const abilityMap = new Map<number, unknown>();
-  // Base unit abilities — only include IsDefault abilities; non-default ones come via Options
+  // 6. Abilities — coin-sorter category-slot model.
+  //
+  // Each ability category (smoke, aps, laser, sprint, decoy, radar, ecm) has
+  // a single slot. Base unit abilities marked IsDefault populate slots first,
+  // then each active option's Ability1/2/3Id overrides slots by category.
+  // Override is unconditional — option may "improve" or "downgrade" the slot,
+  // it just replaces. Within a single option, Ability1/2/3 are trusted not to
+  // collide on the same category. An ability that covers multiple categories
+  // (e.g. "Laser Smoke x2" — both laser AND smoke) occupies multiple slots;
+  // overriding one slot leaves its other-category occupancy intact.
+  type AbilityRecord = { Id: number; IsDefault?: boolean } & Record<string, unknown>;
+  const isLaser = (a: AbilityRecord) => Boolean(a.IsLaserDesignator);
+  const isRadar = (a: AbilityRecord) => Boolean(a.IsRadar);
+  const isAps = (a: AbilityRecord) => Boolean(a.IsAPS);
+  const isSmoke = (a: AbilityRecord) => Boolean(a.IsSmoke);
+  const isSprint = (a: AbilityRecord) => Boolean(a.IsInfantrySprint);
+  const isDecoy = (a: AbilityRecord) => Boolean(a.IsDecoy);
+  const isEcm = (a: AbilityRecord) => {
+    const m = a.ECMAccuracyMultiplier;
+    return typeof m === 'number' && m > 0 && m < 1;
+  };
+  const slotsForAbility = (a: AbilityRecord): string[] => {
+    const cats: string[] = [];
+    if (isLaser(a)) cats.push('laser');
+    if (isRadar(a)) cats.push('radar');
+    if (isAps(a)) cats.push('aps');
+    if (isSmoke(a)) cats.push('smoke');
+    if (isSprint(a)) cats.push('sprint');
+    if (isDecoy(a)) cats.push('decoy');
+    if (isEcm(a)) cats.push('ecm');
+    return cats;
+  };
+  const slots = new Map<string, AbilityRecord>();
   for (const link of indexes.unitAbilitiesByUnitId.get(resolvedUnit.Id) ?? []) {
-    const a = indexes.abilitiesById.get(link.AbilityId) as { Id: number; IsDefault?: boolean } | undefined;
-    if (a && a.IsDefault !== false) abilityMap.set(link.AbilityId, a);
+    const a = indexes.abilitiesById.get(link.AbilityId) as AbilityRecord | undefined;
+    if (!a || a.IsDefault === false) continue;
+    for (const cat of slotsForAbility(a)) slots.set(cat, a);
   }
-  // Option abilities overlay (add / replace by Id)
   for (const opt of activeOptions) {
     for (const id of [opt.Ability1Id, opt.Ability2Id, opt.Ability3Id]) {
-      if (isPositiveId(id)) {
-        const a = indexes.abilitiesById.get(id);
-        if (a) abilityMap.set(id, a);
-      }
+      if (!isPositiveId(id)) continue;
+      const a = indexes.abilitiesById.get(id) as AbilityRecord | undefined;
+      if (!a) continue;
+      for (const cat of slotsForAbility(a)) slots.set(cat, a);
     }
   }
-  const abilities = [...abilityMap.values()];
+  // An ability spanning multiple slots appears once per slot in `slots.values()`;
+  // dedupe by Id so we don't return the same record N times.
+  const abilities = [...new Map([...slots.values()].map(a => [a.Id, a])).values()];
 
   // 7. Weapons (with turret overrides)
   let weapons = buildUnitWeaponsWithOverrides(
     resolvedUnit.Id,
-    unitId,
     activeOptions as unknown as Array<Record<string, unknown>>,
     indexes,
   );
@@ -503,6 +602,29 @@ const buildUnitDetailResult = (
     })
     .filter(Boolean);
 
+  // 10b. Transport relationship — when this unit is itself used as a transport,
+  // surface the parent infantry units that take it. A transport belongs to a
+  // single specialization (per design), so we collapse all TA→SA→spec links.
+  const transportEntries = indexes.transportAvailabilitiesByUnitId.get(unitId) ?? [];
+  let transportFor: { specialization: unknown; parentUnits: unknown[] } | null = null;
+  if (transportEntries.length > 0) {
+    const parentIds = new Set<number>();
+    let specId: number | null = null;
+    for (const te of transportEntries) {
+      const saEntry = indexes.specializationAvailabilitiesById.get(te.SpecializationAvailabilityId);
+      if (!saEntry) continue;
+      parentIds.add(saEntry.UnitId);
+      if (specId === null) specId = saEntry.SpecializationId;
+    }
+    const spec = specId !== null ? indexes.specializationsById.get(specId) : null;
+    if (spec) {
+      const parentUnits = [...parentIds]
+        .map(id => indexes.unitsById.get(id))
+        .filter((u): u is NonNullable<typeof u> => Boolean(u));
+      transportFor = { specialization: spec, parentUnits };
+    }
+  }
+
   return {
     unit: resolvedUnit,
     baseUnit,
@@ -518,6 +640,7 @@ const buildUnitDetailResult = (
     modifications: modSlots.map(({ _opt, ...rest }) => rest),
     squadMembers,
     availability,
+    transportFor,
   };
 };
 
@@ -598,6 +721,7 @@ export const resolvers = {
     unit: (_: unknown, args: { id: number }, ctx: GraphQLContext) => ctx.indexes.unitsById.get(args.id) ?? null,
     arsenalUnitsCards: (_: unknown, __: unknown, ctx: GraphQLContext) => {
       return ctx.data.units
+        .filter(unit => ctx.indexes.playableUnitIds.has(unit.Id))
         .map(unit => buildArsenalUnitCard(unit.Id, ctx))
         .filter((card): card is ArsenalUnitCard => Boolean(card));
     },
@@ -607,25 +731,30 @@ export const resolvers = {
 
     // ── Search ──────────────────────────────────────────────────
     searchUnits: (_: unknown, args: { search: string; limit?: number }, ctx: GraphQLContext) => {
-      const { data } = ctx;
+      const { data, indexes } = ctx;
       const search = normalizeSearch(args.search);
       if (!search) return [];
       const limit = Math.min(args.limit ?? 12, 30);
-      const results: Array<{ Id: number; HUDName: string; ThumbnailFileName: string; CountryId: number; CategoryType: number; Cost: number }> = [];
+      const results: Array<{ Id: number; HUDName: string; displayName: string; ThumbnailFileName: string; CountryId: number; CategoryType: number; Cost: number; rootUnitId: number | null; rootOptionId: number | null }> = [];
       for (const unit of data.units) {
         if (!unit.DisplayInArmory) continue;
+        if (!indexes.playableUnitIds.has(unit.Id)) continue;
         if (
           matchesSearch(unit.Name, search) ||
           matchesSearch(unit.HUDName, search) ||
           matchesSearch(unit.OriginalName, search)
         ) {
+          const variantRoot = indexes.variantRoots.get(unit.Id) ?? null;
           results.push({
             Id: unit.Id,
             HUDName: unit.HUDName,
+            displayName: buildDisplayLabel(unit, indexes),
             ThumbnailFileName: unit.ThumbnailFileName,
             CountryId: unit.CountryId,
             CategoryType: unit.CategoryType,
             Cost: unit.Cost,
+            rootUnitId: variantRoot?.rootUnitId ?? null,
+            rootOptionId: variantRoot?.optionId ?? null,
           });
           if (results.length >= limit) break;
         }
