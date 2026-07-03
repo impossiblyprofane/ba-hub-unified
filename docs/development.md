@@ -40,13 +40,14 @@ ba-hub-unified/
 │   │   ├── components/     # Reusable components
 │   │   ├── lib/            # graphql-types, queries, i18n, deck/, iconPaths, admin/
 │   │   ├── root.tsx        # QwikCityProvider + RouterOutlet
-│   │   └── global.css      # Tailwind + CSS variables + tactical grid
-│   └── server/index.ts     # Production Fastify server: crawler-meta SSR + static SPA
+│   │   ├── global.css      # Tailwind + CSS variables + tactical grid
+│   │   ├── entry.fastify.tsx   # Production Fastify server: crawler-meta SSR + static SPA
+│   │   └── lib/meta/       # Crawler metadata: renderer, per-route resolvers, robots, sitemap
 │
 ├── backend/      # Fastify + Mercurius GraphQL gateway    (port 3001)
 │   ├── src/
 │   │   ├── index.ts                # Server entry, plugin wiring, lifecycle
-│   │   ├── graphql/                # schema.ts, resolvers.ts, graphql-types.ts
+│   │   ├── graphql/                # schema.ts, resolvers.ts
 │   │   ├── data/                   # loader.ts, indexes.ts, static/*.json
 │   │   ├── services/               # statsClient, statsCollector, matchCrawler,
 │   │   │                           # steamProfileClient, databaseClient,
@@ -71,7 +72,7 @@ ba-hub-unified/
 │
 ├── docs/         # Development & architectural docs
 ├── docker/       # Production Docker Compose configs
-└── scripts/      # Build & setup helpers
+└── scripts/      # crawler-seed.ts (leaderboard seeding helper)
 ```
 
 **Data flow:** Frontend → GraphQL (backend) → REST (database) → PostgreSQL.
@@ -156,6 +157,9 @@ DB_ADMIN_ORIGINS=
 PORT=3000
 SITE_URL=http://localhost:3000
 VITE_API_URL=http://localhost:3001/graphql
+VITE_WS_URL=ws://localhost:3001/graphql
+# Server-side crawler-meta fetch (entry.fastify.tsx → src/lib/meta); may be internal
+API_URL=http://localhost:3001/graphql
 VITE_ENCRYPTION_KEY=
 VITE_ENCRYPTION_IV=
 ```
@@ -164,13 +168,13 @@ VITE_ENCRYPTION_IV=
 
 ---
 
-## Frontend Data Fetching — In-Flight SSR → SPA Conversion
+## Frontend Data Fetching — Client-Only (SSR → SPA Conversion Complete)
 
-The frontend has historically used `routeLoader$` and `useResource$` for page data, but **both run during Qwik City SSR** and embed the resolved data in the HTML response. This makes the site trivially scrapeable and obscures all real fetches from frontend debugging.
+The frontend historically used `routeLoader$` and `useResource$` for page data, but **both run during Qwik City SSR** and embed the resolved data in the HTML response. This made the site trivially scrapeable and obscured all real fetches from frontend debugging.
 
-The active conversion replaces them with a client-only pattern: `useSignal + useVisibleTask$ + skeleton + GenericErrorView`. Read [`docs/ssr-to-spa-plan.md`](./ssr-to-spa-plan.md) before adding any new data-bearing route or touching an existing one — it has the principles, the route inventory, and the canonical template.
+The conversion is **complete**: zero `routeLoader$` remain under `frontend/src/routes/`, and all data-bearing routes use the client-only pattern `useSignal + useVisibleTask$ + skeleton + GenericErrorView`. Read [`docs/ssr-to-spa-plan.md`](./ssr-to-spa-plan.md) before adding any new data-bearing route — it has the principles, the route inventory, and the canonical template.
 
-The crawler-meta SSR path in `frontend/server/index.ts` (sniffing `User-Agent` and rendering bot-only `<meta>` tags) is **separate and stays untouched**.
+The crawler-meta SSR path in `frontend/src/entry.fastify.tsx` (sniffing `User-Agent` and rendering bot-only `<meta>` tags) is **separate and intentionally stays server-side**.
 
 ---
 
@@ -178,10 +182,10 @@ The crawler-meta SSR path in `frontend/server/index.ts` (sniffing `User-Agent` a
 
 The production frontend uses **two completely independent rendering paths**:
 
-1. **Bot/crawler path** — `frontend/server/index.ts`'s `onRequest` hook sniffs `User-Agent`, and for known bots renders a tiny hand-built HTML page via `renderMetaHtml()` / `resolveRouteMeta()`. Used for Discord/Twitter/Google link previews. This is the only path that emits page-specific content server-side.
-2. **Real-user path** — Qwik City SSR streams a thin app shell. After the conversion is complete (see above) all backend data fetches happen browser-side after hydration.
+1. **Bot/crawler path** — `frontend/src/entry.fastify.tsx` sniffs `User-Agent`, and for known bots renders a tiny hand-built HTML page via `renderMetaHtml()` and the per-route resolvers in `frontend/src/lib/meta/resolvers/`. Used for Discord/Twitter/Google link previews. This is the only path that emits page-specific content server-side.
+2. **Real-user path** — Qwik City SSR streams a thin app shell; all backend data fetches happen browser-side after hydration.
 
-When adding a new page that should produce a link preview, update `getRouteMeta()` in `frontend/server/index.ts`.
+When adding a new page that should produce a link preview, add a resolver in `frontend/src/lib/meta/resolvers/` (dynamic routes) or extend `getStaticRouteMeta()` in `frontend/src/lib/meta/static-routes.ts` (static routes), and wire it in `entry.fastify.tsx`.
 
 ---
 
@@ -193,4 +197,4 @@ A token-gated admin/inspection panel lives at the unlisted `frontend/src/routes/
 
 ## Migration from Legacy
 
-The current rebuild is based on the legacy production site https://www.ba-hub.net (React + Express). Use it only as a UX/feature reference — not as a source of code or API contracts. Old TypeScript definitions can be parked in `shared/src/legacy/` while migrating.
+The current rebuild is based on the legacy production site https://www.ba-hub.net (React + Express). Use it only as a UX/feature reference — not as a source of code or API contracts.

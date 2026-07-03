@@ -6,7 +6,7 @@
 - Backend data is static JSON tables loaded once at startup into typed arrays. Loader: [backend/src/data/loader.ts](../backend/src/data/loader.ts). Data files live in [backend/src/data/static](../backend/src/data/static).
 - Database service is a Fastify REST API using Drizzle ORM with PostgreSQL for dynamic data (published decks, likes, views, challenges, users). Entry: [database/src/index.ts](../database/src/index.ts). Schema: [database/src/schema](../database/src/schema). Routes: [database/src/routes](../database/src/routes).
 - Data flow: Frontend → GraphQL (backend) → REST (database) → PostgreSQL. Static game data is served directly from backend memory; dynamic data goes through the database service.
-- Frontend is Qwik with Qwik City routing; metadata-only SSR is handled by a Fastify server that serves SPA HTML and crawler-specific metadata. See [frontend/server/index.ts](../frontend/server/index.ts), [frontend/src/root.tsx](../frontend/src/root.tsx).
+- Frontend is Qwik with Qwik City routing; metadata-only SSR is handled by a Fastify server that serves SPA HTML and crawler-specific metadata. See [frontend/src/entry.fastify.tsx](../frontend/src/entry.fastify.tsx) and [frontend/src/lib/meta](../frontend/src/lib/meta), [frontend/src/root.tsx](../frontend/src/root.tsx).
 - Shared types are published as @ba-hub/shared and imported by all workspaces. See [shared/src/types](../shared/src/types).
 
 ## Critical workflows
@@ -22,7 +22,7 @@
 - Static data loader tolerates missing JSON files by returning empty arrays and logging warnings (ENOENT). Keep this behavior when adding new tables. See `loadJsonArray()` in [backend/src/data/loader.ts](../backend/src/data/loader.ts).
 - GraphQL schema/resolvers are defined in separate files and wired into Mercurius. See [backend/src/graphql/schema.ts](../backend/src/graphql/schema.ts) and [backend/src/graphql/resolvers.ts](../backend/src/graphql/resolvers.ts).
 - Qwik routes live under [frontend/src/routes](../frontend/src/routes) using `component$` and `DocumentHead` (example: [frontend/src/routes/index.tsx](../frontend/src/routes/index.tsx)).
-- Metadata-only SSR is intentionally minimal for crawlers and does not render full SPA content. Changes to SEO metadata should coordinate [frontend/server/index.ts](../frontend/server/index.ts) and Qwik `DocumentHead`.
+- Metadata-only SSR is intentionally minimal for crawlers and does not render full SPA content. Changes to SEO metadata should coordinate [frontend/src/entry.fastify.tsx](../frontend/src/entry.fastify.tsx) + [frontend/src/lib/meta](../frontend/src/lib/meta) and Qwik `DocumentHead`.
 - UI layout conventions:
   - Unit viewer width is intentionally constrained (target `max-w-[1600px]`) even when the global container is wider.
   - Global page container max width is `2000px`; layouts should scale within it.

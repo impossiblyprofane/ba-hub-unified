@@ -159,7 +159,8 @@ npm run docker:down
 
 - [CLAUDE.md](CLAUDE.md) — Single source of truth for architecture, patterns, and conventions
 - [docs/development.md](docs/development.md) — Detailed dev guide, environment variables, workflows
-- [docs/ssr-to-spa-plan.md](docs/ssr-to-spa-plan.md) — In-flight conversion of route data fetching from SSR to client-only
+- [docs/overhaul-plan.md](docs/overhaul-plan.md) — Repo cleanup/refactor plan + branch audit (2026-07)
+- [docs/ssr-to-spa-plan.md](docs/ssr-to-spa-plan.md) — Completed SSR → client-only conversion; canonical data-fetch template
 - [docker/README.md](docker/README.md) — Docker configuration details
 
 ## Project Status
