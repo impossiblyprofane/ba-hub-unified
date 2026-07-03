@@ -1,14 +1,24 @@
 name: Deploy
 
+# Deploy model (single mainline):
+#   push to master  → development environment
+#   push a v* tag   → production
+# See docs/overhaul-plan.md §3. The legacy main/dev branch triggers are gone.
 on:
   push:
-    branches: [main, dev]
+    branches: [master]
+    tags: ['v*']
   workflow_dispatch:
 
 jobs:
+  # Gate: type-check + tests must pass before anything ships.
+  ci:
+    uses: ./.github/workflows/ci.yml
+
   deploy:
+    needs: ci
     runs-on: ubuntu-latest
-    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+    environment: ${{ startsWith(github.ref, 'refs/tags/v') && 'production' || 'development' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -16,7 +26,7 @@ jobs:
       - name: Set environment
         id: env
         run: |
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             echo "ENV=prod" >> $GITHUB_OUTPUT
             echo "COMPOSE_FILE=docker-compose.prod.yml" >> $GITHUB_OUTPUT
           else
@@ -30,10 +40,10 @@ jobs:
           PG_USER=${{ secrets.PG_USER }}
           PG_PASSWORD=${{ secrets.PG_PASSWORD }}
           PG_DB=${{ secrets.PG_DB }}
-          VITE_API_URL=${{ github.ref == 'refs/heads/main' && secrets.PROD_API_URL || secrets.DEV_API_URL }}
-          VITE_WS_URL=${{ github.ref == 'refs/heads/main' && secrets.PROD_WS_URL || secrets.DEV_WS_URL }}
-          SITE_URL=${{ github.ref == 'refs/heads/main' && secrets.PROD_SITE_URL || secrets.DEV_SITE_URL }}
-          FRONTEND_URL=${{ github.ref == 'refs/heads/main' && secrets.PROD_FRONTEND_URL || secrets.DEV_FRONTEND_URL }}
+          VITE_API_URL=${{ startsWith(github.ref, 'refs/tags/v') && secrets.PROD_API_URL || secrets.DEV_API_URL }}
+          VITE_WS_URL=${{ startsWith(github.ref, 'refs/tags/v') && secrets.PROD_WS_URL || secrets.DEV_WS_URL }}
+          SITE_URL=${{ startsWith(github.ref, 'refs/tags/v') && secrets.PROD_SITE_URL || secrets.DEV_SITE_URL }}
+          FRONTEND_URL=${{ startsWith(github.ref, 'refs/tags/v') && secrets.PROD_FRONTEND_URL || secrets.DEV_FRONTEND_URL }}
           STATS_PARTNER_TOKEN=${{ secrets.STATS_PARTNER_TOKEN }}
           ENCRYPT_API=true
           ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}
