@@ -1,10 +1,10 @@
 # SSR → SPA Conversion Plan
 
-**Status:** Planning
+**Status:** ✅ Complete — all 4 target routes converted (commits `b06dd06`, `176a460`, `8839d39`, `3024e12`), plus 2 hidden `useResource$` leaks fixed (`002f408`, `473c0e7`). Zero `routeLoader$` remain under `frontend/src/routes/`. Kept for reference; see `docs/overhaul-plan.md` for current work.
 **Scope:** `frontend/` (Qwik City SPA on port 3000)
 **Branch:** `main` (`dev` is in limbo, do not use)
 **Owner:** TBD
-**Last updated:** 2026-04-07
+**Last updated:** 2026-07-03
 
 ---
 
