@@ -11,14 +11,13 @@ async function main() {
 
   // ── Plugins ──────────────────────────────────────────────────
   // CORS: allow internal services + admin viewer origins.
+  // CORS_ORIGINS overrides the local-dev defaults (comma-separated).
   // DB_ADMIN_ORIGINS can include "null" for file:// protocol access.
+  const corsOrigins = (process.env.CORS_ORIGINS ?? 'http://localhost:3000,http://localhost:3001')
+    .split(',').map(s => s.trim()).filter(Boolean);
   const adminOrigins = (process.env.DB_ADMIN_ORIGINS ?? '').split(',').map(s => s.trim()).filter(Boolean);
   await app.register(cors, {
-    origin: [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      ...adminOrigins,
-    ],
+    origin: [...corsOrigins, ...adminOrigins],
     credentials: true,
   });
 

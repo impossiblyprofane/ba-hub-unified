@@ -1,4 +1,6 @@
-# Dev-only: starts just PostgreSQL for local development.
+# Local-only: starts just PostgreSQL for local development.
+# Not to be confused with docker/docker-compose.dev.yml, which is the full
+# 3-service stack for the deployed development environment.
 # Usage:  npm run dev:db        (starts PostgreSQL in background)
 #         npm run dev:db:stop   (stops it)
 #         npm run dev:migrate   (creates/updates tables)
