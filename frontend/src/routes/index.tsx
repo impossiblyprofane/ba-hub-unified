@@ -32,10 +32,13 @@ function HeroCard(props: {
   cta: string;
   primary?: boolean;
 }) {
+  const external = props.href.startsWith('http');
   return (
     <a
       href={props.href}
-      {...(props.href.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer', 'data-native-link': '' } : {})}
+      target={external ? '_blank' : undefined}
+      rel={external ? 'noopener noreferrer' : undefined}
+      data-native-link={external ? '' : undefined}
       class={`group relative flex flex-col items-center justify-center overflow-hidden
               bg-gradient-to-b from-[rgba(26,26,26,0.3)] to-[rgba(26,26,26,0.8)]
               border border-[rgba(51,51,51,0.15)]
