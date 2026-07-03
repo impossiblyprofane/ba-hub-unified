@@ -5,8 +5,13 @@ dist/
 .env
 .DS_Store
 
+# Build artifacts
+*.tsbuildinfo
+
+# Data dumps — never commit these
+/out.json
+/lb100.json
+
 # AI / Copilot
-.github/copilot-instructions.md
 .github/skills/
-CLAUDE.md
 .claude/
